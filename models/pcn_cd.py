@@ -20,8 +20,8 @@ class Model:
 
     def create_encoder(self, inputs, npts):
         with tf.variable_scope('encoder_0', reuse=tf.AUTO_REUSE):
-            inputs = tf.concat([inputs[:,:,0:3], tf.cast(tf.one_hot(tf.cast(inputs[:,:,5]*11, tf.int32), 11), tf.float32)], -1)
-            features = mlp_conv(inputs, [128, 256])
+            # inputs = tf.concat([inputs[:,:,0:3], tf.cast(tf.one_hot(tf.cast(inputs[:,:,5]*11, tf.int32), 11), tf.float32)], -1)
+            features = mlp_conv(inputs[:,:,0:3], [128, 256])
             features_global = point_unpool(point_maxpool(features, npts, keepdims=True), npts)
             features = tf.concat([features, features_global], axis=2)
         with tf.variable_scope('encoder_1', reuse=tf.AUTO_REUSE):
