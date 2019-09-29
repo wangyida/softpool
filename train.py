@@ -20,9 +20,13 @@ def train(args):
     global_step = tf.Variable(0, trainable=False, name='global_step')
     alpha = tf.train.piecewise_constant(global_step, [10000, 20000, 50000],
                                         [0.01, 0.1, 0.5, 1.0], 'alpha_op')
-    inputs_pl = tf.placeholder(tf.float32, (1, None, 6), 'inputs')
+    inputs_pl = tf.placeholder(tf.float32, (1, None, 3), 'inputs')
     npts_pl = tf.placeholder(tf.int32, (args.batch_size,), 'num_points')
-    gt_pl = tf.placeholder(tf.float32, (args.batch_size, args.num_gt_points, 6), 'ground_truths')
+    exp = args.experiment
+    if args.experiment is 'suncg':
+        gt_pl = tf.placeholder(tf.float32, (args.batch_size, args.num_gt_points, 6), 'ground_truths')
+    else:
+        gt_pl = tf.placeholder(tf.float32, (args.batch_size, args.num_gt_points, 3), 'ground_truths')
 
     model_module = importlib.import_module('.%s' % args.model_type, 'models')
     model = model_module.Model(inputs_pl, npts_pl, gt_pl, alpha)
@@ -82,7 +86,7 @@ def train(args):
         epoch = step * args.batch_size // num_train + 1
         ids, inputs, npts, gt = next(train_gen)
         start = time.time()
-        feed_dict = {inputs_pl: inputs, npts_pl: npts, gt_pl: gt, is_training_pl: True}
+        feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: True}
         _, loss, summary = sess.run([train_op, model.loss, train_summary], feed_dict=feed_dict)
         total_time += time.time() - start
         writer.add_summary(summary, step)
@@ -99,7 +103,7 @@ def train(args):
             for i in range(num_eval_steps):
                 start = time.time()
                 ids, inputs, npts, gt = next(valid_gen)
-                feed_dict = {inputs_pl: inputs, npts_pl: npts, gt_pl: gt, is_training_pl: False}
+                feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: False}
                 loss, _ = sess.run([model.loss, model.update], feed_dict=feed_dict)
                 total_loss += loss
                 total_time += time.time() - start
@@ -115,7 +119,10 @@ def train(args):
                     plot_path = os.path.join(args.log_dir, 'plots',
                                             'epoch_%d_step_%d_%s.png' % (epoch, step, ids[i]))
                     pcds = [x[i] for x in all_pcds]
-                    plot_pcd_three_views(plot_path, pcds, model.visualize_titles)
+                    if args.experiment is 'suncg':
+                        plot_pcd_three_views(plot_path, pcds, model.visualize_titles)
+                    else:
+                        plot_pcd_three_views(plot_path, pcds, model.visualize_titles, xlim=(-0.3, 0.3), ylim=(-0.3, 0.3), zlim=(-0.3, 0.3))
         if step % args.steps_per_save == 0:
             saver.save(sess, os.path.join(args.log_dir, 'model'), step)
             print(colored('Model saved at %s' % args.log_dir, 'white', 'on_blue'))
@@ -128,6 +135,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--lmdb_train', default='/media/wangyida/HDD/database/pcn/suncg/train.lmdb')
     parser.add_argument('--lmdb_valid', default='/media/wangyida/HDD/database/pcn/suncg/valid.lmdb')
+    parser.add_argument('--experiment', default='suncg')
     parser.add_argument('--log_dir', default='log/pcn_emd')
     parser.add_argument('--model_type', default='pcn_emd')
     parser.add_argument('--restore', action='store_true')

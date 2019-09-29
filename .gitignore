@@ -1,3 +1,4 @@
+*.pyc
 log
 __pycache__
 pc_distance/__pycache__

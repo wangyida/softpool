@@ -77,7 +77,13 @@ def test(args):
                                  [5, 0.5, 0.5])
         if args.save_pcd:
             os.makedirs(os.path.join(args.results_dir, 'pcds', synset_id), exist_ok=True)
-            save_pcd(os.path.join(args.results_dir, 'pcds', '%s.ply' % model_id), completion[0])
+            pts_coord = completion[0][:,0:3]
+            pts_color = matplotlib.cm.Set3((np.argmax(completion[0][:, 3:], -1) + 1)/11 - 0.5/11)
+            save_pcd(os.path.join(args.results_dir, 'pcds', '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
+            os.makedirs(os.path.join(args.results_dir, 'gt', synset_id), exist_ok=True)
+            pts_coord = complete[:,0:3]
+            pts_color = matplotlib.cm.Set3(complete[:,3] - 0.5/11)
+            save_pcd(os.path.join(args.results_dir, 'gt', '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
     csv_file.close()
     sess.close()
 
