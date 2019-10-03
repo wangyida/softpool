@@ -20,7 +20,6 @@ class Model:
 
     def create_encoder(self, inputs, npts):
         with tf.variable_scope('encoder_0', reuse=tf.AUTO_REUSE):
-            # inputs = inputs[:,:,0:3] + inputs[:,:,3:]*11 - 1
             features = mlp_conv(inputs, [128, 256])
             features_global = point_unpool(point_maxpool(features, npts, keepdims=True), npts)
             features = tf.concat([features, features_global], axis=2)

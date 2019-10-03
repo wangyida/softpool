@@ -32,7 +32,7 @@ class Model:
     def create_decoder(self, features):
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
             coarse = mlp(features, [1024, 1024, self.num_coarse * (3+11)])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+11])
+            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+11]) 
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
             grid = tf.meshgrid(tf.linspace(-0.05, 0.05, self.grid_size), tf.linspace(-0.05, 0.05, self.grid_size))
