@@ -48,8 +48,8 @@ def test(args):
     cd_per_cat = {}
     emd_per_cat = {}
     for i, model_id in enumerate(model_list):
-        partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial', '%s.pcd' % model_id))
-        complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete', '%s.pcd' % model_id))
+        partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial_fur', '%s.pcd' % model_id))
+        complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete_fur', '%s.pcd' % model_id))
         complete = resample_pcd(complete, 16384)
         start = time.time()
         completion = sess.run(model.outputs, feed_dict={inputs: [partial], npts: [partial.shape[0]]})
