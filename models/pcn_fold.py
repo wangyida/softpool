@@ -8,7 +8,7 @@ from tf_util import *
 class Model:
     def __init__(self, inputs, npts, gt, alpha):
         self.num_coarse = 1
-        self.grid_size = 128
+        self.grid_size = 64
         self.grid_scale = 0.05
         self.num_fine = self.grid_size ** 2 * self.num_coarse
         self.features, self.features_3d = self.create_encoder(inputs, npts)
@@ -41,10 +41,11 @@ class Model:
             tmp_s, tmp_u, tmp_v = tf.linalg.svd(fold1_reg[:,:,0:512])
             fold1_3d = tf.matmul(tmp_u, tf.matmul(tf.linalg.diag(tmp_s), tmp_v, adjoint_b=True))
         with tf.variable_scope('fold1_1', reuse=tf.AUTO_REUSE):
-            fold1 = mlp_conv(fold1_reg[:,:,0:512], [512, 3+11])
+            # fold1 = mlp_conv(fold1_reg[:,:,0:512], [512, 3+11])
+            fold1 = mlp_conv(fold1_3d[:,:,0:3], [512, 3+11])
         with tf.variable_scope('fold2', reuse=tf.AUTO_REUSE):
             fold2 = mlp_conv(tf.concat([point_feat, fold1[:,:,0:3]], axis=2), [512, 512, 3+11]) 
-        return tf.concat([fold1_3d[:,:,0:3], fold1_reg[:,:,256:]], axis=2), fold2
+        return tf.concat([fold1_3d[:,:,0:3], fold1_reg[:,:,512:]], axis=2), fold2
 
     def create_loss(self, fold2, gt, alpha):
         loss = chamfer(fold2[:,:,0:3], gt[:,:,0:3])
