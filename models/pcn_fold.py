@@ -42,19 +42,9 @@ class Model:
             tmp_s, tmp_u, tmp_v = tf.linalg.svd(fold1_reg[:,:,0:512])
             fold1_3d = tf.matmul(tmp_u, tf.matmul(tf.linalg.diag(tmp_s), tmp_v, adjoint_b=True))
         with tf.variable_scope('fold1_1', reuse=tf.AUTO_REUSE):
-            fold1_pre = mlp_conv(fold1_reg[:,:,0:512], [512])
-        with tf.variable_scope('fold1_2', reuse=tf.AUTO_REUSE):
-            fold1 = mlp_conv(fold1_pre, [3])
-        with tf.variable_scope('fold1_3', reuse=tf.AUTO_REUSE):
-            fold1_act = mlp_conv(fold1_pre, [self.channels])
-            fold1 = tf.concat([fold1, fold1_pre], -1)
-        with tf.variable_scope('fold2_1', reuse=tf.AUTO_REUSE):
-            fold2_pre = mlp_conv(tf.concat([point_feat, fold1[:,:,0:3]], axis=2), [512, 512]) 
-        with tf.variable_scope('fold2_2', reuse=tf.AUTO_REUSE):
-            fold2 = mlp_conv(fold2_pre, [3]) 
-        with tf.variable_scope('fold2_3', reuse=tf.AUTO_REUSE):
-            fold2_act = mlp_conv(fold2_pre, [self.channels])
-            fold2 = tf.concat([fold2, fold2_pre], -1)
+            fold1 = mlp_conv(fold1_reg[:,:,0:512], [512, 3+self.channels])
+        with tf.variable_scope('fold2', reuse=tf.AUTO_REUSE):
+            fold2 = mlp_conv(tf.concat([point_feat, fold1[:,:,0:3]], axis=2), [512, 512, 3+self.channels]) 
         entropy = tf.reduce_mean(tf.nn.softmax(fold1[:,:,3:], -1) * tf.log(tf.nn.softmax(fold1[:,:,3:], -1)), [0,1])
         entropy += tf.reduce_mean(tf.nn.softmax(fold2[:,:,3:], -1) * tf.log(tf.nn.softmax(fold2[:,:,3:], -1)), [0,1])
         return fold1, fold2, entropy
