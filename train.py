@@ -139,7 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir', default='log/pcn_emd')
     parser.add_argument('--model_type', default='pcn_emd')
     parser.add_argument('--restore', action='store_true')
-    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=16)
     """
     parser.add_argument('--num_input_points', type=int, default=3000)
     parser.add_argument('--num_gt_points', type=int, default=16384)

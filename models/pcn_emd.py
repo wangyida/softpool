@@ -10,6 +10,7 @@ class Model:
         self.num_coarse = 1024
         self.grid_size = 4
         self.grid_scale = 0.05
+        self.channels = 11
         self.num_fine = self.grid_size ** 2 * self.num_coarse
         self.features = self.create_encoder(inputs, npts)
         self.coarse, self.fine = self.create_decoder(self.features)
@@ -30,8 +31,8 @@ class Model:
 
     def create_decoder(self, features):
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            coarse = mlp(features, [1024, 1024, self.num_coarse * (3+11)])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+11])
+            coarse = mlp(features, [1024, 1024, self.num_coarse * (3+self.channels)])
+            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+self.channels])
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
             x = tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size)
@@ -40,20 +41,22 @@ class Model:
             grid = tf.expand_dims(tf.reshape(tf.stack(grid, axis=2), [-1, 2]), 0)
             grid_feat = tf.tile(grid, [features.shape[0], self.num_coarse, 1])
 
-            point_feat = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
-            point_feat = tf.reshape(point_feat, [-1, self.num_fine, 3+11])
+            point_feat = tf.tile(tf.expand_dims(coarse[:,:,0:3], 2), [1, 1, self.grid_size ** 2, 1])
+            point_feat = tf.reshape(point_feat, [-1, self.num_fine, 3])
 
             global_feat = tf.tile(tf.expand_dims(features, 1), [1, self.num_fine, 1])
 
             feat = tf.concat([grid_feat, point_feat, global_feat], axis=2)
 
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
-            center = tf.reshape(center, [-1, self.num_fine, 3+11])
+            center = tf.reshape(center, [-1, self.num_fine, 3+self.channels])
 
-            fine = mlp_conv(feat, [512, 512, 3+11]) + center
-        return coarse, fine
+            fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
+        entropy = tf.reduce_mean(tf.nn.softmax(coarse[:,:,3:], -1) * tf.log(tf.nn.softmax(coarse[:,:,3:], -1)), [0,1])
+        entropy += tf.reduce_mean(tf.nn.softmax(fine[:,:,3:], -1) * tf.log(tf.nn.softmax(fine[:,:,3:], -1)), [0,1])
+        return coarse, fine, entropy
 
-    def create_loss(self, coarse, fine, gt, alpha):
+    def create_loss(self, coarse, fine, gt, alpha, entropy):
         gt_ds = gt[:, :coarse.shape[1], :]
         loss_coarse = earth_mover(coarse[:,:,0:3], gt_ds[:,:,0:3])
         """
@@ -61,7 +64,7 @@ class Model:
         for i in range(np.shape(gt_ds)[0]):
             index = tf.expand_dims(retb[i], -1)
             sem_feat = tf.nn.softmax(coarse[i,:,3:], -1)
-            sem_gt = tf.cast(tf.one_hot(tf.gather_nd(tf.cast(gt_ds[i,:,3]*11, tf.int32), index), 11), tf.float32)
+            sem_gt = tf.cast(tf.one_hot(tf.gather_nd(tf.cast(gt_ds[i,:,3]*self.channels, tf.int32), index), self.channels), tf.float32)
             loss_sem_coarse = tf.reduce_mean(-tf.reduce_sum(
                         0.97 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.97) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
@@ -76,7 +79,7 @@ class Model:
         for i in range(np.shape(gt)[0]):
             index = tf.expand_dims(retb[i], -1)
             sem_feat = tf.nn.softmax(fine[i,:,3:], -1)
-            sem_gt = tf.cast(tf.one_hot(tf.gather_nd(tf.cast(gt[i,:,3]*11, tf.int32), index), 11), tf.float32)
+            sem_gt = tf.cast(tf.one_hot(tf.gather_nd(tf.cast(gt[i,:,3]*self.channels, tf.int32), index), self.channels), tf.float32)
             loss_sem_fine = tf.reduce_mean(-tf.reduce_sum(
                         0.6 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.6) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
@@ -86,6 +89,7 @@ class Model:
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
         loss = loss_coarse + alpha * loss_fine
+        loss += 0.001*(tf.reduce_sum(entropy) - 2*tf.log(1/self.channels))
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 
