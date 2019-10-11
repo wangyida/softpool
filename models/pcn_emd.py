@@ -13,8 +13,8 @@ class Model:
         self.channels = 11
         self.num_fine = self.grid_size ** 2 * self.num_coarse
         self.features = self.create_encoder(inputs, npts)
-        self.coarse, self.fine = self.create_decoder(self.features)
-        self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha)
+        self.coarse, self.fine, self.entropy = self.create_decoder(self.features)
+        self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha, self.entropy)
         self.outputs = self.fine
         self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.fine, gt]
         self.visualize_titles = ['input', 'coarse output', 'fine output', 'ground truth']
@@ -35,14 +35,12 @@ class Model:
             coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+self.channels])
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
-            x = tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size)
-            y = tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size)
-            grid = tf.meshgrid(x, y)
+            grid = tf.meshgrid(tf.linspace(-0.05, 0.05, self.grid_size), tf.linspace(-0.05, 0.05, self.grid_size))
             grid = tf.expand_dims(tf.reshape(tf.stack(grid, axis=2), [-1, 2]), 0)
             grid_feat = tf.tile(grid, [features.shape[0], self.num_coarse, 1])
 
-            point_feat = tf.tile(tf.expand_dims(coarse[:,:,0:3], 2), [1, 1, self.grid_size ** 2, 1])
-            point_feat = tf.reshape(point_feat, [-1, self.num_fine, 3])
+            point_feat = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
+            point_feat = tf.reshape(point_feat, [-1, self.num_fine, 3+self.channels])
 
             global_feat = tf.tile(tf.expand_dims(features, 1), [1, self.num_fine, 1])
 
@@ -52,8 +50,9 @@ class Model:
             center = tf.reshape(center, [-1, self.num_fine, 3+self.channels])
 
             fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
-        entropy = tf.reduce_mean(tf.nn.softmax(coarse[:,:,3:], -1) * tf.log(tf.nn.softmax(coarse[:,:,3:], -1)), [0,1])
-        entropy += tf.reduce_mean(tf.nn.softmax(fine[:,:,3:], -1) * tf.log(tf.nn.softmax(fine[:,:,3:], -1)), [0,1])
+
+        entropy = tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(coarse[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(coarse[:,:,3:]), -1)), [1]), [0])
+        entropy += tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(fine[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(fine[:,:,3:]), -1)), [1]), [0])
         return coarse, fine, entropy
 
     def create_loss(self, coarse, fine, gt, alpha, entropy):
