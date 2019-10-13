@@ -7,7 +7,10 @@ import matplotlib
 
 def read_pcd(filename):
     pcd = read_point_cloud(filename)
-    return np.concatenate([np.array(pcd.points), np.array(pcd.colors)], 1)
+    if pcd.colors:
+        return np.concatenate([np.array(pcd.points), np.array(pcd.colors)], 1)
+    else:
+        return np.concatenate([np.array(pcd.points), np.array(pcd.points)], 1)
 
 
 def save_pcd(filename, points):

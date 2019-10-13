@@ -15,7 +15,8 @@ class Model:
         self.features, self.features_3d = self.create_encoder(inputs, npts)
         self.fold1, self.fold2, self.entropy = self.create_decoder(self.features)
         self.loss, self.update = self.create_loss(self.fold2, gt, alpha, self.entropy)
-        self.outputs = self.fold2
+        self.outputs1 = self.fold1
+        self.outputs2 = self.fold2
         self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.fold1, self.fold2, gt]
         self.visualize_titles = ['input', 'fold1', 'fold2', 'ground truth']
 

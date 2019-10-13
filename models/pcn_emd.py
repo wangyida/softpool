@@ -15,7 +15,8 @@ class Model:
         self.features = self.create_encoder(inputs, npts)
         self.coarse, self.fine, self.entropy = self.create_decoder(self.features)
         self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha, self.entropy)
-        self.outputs = self.fine
+        self.outputs1 = self.coarse
+        self.outputs2 = self.fine
         self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.fine, gt]
         self.visualize_titles = ['input', 'coarse output', 'fine output', 'ground truth']
 

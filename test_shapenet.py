@@ -47,43 +47,52 @@ def test(args):
     total_emd = 0
     cd_per_cat = {}
     emd_per_cat = {}
+    exp = 'shapenet'
     for i, model_id in enumerate(model_list):
-        partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial_fur', '%s.pcd' % model_id))
-        complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete_fur', '%s.pcd' % model_id))
+        if exp is 'shapenet':
+            synset_id, model_id = model_id.split('/')
+            partial = read_pcd(os.path.join(args.data_dir, 'partial', synset_id, '%s.pcd' % model_id))
+            complete = read_pcd(os.path.join(args.data_dir, 'complete', synset_id, '%s.pcd' % model_id))
+        elif exp is 'suncg':
+            synset_id = 'all_rooms'
+            partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial_fur', '%s.pcd' % model_id))
+            complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete_fur', '%s.pcd' % model_id))
         complete = resample_pcd(complete, 16384)
         start = time.time()
-        completion = sess.run(model.outputs, feed_dict={inputs: [partial], npts: [partial.shape[0]]})
+        completion1, completion2 = sess.run([model.outputs1, model.outputs2], feed_dict={inputs: [partial], npts: [partial.shape[0]]})
         total_time += time.time() - start
-        cd, emd = sess.run([cd_op, emd_op], feed_dict={output: completion, gt: [complete]})
+        cd, emd = sess.run([cd_op, emd_op], feed_dict={output: completion2, gt: [complete]})
         total_cd += cd
         total_emd += emd
-        writer.writerow([model_id, cd, emd])
-
-        # synset_id, model_id = model_id.split('/')
-        synset_id = 'suncg'
         if not cd_per_cat.get(synset_id):
             cd_per_cat[synset_id] = []
         if not emd_per_cat.get(synset_id):
             emd_per_cat[synset_id] = []
         cd_per_cat[synset_id].append(cd)
         emd_per_cat[synset_id].append(emd)
+        writer.writerow([model_id, cd, emd])
+
 
         if i % args.plot_freq == 0:
             os.makedirs(os.path.join(args.results_dir, 'plots', synset_id), exist_ok=True)
             plot_path = os.path.join(args.results_dir, 'plots', synset_id, '%s.png' % model_id)
-            plot_pcd_three_views(plot_path, [partial, completion[0], complete],
-                                 ['input', 'output', 'ground truth'],
+            plot_pcd_three_views(plot_path, [partial, completion1[0], completion2[0], complete],
+                                 ['input', 'output1', 'output2', 'ground truth'],
                                  'CD %.4f  EMD %.4f' % (cd, emd),
                                  [5, 0.5, 0.5])
         if args.save_pcd:
-            os.makedirs(os.path.join(args.results_dir, 'pcds', synset_id), exist_ok=True)
-            pts_coord = completion[0][:,0:3]
-            pts_color = matplotlib.cm.Set3((np.argmax(completion[0][:, 3:], -1) + 1)/11 - 0.5/11)
-            save_pcd(os.path.join(args.results_dir, 'pcds', '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
+            os.makedirs(os.path.join(args.results_dir, 'output1', synset_id), exist_ok=True)
+            pts_coord = completion1[0][:,0:3]
+            pts_color = matplotlib.cm.Set3((np.argmax(completion1[0][:, 3:], -1) + 1)/11 - 0.5/11)
+            save_pcd(os.path.join(args.results_dir, 'output1', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
+            os.makedirs(os.path.join(args.results_dir, 'output2', synset_id), exist_ok=True)
+            pts_coord = completion2[0][:,0:3]
+            pts_color = matplotlib.cm.Set3((np.argmax(completion2[0][:, 3:], -1) + 1)/11 - 0.5/11)
+            save_pcd(os.path.join(args.results_dir, 'output2', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
             os.makedirs(os.path.join(args.results_dir, 'gt', synset_id), exist_ok=True)
             pts_coord = complete[:,0:3]
             pts_color = matplotlib.cm.Set3(complete[:,3] - 0.5/11)
-            save_pcd(os.path.join(args.results_dir, 'gt', '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
+            save_pcd(os.path.join(args.results_dir, 'gt', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
     csv_file.close()
     sess.close()
 
