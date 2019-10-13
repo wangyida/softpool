@@ -10,7 +10,8 @@ def read_pcd(filename):
     if pcd.colors:
         return np.concatenate([np.array(pcd.points), np.array(pcd.colors)], 1)
     else:
-        return np.concatenate([np.array(pcd.points), np.array(pcd.points)], 1)
+        colors = matplotlib.cm.Dark2(np.array(pcd.points)[:,1])
+        return np.concatenate([np.array(pcd.points), colors[:,0:3]], 1)
 
 
 def save_pcd(filename, points):

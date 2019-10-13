@@ -81,6 +81,10 @@ def test(args):
                                  'CD %.4f  EMD %.4f' % (cd, emd),
                                  [5, 0.5, 0.5])
         if args.save_pcd:
+            os.makedirs(os.path.join(args.results_dir, 'input', synset_id), exist_ok=True)
+            pts_coord = partial[:,0:3]
+            pts_color = matplotlib.cm.Dark2((partial[:,5]))
+            save_pcd(os.path.join(args.results_dir, 'input', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
             os.makedirs(os.path.join(args.results_dir, 'output1', synset_id), exist_ok=True)
             pts_coord = completion1[0][:,0:3]
             pts_color = matplotlib.cm.Set3((np.argmax(completion1[0][:, 3:], -1) + 1)/11 - 0.5/11)
