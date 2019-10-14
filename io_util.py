@@ -16,7 +16,6 @@ def read_pcd(filename):
 
 def save_pcd(filename, points):
     pcd = PointCloud()
-    color = matplotlib.cm.Set3((np.argmax(points[:, 3:], -1) + 1)/11 - 0.5/11)
     pcd.points = Vector3dVector(points[:,0:3])
-    pcd.colors = Vector3dVector(color[:,0:3])
+    pcd.colors = Vector3dVector(points[:,3:6])
     write_point_cloud(filename, pcd)

@@ -47,7 +47,7 @@ def test(args):
     total_emd = 0
     cd_per_cat = {}
     emd_per_cat = {}
-    exp = 'shapenet'
+    exp = 'suncg'
     for i, model_id in enumerate(model_list):
         if exp is 'shapenet':
             synset_id, model_id = model_id.split('/')
@@ -76,12 +76,6 @@ def test(args):
         if i % args.plot_freq == 0:
             os.makedirs(os.path.join(args.results_dir, 'plots', synset_id), exist_ok=True)
             plot_path = os.path.join(args.results_dir, 'plots', synset_id, '%s.png' % model_id)
-            """
-            plot_pcd_three_views(plot_path, [partial, completion1[0], completion2[0], complete],
-                                 ['input', 'output1', 'output2', 'ground truth'],
-                                 'CD %.4f  EMD %.4f' % (cd, emd),
-                                 [5, 0.5, 0.5])
-            """
             plot_pcd_three_views(plot_path, [partial, completion1[0], completion2[0], complete],
                                  ['input', 'output1', 'output2', 'ground truth'],
                                  'CD %.4f  EMD %.4f' % (cd, emd))
