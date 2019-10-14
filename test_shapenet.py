@@ -76,10 +76,15 @@ def test(args):
         if i % args.plot_freq == 0:
             os.makedirs(os.path.join(args.results_dir, 'plots', synset_id), exist_ok=True)
             plot_path = os.path.join(args.results_dir, 'plots', synset_id, '%s.png' % model_id)
+            """
             plot_pcd_three_views(plot_path, [partial, completion1[0], completion2[0], complete],
                                  ['input', 'output1', 'output2', 'ground truth'],
                                  'CD %.4f  EMD %.4f' % (cd, emd),
                                  [5, 0.5, 0.5])
+            """
+            plot_pcd_three_views(plot_path, [partial, completion1[0], completion2[0], complete],
+                                 ['input', 'output1', 'output2', 'ground truth'],
+                                 'CD %.4f  EMD %.4f' % (cd, emd))
         if args.save_pcd:
             os.makedirs(os.path.join(args.results_dir, 'input', synset_id), exist_ok=True)
             pts_coord = partial[:,0:3]
