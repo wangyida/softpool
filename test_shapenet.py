@@ -47,7 +47,7 @@ def test(args):
     total_emd = 0
     cd_per_cat = {}
     emd_per_cat = {}
-    exp = 'suncg'
+    exp = 'shapenet'
     for i, model_id in enumerate(model_list):
         if exp is 'shapenet':
             synset_id, model_id = model_id.split('/')
