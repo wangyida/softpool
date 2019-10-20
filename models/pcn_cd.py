@@ -13,7 +13,7 @@ class Model:
         self.channels = 11
         self.num_fine = self.grid_size ** 2 * self.num_coarse
         self.features = self.create_encoder(inputs, npts)
-        self.coarse, self.fine, self.entropy = self.create_decoder(self.features)
+        self.coarse, self.fine, self.entropy = self.create_decoder(self.features, inputs, npts)
         self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha, self.entropy)
         self.outputs1 = self.coarse
         self.outputs2 = self.fine
@@ -30,7 +30,7 @@ class Model:
             features = point_maxpool(features, npts)
         return features
 
-    def create_decoder(self, features):
+    def create_decoder(self, features, inputs, npts):
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
             coarse = mlp(features, [1024, 1024, self.num_coarse * (3+self.channels)])
             coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+self.channels])
@@ -54,6 +54,8 @@ class Model:
 
         entropy = tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(coarse[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(coarse[:,:,3:]), -1)), [1]), [0])
         entropy += tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(fine[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(fine[:,:,3:]), -1)), [1]), [0])
+        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(coarse[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(coarse[:,:,3:]), -1)), -1), [0,1])
+        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(fine[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(fine[:,:,3:]), -1)), -1), [0,1])
         return coarse, fine, entropy
 
     def create_loss(self, coarse, fine, gt, alpha, entropy):

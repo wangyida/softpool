@@ -17,7 +17,7 @@ from data_util import resample_pcd
 
 
 def test(args):
-    inputs = tf.placeholder(tf.float32, (1, None, 6))
+    inputs = tf.placeholder(tf.float32, (1, None, 3))
     npts = tf.placeholder(tf.int32, (1,))
     gt = tf.placeholder(tf.float32, (1, args.num_gt_points, 6))
     model_module = importlib.import_module('.%s' % args.model_type, 'models')
@@ -47,16 +47,20 @@ def test(args):
     total_emd = 0
     cd_per_cat = {}
     emd_per_cat = {}
-    exp = 'suncg'
     for i, model_id in enumerate(model_list):
-        if exp is 'shapenet':
+        if args.experiment == 'shapenet':
             synset_id, model_id = model_id.split('/')
             partial = read_pcd(os.path.join(args.data_dir, 'partial', synset_id, '%s.pcd' % model_id))
             complete = read_pcd(os.path.join(args.data_dir, 'complete', synset_id, '%s.pcd' % model_id))
-        elif exp is 'suncg':
+        elif args.experiment == 'suncg':
             synset_id = 'all_rooms'
-            partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial_fur', '%s.pcd' % model_id))
-            complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete_fur', '%s.pcd' % model_id))
+            partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial', '%s.pcd' % model_id))
+            complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete', '%s.pcd' % model_id))
+        rotate = True
+        if rotate:    
+            angle = np.random.rand(1)*360
+            partial = np.stack([np.cos(angle)*partial[:,0] - np.sin(angle)*partial[:,2], partial[:,1], np.sin(angle)*partial[:,0] + np.cos(angle)*partial[:,2]], axis=-1)
+            complete = np.stack([np.cos(angle)*complete[:,0] - np.sin(angle)*complete[:,2], complete[:,1], np.sin(angle)*complete[:,0] + np.cos(angle)*complete[:,2], complete[:,3], complete[:,4], complete[:,5]], axis=-1)
         complete = resample_pcd(complete, 16384)
         start = time.time()
         completion1, completion2 = sess.run([model.outputs1, model.outputs2], feed_dict={inputs: [partial], npts: [partial.shape[0]]})
@@ -82,7 +86,7 @@ def test(args):
         if args.save_pcd:
             os.makedirs(os.path.join(args.results_dir, 'input', synset_id), exist_ok=True)
             pts_coord = partial[:,0:3]
-            pts_color = matplotlib.cm.Dark2((partial[:,5]))
+            pts_color = matplotlib.cm.cool((partial[:,0]))
             save_pcd(os.path.join(args.results_dir, 'input', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
             os.makedirs(os.path.join(args.results_dir, 'output1', synset_id), exist_ok=True)
             pts_coord = completion1[0][:,0:3]
@@ -94,7 +98,10 @@ def test(args):
             save_pcd(os.path.join(args.results_dir, 'output2', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
             os.makedirs(os.path.join(args.results_dir, 'gt', synset_id), exist_ok=True)
             pts_coord = complete[:,0:3]
-            pts_color = matplotlib.cm.Set3(complete[:,3] - 0.5/11)
+            if args.experiment == 'shapenet':
+                pts_color = matplotlib.cm.cool(complete[:,0])
+            elif args.experiment == 'suncg':
+                pts_color = matplotlib.cm.Set3(complete[:,3] - 0.5/11)
             save_pcd(os.path.join(args.results_dir, 'gt', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
     csv_file.close()
     sess.close()
@@ -114,6 +121,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--list_path', default='data/shapenet/test.list')
     parser.add_argument('--data_dir', default='data/shapenet/test')
+    parser.add_argument('--experiment', default='suncg')
     parser.add_argument('--model_type', default='pcn_emd')
     parser.add_argument('--checkpoint', default='data/trained_models/pcn_emd')
     parser.add_argument('--results_dir', default='results/shapenet_pcn_emd')

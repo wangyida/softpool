@@ -48,6 +48,8 @@ class Model:
             fold2 = mlp_conv(tf.concat([point_feat, fold1], axis=2), [512, 512, 3+self.channels]) 
         entropy = tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(fold1[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(fold1[:,:,3:]), -1)), [1]), [0])
         entropy += tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(fold2[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(fold2[:,:,3:]), -1)), [1]), [0])
+        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(fold1[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(fold1[:,:,3:]), -1)), -1), [0,1])
+        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(fold2[:,:,3:]), -1) * tf.log(tf.nn.softmax(tf.round(fold2[:,:,3:]), -1)), -1), [0,1])
         return fold1, fold2, entropy
 
     def create_loss(self, fold2, gt, alpha, entropy):
