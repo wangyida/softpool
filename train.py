@@ -8,6 +8,7 @@ matplotlib.use('Agg')
 import models
 import os
 import tensorflow as tf
+import numpy as np
 import time
 from data_util import lmdb_dataflow, get_queued_data
 from termcolor import colored
@@ -22,7 +23,6 @@ def train(args):
                                         [0.01, 0.1, 0.5, 1.0], 'alpha_op')
     inputs_pl = tf.placeholder(tf.float32, (1, None, 3), 'inputs')
     npts_pl = tf.placeholder(tf.int32, (args.batch_size,), 'num_points')
-    exp = args.experiment
     if args.experiment is 'suncg':
         gt_pl = tf.placeholder(tf.float32, (args.batch_size, args.num_gt_points, 6), 'ground_truths')
     else:
@@ -85,6 +85,14 @@ def train(args):
     for step in range(init_step+1, args.max_step+1):
         epoch = step * args.batch_size // num_train + 1
         ids, inputs, npts, gt = next(train_gen)
+        rotate = True
+        if rotate:
+            angle = np.random.rand(args.batch_size)*360
+            inputs = np.stack((np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,2]), axis=-1)
+            if args.experiment is 'suncg': 
+                gt = np.stack((np.expand_dims(np.cos(angle), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle), -1)*gt[:,:,2], gt[:,:,3], gt[:,:,4], gt[:,:,5]), axis=-1)
+            elif args.experiment is 'shapenet': 
+                gt = np.stack((np.expand_dims(np.cos(angle), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle), -1)*gt[:,:,2]), axis=-1)
         start = time.time()
         feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: True}
         _, loss, summary = sess.run([train_op, model.loss, train_summary], feed_dict=feed_dict)
@@ -103,6 +111,9 @@ def train(args):
             for i in range(num_eval_steps):
                 start = time.time()
                 ids, inputs, npts, gt = next(valid_gen)
+                if args.experiment is 'shapenet' and rotate:
+                    inputs = np.stack((np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,2]), axis=-1)
+                    gt = np.stack((np.expand_dims(np.cos(angle), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle), -1)*gt[:,:,2]), axis=-1)
                 feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: False}
                 loss, _ = sess.run([model.loss, model.update], feed_dict=feed_dict)
                 total_loss += loss
@@ -144,8 +155,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_input_points', type=int, default=3000)
     parser.add_argument('--num_gt_points', type=int, default=16384)
     """
-    parser.add_argument('--num_input_points', type=int, default=1024)
-    parser.add_argument('--num_gt_points', type=int, default=4096)
+    parser.add_argument('--num_input_points', type=int, default=2048)
+    parser.add_argument('--num_gt_points', type=int, default=8192)
     parser.add_argument('--base_lr', type=float, default=0.0001)
     parser.add_argument('--lr_decay', action='store_true')
     parser.add_argument('--lr_decay_steps', type=int, default=50000)
