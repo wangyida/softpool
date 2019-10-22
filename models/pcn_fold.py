@@ -54,7 +54,7 @@ class Model:
 
     def create_loss(self, fold2, gt, alpha, entropy):
         loss = chamfer(fold2[:,:,0:3], gt[:,:,0:3])
-        loss += 0.001*(tf.reduce_sum(entropy) - 2*tf.log(1/self.channels))
+        loss += 0.1*(tf.reduce_sum(entropy) - 2*tf.log(1/self.channels))
         """
         _, retb, _, retd = tf_nndistance.nn_distance(fold2[:,:,0:3], gt[:,:,0:3])
         for i in range(np.shape(gt)[0]):

@@ -23,9 +23,9 @@ def train(args):
                                         [0.01, 0.1, 0.5, 1.0], 'alpha_op')
     inputs_pl = tf.placeholder(tf.float32, (1, None, 3), 'inputs')
     npts_pl = tf.placeholder(tf.int32, (args.batch_size,), 'num_points')
-    if args.experiment is 'suncg':
+    if args.experiment == 'suncg':
         gt_pl = tf.placeholder(tf.float32, (args.batch_size, args.num_gt_points, 6), 'ground_truths')
-    else:
+    elif args.experiment == 'shapenet':
         gt_pl = tf.placeholder(tf.float32, (args.batch_size, args.num_gt_points, 3), 'ground_truths')
 
     model_module = importlib.import_module('.%s' % args.model_type, 'models')
@@ -89,9 +89,9 @@ def train(args):
         if rotate:
             angle = np.random.rand(args.batch_size)*360
             inputs = np.stack((np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,2]), axis=-1)
-            if args.experiment is 'suncg': 
+            if args.experiment == 'suncg': 
                 gt = np.stack((np.expand_dims(np.cos(angle), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle), -1)*gt[:,:,2], gt[:,:,3], gt[:,:,4], gt[:,:,5]), axis=-1)
-            elif args.experiment is 'shapenet': 
+            elif args.experiment == 'shapenet': 
                 gt = np.stack((np.expand_dims(np.cos(angle), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle), -1)*gt[:,:,2]), axis=-1)
         start = time.time()
         feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: True}
@@ -111,7 +111,7 @@ def train(args):
             for i in range(num_eval_steps):
                 start = time.time()
                 ids, inputs, npts, gt = next(valid_gen)
-                if args.experiment is 'shapenet' and rotate:
+                if args.experiment == 'shapenet' and rotate:
                     inputs = np.stack((np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,2]), axis=-1)
                     gt = np.stack((np.expand_dims(np.cos(angle), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle), -1)*gt[:,:,2]), axis=-1)
                 feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: False}
@@ -130,10 +130,7 @@ def train(args):
                     plot_path = os.path.join(args.log_dir, 'plots',
                                             'epoch_%d_step_%d_%s.png' % (epoch, step, ids[i]))
                     pcds = [x[i] for x in all_pcds]
-                    if args.experiment is 'suncg':
-                        plot_pcd_three_views(plot_path, pcds, model.visualize_titles)
-                    else:
-                        plot_pcd_three_views(plot_path, pcds, model.visualize_titles, xlim=(-0.3, 0.3), ylim=(-0.3, 0.3), zlim=(-0.3, 0.3))
+                    plot_pcd_three_views(plot_path, pcds, model.visualize_titles)
         if step % args.steps_per_save == 0:
             saver.save(sess, os.path.join(args.log_dir, 'model'), step)
             print(colored('Model saved at %s' % args.log_dir, 'white', 'on_blue'))
@@ -156,7 +153,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_gt_points', type=int, default=16384)
     """
     parser.add_argument('--num_input_points', type=int, default=2048)
-    parser.add_argument('--num_gt_points', type=int, default=8192)
+    parser.add_argument('--num_gt_points', type=int, default=16384)
     parser.add_argument('--base_lr', type=float, default=0.0001)
     parser.add_argument('--lr_decay', action='store_true')
     parser.add_argument('--lr_decay_steps', type=int, default=50000)

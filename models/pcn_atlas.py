@@ -90,7 +90,7 @@ class Model:
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
         loss = loss_coarse + alpha * loss_fine
-        loss += 0.001*(tf.reduce_sum(entropy) - 2*tf.log(1/self.channels))
+        loss += 0.1*(tf.reduce_sum(entropy) - 2*tf.log(1/self.channels))
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 

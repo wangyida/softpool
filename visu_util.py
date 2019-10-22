@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 def plot_pcd_three_views(filename, pcds, titles, suptitle='', sizes=None, cmap='Set3', zdir='y',
-                         xlim=(-0.0, 1.0), ylim=(-0.0, 1.0), zlim=(-0.0, 0.8)):
+                         xlim=(-0.4, 0.4), ylim=(-0.4, 0.4), zlim=(-0.3, 0.3)):
     if sizes is None:
         sizes = [0.5 for i in range(len(pcds))]
     fig = plt.figure(figsize=(len(pcds) * 3, 9))
