@@ -159,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr_decay_steps', type=int, default=50000)
     parser.add_argument('--lr_decay_rate', type=float, default=0.7)
     parser.add_argument('--lr_clip', type=float, default=1e-6)
-    parser.add_argument('--max_step', type=int, default=3000000)
+    parser.add_argument('--max_step', type=int, default=10000000)
     parser.add_argument('--steps_per_print', type=int, default=100)
     parser.add_argument('--steps_per_eval', type=int, default=3000)
     parser.add_argument('--steps_per_visu', type=int, default=3000)
