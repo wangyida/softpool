@@ -33,6 +33,26 @@ def mlp_conv(inputs, layer_dims, bn=None, bn_params=None):
         scope='conv_%d' % (len(layer_dims) - 1))
     return outputs
 
+def mlp_conv_act(inputs, layer_dims, act_dim=11, bn=None, bn_params=None):
+    for i, num_out_channel in enumerate(layer_dims[:-1]):
+        inputs = tf.contrib.layers.conv1d(
+            inputs, num_out_channel,
+            kernel_size=1,
+            normalizer_fn=bn,
+            normalizer_params=bn_params,
+            scope='conv_%d' % i)
+    feature = tf.contrib.layers.conv1d(
+        inputs, layer_dims[-1],
+        kernel_size=1,
+        activation_fn=None,
+        scope='conv_%d' % (len(layer_dims) - 1))
+    act = tf.contrib.layers.conv1d(
+        inputs, act_dim,
+        kernel_size=1,
+        activation_fn=None,
+        scope='conv_act')
+    outputs = tf.concat([feature, act], axis=-1)
+    return outputs
 
 def point_maxpool(inputs, npts, keepdims=False):
     outputs = [tf.reduce_max(f, axis=1, keepdims=keepdims)

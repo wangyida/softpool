@@ -6,6 +6,7 @@ import matplotlib
 
 
 def read_pcd(filename):
+    set_verbosity_level(VerbosityLevel.Error)
     pcd = read_point_cloud(filename)
     if pcd.colors:
         return np.concatenate([np.array(pcd.points), np.array(pcd.colors)], 1)
@@ -15,6 +16,7 @@ def read_pcd(filename):
 
 
 def save_pcd(filename, points):
+    set_verbosity_level(VerbosityLevel.Error)
     pcd = PointCloud()
     pcd.points = Vector3dVector(points[:,0:3])
     pcd.colors = Vector3dVector(points[:,3:6])

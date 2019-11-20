@@ -46,15 +46,21 @@ class Model:
             fold1 = mlp_conv(fold1_reg, [512, 3+self.channels])
         with tf.variable_scope('fold2', reuse=tf.AUTO_REUSE):
             fold2 = mlp_conv(tf.concat([point_feat, fold1], axis=2), [512, 512, 3+self.channels]) 
-        entropy = tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(fold1[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(fold1[:,:,3:3+self.channels]), -1)), [1]), [0])
-        entropy += tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(fold2[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(fold2[:,:,3:3+self.channels]), -1)), [1]), [0])
-        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(fold1[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(fold1[:,:,3:3+self.channels]), -1)), -1), [0,1])
-        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(fold2[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(fold2[:,:,3:3+self.channels]), -1)), -1), [0,1])
+        p_coar_feat = tf.nn.softmax(tf.round(fold1[:,:,3:3+self.channels]), -1)
+        p_fine_feat = tf.nn.softmax(tf.round(fold2[:,:,3:3+self.channels]), -1)
+        # p_coar_feat = tf.nn.softmax(fold1[:,:,3:3+self.channels], -1)
+        # p_fine_feat = tf.nn.softmax(fold2[:,:,3:3+self.channels], -1)
+        p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
+        p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
+        # entropy = -tf.reduce_mean(tf.reduce_sum(p_coar_feat * tf.log(p_coar_feat), [2]), [0, 1])
+        # entropy -= tf.reduce_mean(tf.reduce_sum(p_fine_feat * tf.log(p_fine_feat), [2]), [0, 1])
+        entropy = (tf.log(11.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
+        entropy += (tf.log(11.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
         return fold1, fold2, entropy
 
     def create_loss(self, fold2, gt, alpha, entropy):
         loss = chamfer(fold2[:,:,0:3], gt[:,:,0:3])
-        loss += 0.1*(tf.reduce_sum(entropy) - 2*tf.log(1/self.channels))
+        loss += 0.1*entropy
         """
         _, retb, _, retd = tf_nndistance.nn_distance(fold2[:,:,0:3], gt[:,:,0:3])
         for i in range(np.shape(gt)[0]):
@@ -64,7 +70,7 @@ class Model:
             loss_sem = tf.reduce_mean(-tf.reduce_sum(
                         0.97 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.97) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
-            loss += 0.0001 * loss_sem
+            loss += 0.01 * loss_sem
         """
 
         add_train_summary('train/loss', loss)
