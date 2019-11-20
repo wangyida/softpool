@@ -6,11 +6,11 @@ from tf_util import *
 
 
 class Model:
-    def __init__(self, inputs, npts, gt, alpha):
+    def __init__(self, inputs, npts, gt, alpha, num_channel):
         self.num_coarse = 64
         self.grid_size = 16
         self.grid_scale = 0.05
-        self.channels = 11
+        self.channels = num_channel
         self.num_fine = self.grid_size ** 2 * self.num_coarse
         self.features = self.create_encoder(inputs, npts)
         self.coarse, self.fine, self.mesh, self.entropy = self.create_decoder(self.features)
@@ -18,7 +18,7 @@ class Model:
         self.outputs1 = self.coarse
         self.outputs2 = self.fine
         self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.mesh, self.fine, gt]
-        self.visualize_titles = ['input', 'coarse output', 'fine output', 'ground truth']
+        self.visualize_titles = ['input', 'coarse output', 'meshes', 'fine output', 'ground truth']
 
     def create_encoder(self, inputs, npts):
         with tf.variable_scope('encoder_0', reuse=tf.AUTO_REUSE):
@@ -53,9 +53,11 @@ class Model:
             center = tf.reshape(center, [-1, self.num_fine, 3+11])
 
             fine = mlp_conv_act(feat, [512, 512, 3]) # + center
+            """
             fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
+            """
             
             mesh = fine * [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             mesh += center

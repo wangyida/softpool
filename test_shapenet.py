@@ -21,7 +21,7 @@ def test(args):
     npts = tf.placeholder(tf.int32, (1,))
     gt = tf.placeholder(tf.float32, (1, args.num_gt_points, 6))
     model_module = importlib.import_module('.%s' % args.model_type, 'models')
-    model = model_module.Model(inputs, npts, gt, tf.constant(1.0))
+    model = model_module.Model(inputs, npts, gt, tf.constant(1.0), args.num_channel)
 
     output = tf.placeholder(tf.float32, (1, args.num_gt_points, 14))
     cd_op = chamfer(output[:,:,0:3], gt[:,:,0:3])
