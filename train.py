@@ -85,7 +85,7 @@ def train(args):
     for step in range(init_step+1, args.max_step+1):
         epoch = step * args.batch_size // num_train + 1
         ids, inputs, npts, gt = next(train_gen)
-        rotate = True
+        rotate = False
         if rotate:
             angle = np.random.rand(args.batch_size)*360
             inputs = np.stack((np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,2]), axis=-1)
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir', default='log/pcn_emd')
     parser.add_argument('--model_type', default='pcn_emd')
     parser.add_argument('--restore', action='store_true')
-    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=4)
     """
     parser.add_argument('--num_input_points', type=int, default=3000)
     parser.add_argument('--num_gt_points', type=int, default=16384)

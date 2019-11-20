@@ -47,6 +47,7 @@ def test(args):
     total_emd = 0
     cd_per_cat = {}
     emd_per_cat = {}
+    np.random.seed(1)
     for i, model_id in enumerate(model_list):
         if args.experiment == 'shapenet':
             synset_id, model_id = model_id.split('/')
@@ -56,14 +57,18 @@ def test(args):
             synset_id = 'all_rooms'
             partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial_fur', '%s.pcd' % model_id))
             complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete_fur', '%s.pcd' % model_id))
-        rotate = True
+        rotate = False
         if rotate:    
             angle = np.random.rand(1)*360
             partial = np.stack([np.cos(angle)*partial[:,0] - np.sin(angle)*partial[:,2], partial[:,1], np.sin(angle)*partial[:,0] + np.cos(angle)*partial[:,2]], axis=-1)
             complete = np.stack([np.cos(angle)*complete[:,0] - np.sin(angle)*complete[:,2], complete[:,1], np.sin(angle)*complete[:,0] + np.cos(angle)*complete[:,2], complete[:,3], complete[:,4], complete[:,5]], axis=-1)
+        partial = partial[:,:3]
         complete = resample_pcd(complete, 16384)
         start = time.time()
-        completion1, completion2 = sess.run([model.outputs1, model.outputs2], feed_dict={inputs: [partial], npts: [partial.shape[0]]})
+        completion1, completion2, mesh_out = sess.run([model.outputs1, model.outputs2, model.mesh], feed_dict={inputs: [partial], npts: [partial.shape[0]]})
+        completion1[0][:, (3+args.num_channel):] *= 0
+        completion2[0][:, (3+args.num_channel):] *= 0
+        mesh_out[0][:, (3+args.num_channel):] *= 0
         total_time += time.time() - start
         cd, emd = sess.run([cd_op, emd_op], feed_dict={output: completion2, gt: [complete]})
         total_cd += cd
@@ -80,42 +85,45 @@ def test(args):
         if i % args.plot_freq == 0:
             os.makedirs(os.path.join(args.results_dir, 'plots', synset_id), exist_ok=True)
             plot_path = os.path.join(args.results_dir, 'plots', synset_id, '%s.png' % model_id)
-            plot_pcd_three_views(plot_path, [partial, completion1[0], completion2[0], complete],
-                                 ['input', 'output1', 'output2', 'ground truth'],
+            plot_pcd_three_views(plot_path, [partial, completion1[0], completion2[0], mesh_out[0], complete],
+                                 ['input', 'coarse', 'fine', 'mesh', 'ground truth'],
                                  'CD %.4f  EMD %.4f' % (cd, emd),
-                                 [5, 0.5, 0.5, 0.5])
+                                 [5, 0.5, 0.5, 0.5, 0.5])
         if args.save_pcd:
             os.makedirs(os.path.join(args.results_dir, 'input', synset_id), exist_ok=True)
             pts_coord = partial[:,0:3]
-            pts_color = matplotlib.cm.cool((partial[:,0]))
+            pts_color = matplotlib.cm.cool((partial[:,1]))
             save_pcd(os.path.join(args.results_dir, 'input', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
             os.makedirs(os.path.join(args.results_dir, 'output1', synset_id), exist_ok=True)
-            pts_coord = completion1[0][:,0:3]
-            pts_color = matplotlib.cm.Set3((np.argmax(completion1[0][:, 3:], -1) + 1)/11 - 0.5/11)
+            pts_coord = mesh_out[0][:,0:3]
+            pts_color = matplotlib.cm.Paired((np.argmax(mesh_out[0][:, 3:], -1) + 1)/11 - 0.5/11)
             save_pcd(os.path.join(args.results_dir, 'output1', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
             os.makedirs(os.path.join(args.results_dir, 'output2', synset_id), exist_ok=True)
             pts_coord = completion2[0][:,0:3]
-            pts_color = matplotlib.cm.Set3((np.argmax(completion2[0][:, 3:], -1) + 1)/11 - 0.5/11)
+            pts_color = matplotlib.cm.Paired((np.argmax(completion2[0][:, 3:], -1) + 1)/11 - 0.5/11)
             save_pcd(os.path.join(args.results_dir, 'output2', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
             os.makedirs(os.path.join(args.results_dir, 'gt', synset_id), exist_ok=True)
             pts_coord = complete[:,0:3]
             if args.experiment == 'shapenet':
-                pts_color = matplotlib.cm.cool(complete[:,0])
+                pts_color = matplotlib.cm.cool(complete[:,1])
             elif args.experiment == 'suncg':
-                pts_color = matplotlib.cm.Set3(complete[:,3] - 0.5/11)
+                pts_color = matplotlib.cm.Paired(complete[:,3] - 0.5/11)
             save_pcd(os.path.join(args.results_dir, 'gt', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
-    csv_file.close()
     sess.close()
 
     print('Average time: %f' % (total_time / len(model_list)))
     print('Average Chamfer distance: %f' % (total_cd / len(model_list)))
     print('Average Earth mover distance: %f' % (total_emd / len(model_list)))
+    writer.writerow([total_time / len(model_list), total_cd / len(model_list), total_emd / len(model_list)])
     print('Chamfer distance per category')
     for synset_id in cd_per_cat.keys():
         print(synset_id, '%f' % np.mean(cd_per_cat[synset_id]))
+        writer.writerow([synset_id, np.mean(cd_per_cat[synset_id])])
     print('Earth mover distance per category')
     for synset_id in emd_per_cat.keys():
         print(synset_id, '%f' % np.mean(emd_per_cat[synset_id]))
+        writer.writerow([synset_id, np.mean(emd_per_cat[synset_id])])
+    csv_file.close()
 
 
 if __name__ == '__main__':
@@ -129,6 +137,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_gt_points', type=int, default=16384)
     parser.add_argument('--plot_freq', type=int, default=100)
     parser.add_argument('--save_pcd', action='store_true')
+    parser.add_argument('--num_channel', type=int, default=11)
     args = parser.parse_args()
 
     test(args)

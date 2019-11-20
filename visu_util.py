@@ -5,20 +5,20 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def plot_pcd_three_views(filename, pcds, titles, suptitle='', sizes=None, cmap='Set3', zdir='y',
+def plot_pcd_three_views(filename, pcds, titles, suptitle='', sizes=None, cmap='Paired', zdir='y',
                          xlim=(-0.4, 0.4), ylim=(-0.4, 0.4), zlim=(-0.3, 0.3)):
     if sizes is None:
         sizes = [0.5 for i in range(len(pcds))]
-    fig = plt.figure(figsize=(len(pcds) * 3, 9))
+    fig = plt.figure(figsize=(len(pcds) * 3, 12))
     for i in range(3):
         elev = 30
         azim = -45 + 90 * i
         for ij, (pcd, size) in enumerate(zip(pcds, sizes)):
             if np.shape(pcd)[1] == 3:
-                color = pcd[:, 0]
+                color = pcd[:, 1]
             else:
-                if ij == 0 or ij == 3:
-                    color = pcd[:, 3] - 0.5/11
+                if ij == 0 or ij == 4:
+                    color = pcd[:, 1] - 0.5/11
                 else:
                     color = (np.argmax(pcd[:, 3:], -1) + 1)/11 - 0.5/11
             ax = fig.add_subplot(3, len(pcds), i * len(pcds) + ij + 1, projection='3d')

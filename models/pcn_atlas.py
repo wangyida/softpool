@@ -7,8 +7,8 @@ from tf_util import *
 
 class Model:
     def __init__(self, inputs, npts, gt, alpha):
-        self.num_coarse = 64
-        self.grid_size = 16
+        self.num_coarse = 16
+        self.grid_size = 32
         self.grid_scale = 0.05
         self.channels = 11
         self.num_fine = self.grid_size ** 2 * self.num_coarse
@@ -50,12 +50,22 @@ class Model:
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+self.channels])
 
-            fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
+            fine = mlp_conv(feat, [512, 512, 3+self.channels]) # + center
+            # fine += (3*center*[1,1,1,0,0,0,0,0,0,0,0,0,0,0])
+            fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
+            fine += center
+            fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
 
-        entropy = tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)), [1]), [0])
-        entropy += tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)), [1]), [0])
-        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)), -1), [0,1])
-        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)), -1), [0,1])
+        p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels-0]), -1)
+        p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels-0]), -1)
+        # p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels-0], -1)
+        # p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels-0], -1)
+        p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
+        p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
+        # entropy = -tf.reduce_mean(tf.reduce_sum(p_coar_feat * tf.log(p_coar_feat), [2]), [0, 1])
+        # entropy -= tf.reduce_mean(tf.reduce_sum(p_fine_feat * tf.log(p_fine_feat), [2]), [0, 1])
+        entropy = tf.nn.relu(tf.log(11.0-0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
+        entropy += tf.nn.relu(tf.log(11.0-0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
         return coarse, fine, entropy
 
     def create_loss(self, coarse, fine, gt, alpha, entropy):
@@ -69,7 +79,7 @@ class Model:
             loss_sem_coarse = tf.reduce_mean(-tf.reduce_sum(
                         0.97 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.97) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
-            loss_coarse += 0.0001 * loss_sem_coarse
+            loss_coarse += 0.01 * loss_sem_coarse
         """
         add_train_summary('train/coarse_loss', loss_coarse)
         update_coarse = add_valid_summary('valid/coarse_loss', loss_coarse)
@@ -84,13 +94,14 @@ class Model:
             loss_sem_fine = tf.reduce_mean(-tf.reduce_sum(
                         0.97 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.97) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
-            loss_fine += 0.0001 * loss_sem_fine
+            loss_fine += 0.01 * loss_sem_fine
         """
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
         loss = loss_coarse + alpha * loss_fine
-        loss += 0.1*(tf.reduce_sum(entropy) - 2*tf.log(1/self.channels))
+        # loss = loss_fine
+        loss += 0.1*entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 

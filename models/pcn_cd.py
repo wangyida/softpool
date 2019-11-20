@@ -52,10 +52,14 @@ class Model:
 
             fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
 
-        entropy = tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)), [1]), [0])
-        entropy += tf.reduce_mean(tf.reduce_mean(tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)), [1]), [0])
-        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)), -1), [0,1])
-        entropy -= tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1) * tf.log(tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)), -1), [0,1])
+        p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)
+        p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)
+        p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
+        p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
+        entropy = -tf.reduce_mean(tf.reduce_sum(p_coar_feat * tf.log(p_coar_feat), [2]), [0, 1])
+        entropy -= tf.reduce_mean(tf.reduce_sum(p_fine_feat * tf.log(p_fine_feat), [2]), [0, 1])
+        entropy += (2.7 + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
+        entropy += (2.7 + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
         return coarse, fine, entropy
 
     def create_loss(self, coarse, fine, gt, alpha, entropy):
@@ -90,7 +94,7 @@ class Model:
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
         loss = loss_coarse + alpha * loss_fine 
-        loss += 0.1*(tf.reduce_sum(entropy) - 2*tf.log(1/self.channels))
+        loss += 0.1*entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 
