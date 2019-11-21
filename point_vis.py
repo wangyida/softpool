@@ -1,10 +1,12 @@
 # examples/Python/Basic/pointcloud.py
 
+import os
 import argparse
 import csv
 import trimesh
 import numpy as np
 import open3d as o3d
+import matplotlib.pyplot as plt
 def display_inlier_outlier(cloud, ind):
     inlier_cloud = cloud.select_down_sample(ind)
     outlier_cloud = cloud.select_down_sample(ind, invert=True)
@@ -13,6 +15,17 @@ def display_inlier_outlier(cloud, ind):
     outlier_cloud.paint_uniform_color([1, 0, 0])
     inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
     o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
+def custom_draw_geometry_with_rotation(pcd):
+
+    def rotate_view(vis):
+        ctr = vis.get_view_control()
+        ctr.rotate(10.0, 0.0)
+        return False
+
+    o3d.visualization.draw_geometries_with_animation_callback([pcd],
+                                                              rotate_view)
+
 
 if __name__ == "__main__":
 
@@ -79,6 +92,7 @@ if __name__ == "__main__":
         pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(
             radius=0.05, max_nn=64))
         o3d.visualization.draw_geometries([pcd])
+        custom_draw_geometry_with_rotation(pcd)
 
         print("Statistical oulier removal")
         cl, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=2.0)
