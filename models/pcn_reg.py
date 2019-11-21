@@ -60,7 +60,7 @@ class Model:
             """
             
             mesh = fine * [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
-            mesh += center
+            mesh += (2*center)
 
         p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels-0]), -1)
         p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels-0]), -1)
@@ -105,8 +105,8 @@ class Model:
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        loss = loss_coarse + alpha * loss_fine
-        # loss = loss_fine
+        # loss = loss_coarse + alpha * loss_fine
+        loss = loss_fine
         loss += 0.1*entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
