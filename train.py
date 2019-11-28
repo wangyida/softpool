@@ -29,7 +29,7 @@ def train(args):
         gt_pl = tf.placeholder(tf.float32, (args.batch_size, args.num_gt_points, 3), 'ground_truths')
 
     model_module = importlib.import_module('.%s' % args.model_type, 'models')
-    model = model_module.Model(inputs_pl, npts_pl, gt_pl, alpha)
+    model = model_module.Model(inputs_pl, npts_pl, gt_pl, alpha, args.num_channel)
     add_train_summary('alpha', alpha)
 
     if args.lr_decay:
@@ -165,6 +165,7 @@ if __name__ == '__main__':
     parser.add_argument('--steps_per_visu', type=int, default=3000)
     parser.add_argument('--steps_per_save', type=int, default=10000)
     parser.add_argument('--visu_freq', type=int, default=5)
+    parser.add_argument('--num_channel', type=int, default=11)
     args = parser.parse_args()
 
     train(args)

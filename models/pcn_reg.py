@@ -6,11 +6,11 @@ from tf_util import *
 
 
 class Model:
-    def __init__(self, inputs, npts, gt, alpha):
+    def __init__(self, inputs, npts, gt, alpha, num_channel):
         self.num_coarse = 64
         self.grid_size = 16
         self.grid_scale = 0.05
-        self.channels = 11
+        self.channels = num_channel
         self.num_fine = self.grid_size ** 2 * self.num_coarse
         self.features = self.create_encoder(inputs, npts)
         self.coarse, self.fine, self.mesh, self.entropy = self.create_decoder(self.features)
@@ -18,7 +18,7 @@ class Model:
         self.outputs1 = self.coarse
         self.outputs2 = self.fine
         self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.mesh, self.fine, gt]
-        self.visualize_titles = ['input', 'coarse output', 'fine output', 'ground truth']
+        self.visualize_titles = ['input', 'coarse output', 'meshes', 'fine output', 'ground truth']
 
     def create_encoder(self, inputs, npts):
         with tf.variable_scope('encoder_0', reuse=tf.AUTO_REUSE):
@@ -58,7 +58,7 @@ class Model:
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
             
             mesh = fine * [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
-            mesh += center
+            mesh += (center)
 
         p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels-0]), -1)
         p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels-0]), -1)
@@ -103,8 +103,8 @@ class Model:
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        loss = loss_coarse + alpha * loss_fine
-        # loss = loss_fine
+        # loss = loss_coarse + alpha * loss_fine
+        loss = loss_fine
         loss += 0.1*entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
