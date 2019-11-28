@@ -20,12 +20,66 @@ def custom_draw_geometry_with_rotation(pcd):
 
     def rotate_view(vis):
         ctr = vis.get_view_control()
+        # param = o3d.io.read_pinhole_camera_trajectory("/Users/yidawang/Documents/gitfarm/sem-pts-com/camera_trajectory.json").parameters[0]
+        # ctr.convert_from_pinhole_camera_parameters(param)
+        # ctr.translate(0.5,0.5)
+        # ctr.scale(2)
         ctr.rotate(10.0, 0.0)
         return False
 
     o3d.visualization.draw_geometries_with_animation_callback([pcd],
                                                               rotate_view)
 
+def custom_draw_geometry_with_camera_trajectory(pcd):
+    custom_draw_geometry_with_camera_trajectory.index = -1
+    custom_draw_geometry_with_camera_trajectory.trajectory =\
+            o3d.io.read_pinhole_camera_trajectory(
+                    "/Users/yidawang/Documents/gitfarm/sem-pts-com/camera_trajectory.json")
+    custom_draw_geometry_with_camera_trajectory.vis = o3d.visualization.Visualizer(
+    )
+    if not os.path.exists("../../TestData/image/"):
+        os.makedirs("../../TestData/image/")
+    if not os.path.exists("../../TestData/depth/"):
+        os.makedirs("../../TestData/depth/")
+
+    def move_forward(vis):
+        # This function is called within the o3d.visualization.Visualizer::run() loop
+        # The run loop calls the function, then re-render
+        # So the sequence in this function is to:
+        # 1. Capture frame
+        # 2. index++, check ending criteria
+        # 3. Set camera
+        # 4. (Re-render)
+        ctr = vis.get_view_control()
+        glb = custom_draw_geometry_with_camera_trajectory
+        if glb.index >= 0:
+            print("Capture image {:05d}".format(glb.index))
+            depth = vis.capture_depth_float_buffer(False)
+            image = vis.capture_screen_float_buffer(False)
+            """
+            plt.imsave("../../TestData/depth/{:05d}.png".format(glb.index),\
+                    np.asarray(depth), dpi = 1)
+            plt.imsave("../../TestData/image/{:05d}.png".format(glb.index),\
+                    np.asarray(image), dpi = 1)
+            """
+            #vis.capture_depth_image("depth/{:05d}.png".format(glb.index), False)
+            #vis.capture_screen_image("image/{:05d}.png".format(glb.index), False)
+        glb.index = glb.index + 1
+        if glb.index < len(glb.trajectory.parameters):
+            ctr.convert_from_pinhole_camera_parameters(
+                glb.trajectory.parameters[glb.index])
+        else:
+            custom_draw_geometry_with_camera_trajectory.vis.\
+                    register_animation_callback(None)
+        return False
+
+    vis = custom_draw_geometry_with_camera_trajectory.vis
+    vis.create_window()
+    vis.add_geometry(pcd)
+    vis.get_render_option().load_from_json("/Users/yidawang/Documents/gitfarm/sem-pts-com/renderoption.json")
+    vis.register_animation_callback(move_forward)
+    vis.run()
+    vis.destroy_window()
 
 if __name__ == "__main__":
 
@@ -93,21 +147,22 @@ if __name__ == "__main__":
             radius=0.05, max_nn=64))
         o3d.visualization.draw_geometries([pcd])
         custom_draw_geometry_with_rotation(pcd)
+        # custom_draw_geometry_with_camera_trajectory(pcd)
 
         print("Statistical oulier removal")
-        cl, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=2.0)
+        cl, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=4.0)
         o3d.visualization.draw_geometries([cl])
-        display_inlier_outlier(pcd, ind)
-
-        """
-        print("Radius oulier removal")
-        cl, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=0.5)
-        o3d.visualization.draw_geometries([cl])
-        display_inlier_outlier(pcd, ind)
+        # display_inlier_outlier(pcd, ind)
 
         print("Downsample the point cloud with a voxel of 0.02")
         pcd = pcd.voxel_down_sample(voxel_size=0.02)
         o3d.visualization.draw_geometries([pcd])
+        """
+
+        print("Radius oulier removal")
+        cl, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=0.5)
+        o3d.visualization.draw_geometries([cl])
+        display_inlier_outlier(pcd, ind)
 
         pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(
             radius=0.05, max_nn=64))
@@ -127,11 +182,27 @@ if __name__ == "__main__":
             data = list(reader)
             for i in range(results.numbers):
                 pcd = o3d.io.read_point_cloud(data[i][0])
+                if i == 1:
+                    pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=2.0)
+                npy_points = np.asarray(pcd.points)
+                npy_points[:, 1] += (i*1.002)
+                npy_colors = np.asarray(pcd.colors)
+                points_all = np.concatenate((points_all, npy_points), 0)
+                colors_all = np.concatenate((colors_all, npy_colors), 0)
+        """
+        with open(results.files_list, "r") as f:
+            points_all = np.zeros((1,3))
+            colors_all = np.zeros((1,3)) 
+            reader = csv.reader(f)
+            data = list(reader)
+            for i in range(results.numbers):
+                pcd = o3d.io.read_point_cloud(data[i][0])
                 npy_points = np.asarray(pcd.points)
                 npy_points[:, 0] += (i*1.1002)
                 npy_colors = np.asarray(pcd.colors)
                 points_all = np.concatenate((points_all, npy_points), 0)
                 colors_all = np.concatenate((colors_all, npy_colors), 0)
+        """
         if results.files_list2 != '':
             with open(results.files_list2, "r") as f:
                 points_all2 = np.zeros((1,3))
@@ -231,6 +302,7 @@ if __name__ == "__main__":
             radius=0.1, max_nn=32))
 
         o3d.visualization.draw_geometries([pcd])
+        custom_draw_geometry_with_rotation(pcd)
 
         print("Statistical oulier removal")
         cl, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=2.0)
