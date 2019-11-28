@@ -56,8 +56,8 @@ class Model:
         p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
         # entropy = -tf.reduce_mean(tf.reduce_sum(p_coar_feat * tf.log(p_coar_feat), [2]), [0, 1])
         # entropy -= tf.reduce_mean(tf.reduce_sum(p_fine_feat * tf.log(p_fine_feat), [2]), [0, 1])
-        entropy = (tf.log(11.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
-        entropy += (tf.log(11.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
+        entropy = (self.channels*1.0 + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
+        entropy += (self.channels*1.0 + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
         return fold1, fold2, mesh, entropy
 
     def create_loss(self, fold2, gt, alpha, entropy):
