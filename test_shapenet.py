@@ -10,6 +10,7 @@ import numpy as np
 import os
 import tensorflow as tf
 import time
+from open3d import *
 from io_util import read_pcd, save_pcd
 from tf_util import chamfer, earth_mover
 from visu_util import plot_pcd_three_views
@@ -92,23 +93,36 @@ def test(args):
         if args.save_pcd:
             os.makedirs(os.path.join(args.results_dir, 'input', synset_id), exist_ok=True)
             pts_coord = partial[:,0:3]
-            pts_color = matplotlib.cm.cool((partial[:,1]))
-            save_pcd(os.path.join(args.results_dir, 'input', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
+            pts_color = matplotlib.cm.cool((partial[:,1]))[:,0:3]
+            # save_pcd(os.path.join(args.results_dir, 'input', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color), -1))
+            pcd = PointCloud()
+            pcd.points = Vector3dVector(pts_coord)
+            pcd.colors = Vector3dVector(pts_color)
+            write_point_cloud(os.path.join(args.results_dir, 'input', synset_id, '%s.ply' % model_id), pcd, write_ascii=True)
             os.makedirs(os.path.join(args.results_dir, 'output1', synset_id), exist_ok=True)
             pts_coord = mesh_out[0][:,0:3]
-            pts_color = matplotlib.cm.Paired((np.argmax(mesh_out[0][:, 3:], -1) + 1)/11 - 0.5/11)
-            save_pcd(os.path.join(args.results_dir, 'output1', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
+            pts_color = matplotlib.cm.Paired((np.argmax(mesh_out[0][:, 3:], -1) + 1)/11 - 0.5/11)[:,0:3]
+            # save_pcd(os.path.join(args.results_dir, 'output1', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color), -1))
+            pcd.points = Vector3dVector(pts_coord)
+            pcd.colors = Vector3dVector(pts_color)
+            write_point_cloud(os.path.join(args.results_dir, 'output1', synset_id, '%s.ply' % model_id), pcd, write_ascii=True)
             os.makedirs(os.path.join(args.results_dir, 'output2', synset_id), exist_ok=True)
             pts_coord = completion2[0][:,0:3]
-            pts_color = matplotlib.cm.Paired((np.argmax(completion2[0][:, 3:], -1) + 1)/11 - 0.5/11)
-            save_pcd(os.path.join(args.results_dir, 'output2', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
+            pts_color = matplotlib.cm.Paired((np.argmax(completion2[0][:, 3:], -1) + 1)/11 - 0.5/11)[:,0:3]
+            # save_pcd(os.path.join(args.results_dir, 'output2', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color), -1))
+            pcd.points = Vector3dVector(pts_coord)
+            pcd.colors = Vector3dVector(pts_color)
+            write_point_cloud(os.path.join(args.results_dir, 'output2', synset_id, '%s.ply' % model_id), pcd, write_ascii=True)
             os.makedirs(os.path.join(args.results_dir, 'gt', synset_id), exist_ok=True)
             pts_coord = complete[:,0:3]
             if args.experiment == 'shapenet':
-                pts_color = matplotlib.cm.cool(complete[:,1])
+                pts_color = matplotlib.cm.cool(complete[:,1])[:,0:3]
             elif args.experiment == 'suncg':
-                pts_color = matplotlib.cm.Paired(complete[:,3] - 0.5/11)
-            save_pcd(os.path.join(args.results_dir, 'gt', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color[:,0:3]), -1))
+                pts_color = matplotlib.cm.Paired(complete[:,3] - 0.5/11)[:,0:3]
+            # save_pcd(os.path.join(args.results_dir, 'gt', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color), -1))
+            pcd.points = Vector3dVector(pts_coord)
+            pcd.colors = Vector3dVector(pts_color)
+            write_point_cloud(os.path.join(args.results_dir, 'gt', synset_id, '%s.ply' % model_id), pcd, write_ascii=True)
     sess.close()
 
     print('Average time: %f' % (total_time / len(model_list)))
