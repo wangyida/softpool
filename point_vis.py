@@ -7,6 +7,27 @@ import trimesh
 import numpy as np
 import open3d as o3d
 import matplotlib.pyplot as plt
+
+
+def save_view_point(pcd, filename):
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    vis.add_geometry(pcd)
+    vis.run()  # user changes the view and press "q" to terminate
+    param = vis.get_view_control().convert_to_pinhole_camera_parameters()
+    o3d.io.write_pinhole_camera_parameters(filename, param)
+    vis.destroy_window()
+
+def load_view_point(pcd, filename):
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    ctr = vis.get_view_control()
+    param = o3d.io.read_pinhole_camera_parameters(filename)
+    vis.add_geometry(pcd)
+    ctr.convert_from_pinhole_camera_parameters(param)
+    vis.run()
+    vis.destroy_window()
+
 def display_inlier_outlier(cloud, ind):
     inlier_cloud = cloud.select_down_sample(ind)
     outlier_cloud = cloud.select_down_sample(ind, invert=True)
@@ -136,28 +157,26 @@ if __name__ == "__main__":
     parser.print_help()
     results = parser.parse_args()
     if results.file_path != '':
-        print("Load a ply point cloud, print it, and render it")
         pcd = o3d.io.read_point_cloud(results.file_path)
-        print(pcd)
-        print(np.asarray(pcd.points))
-        o3d.visualization.draw_geometries([pcd])
-
-        print("Recompute the normal of the downsampled point cloud")
+        print("Load a ply point cloud, print it, and render it")
         pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(
             radius=0.05, max_nn=64))
-        o3d.visualization.draw_geometries([pcd])
-        custom_draw_geometry_with_rotation(pcd)
-        # custom_draw_geometry_with_camera_trajectory(pcd)
-
+        cam_view = "/Users/yidawang/Documents/gitfarm/sem-pts-com/qualitative_lists/render_plane.json"
+        print("Recompute the normal of the downsampled point cloud")
+        # save_view_point(pcd, cam_view)
+        load_view_point(pcd, cam_view)
         print("Statistical oulier removal")
         cl, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=4.0)
-        o3d.visualization.draw_geometries([cl])
+        load_view_point(cl, cam_view)
         # display_inlier_outlier(pcd, ind)
 
+        custom_draw_geometry_with_rotation(pcd)
+
+
+        """
         print("Downsample the point cloud with a voxel of 0.02")
         pcd = pcd.voxel_down_sample(voxel_size=0.02)
         o3d.visualization.draw_geometries([pcd])
-        """
 
         print("Radius oulier removal")
         cl, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=0.5)
