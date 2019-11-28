@@ -51,24 +51,26 @@ class Model:
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+11])
 
-            fine = mlp_conv(feat, [512, 512, 3+11]) # + center
+            fine = mlp_conv(feat, [512, 512, 3+11]) + center
+            """
             fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
+            """
             
             mesh = fine * [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             mesh += center
 
-        p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels-0]), -1)
-        p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels-0]), -1)
-        # p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels-0], -1)
-        # p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels-0], -1)
+        # p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)
+        # p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)
+        p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels], -1)
+        p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
         p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
         p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
         # entropy = -tf.reduce_mean(tf.reduce_sum(p_coar_feat * tf.log(p_coar_feat), [2]), [0, 1])
         # entropy -= tf.reduce_mean(tf.reduce_sum(p_fine_feat * tf.log(p_fine_feat), [2]), [0, 1])
-        entropy = tf.nn.relu(tf.log(11.0-0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
-        entropy += tf.nn.relu(tf.log(11.0-0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
+        entropy = tf.nn.relu(self.channels*1.0 + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
+        entropy += tf.nn.relu(self.channels*1.0 + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
         return coarse, fine, mesh, entropy
 
     def create_loss(self, coarse, fine, gt, alpha, entropy):
