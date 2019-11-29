@@ -64,12 +64,14 @@ class Model:
         # p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)
         p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels], -1)
         p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
+        p_center_feat = tf.nn.softmax(center[:,:,3:3+self.channels], -1)
         p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
         p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
         # entropy = -tf.reduce_mean(tf.reduce_sum(p_coar_feat * tf.log(p_coar_feat), [2]), [0, 1])
         # entropy -= tf.reduce_mean(tf.reduce_sum(p_fine_feat * tf.log(p_fine_feat), [2]), [0, 1])
         entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
         entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
+        entropy += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_center_feat, logits=p_fine_feat))
         return coarse, fine, mesh, entropy
 
     def create_loss(self, coarse, fine, gt, alpha, entropy):
