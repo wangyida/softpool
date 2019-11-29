@@ -51,12 +51,10 @@ class Model:
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+11])
 
-            fine = mlp_conv(feat, [512, 512, 3+11]) + center
-            """
+            fine = mlp_conv(feat, [512, 512, 3+11]) # + center
             fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
-            """
             
             mesh = fine * [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             mesh += center
