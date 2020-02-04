@@ -51,7 +51,7 @@ def mlp_conv_act(inputs, layer_dims, act_dim=11, bn=None, bn_params=None):
         kernel_size=1,
         activation_fn=tf.math.sigmoid,
         scope='conv_act')
-    outputs = tf.concat([feature, act], axis=-1)
+    outputs = tf.concat([feature, tf.nn.softmax(act)], axis=-1)
     return outputs
 
 def point_maxpool(inputs, npts, keepdims=False):

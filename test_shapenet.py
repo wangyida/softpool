@@ -56,8 +56,8 @@ def test(args):
             complete = read_pcd(os.path.join(args.data_dir, 'complete', synset_id, '%s.pcd' % model_id))
         elif args.experiment == 'suncg':
             synset_id = 'all_rooms'
-            partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial_fur', '%s.pcd' % model_id))
-            complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete_fur', '%s.pcd' % model_id))
+            partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial', '%s.pcd' % model_id))
+            complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete', '%s.pcd' % model_id))
         rotate = False
         if rotate:    
             angle = np.random.rand(1)*360

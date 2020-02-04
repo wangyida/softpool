@@ -6,19 +6,19 @@ from tf_util import *
 
 
 class Model:
-    def __init__(self, inputs, npts, gt, alpha):
-        self.num_coarse = 1024
-        self.grid_size = 4
+    def __init__(self, inputs, npts, gt, alpha, num_channel):
+        self.num_coarse = 64
+        self.grid_size = 16
         self.grid_scale = 0.05
-        self.channels = 11
+        self.channels = num_channel
         self.num_fine = self.grid_size ** 2 * self.num_coarse
         self.features = self.create_encoder(inputs, npts)
-        self.coarse, self.fine, self.entropy = self.create_decoder(self.features, inputs, npts)
-        self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha, self.entropy)
+        self.coarse, self.fine, self.mesh, self.entropy = self.create_decoder(self.features)
+        self.loss, self.update = self.create_loss(self.fine, self.mesh, gt, alpha, self.entropy)
         self.outputs1 = self.coarse
         self.outputs2 = self.fine
-        self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.fine, gt]
-        self.visualize_titles = ['input', 'coarse output', 'fine output', 'ground truth']
+        self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.mesh, self.fine, gt]
+        self.visualize_titles = ['input', 'coarse output', 'meshes', 'fine output', 'ground truth']
 
     def create_encoder(self, inputs, npts):
         with tf.variable_scope('encoder_0', reuse=tf.AUTO_REUSE):
@@ -30,40 +30,52 @@ class Model:
             features = point_maxpool(features, npts)
         return features
 
-    def create_decoder(self, features, inputs, npts):
+    def create_decoder(self, features):
+        mask = tf.dtypes.cast(tf.sequence_mask([3+self.channels], 14), tf.float32)
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            coarse = mlp(features, [1024, 1024, self.num_coarse * (3+self.channels)])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+self.channels])
+            coarse = mlp(features, [1024, 1024, self.num_coarse * (3+11)])
+            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+11]) 
+            coarse *= mask
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
-            grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
+            grid = tf.meshgrid(tf.linspace(-0.05, 0.05, self.grid_size), tf.linspace(-0.05, 0.05, self.grid_size))
             grid = tf.expand_dims(tf.reshape(tf.stack(grid, axis=2), [-1, 2]), 0)
             grid_feat = tf.tile(grid, [features.shape[0], self.num_coarse, 1])
 
             point_feat = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
-            point_feat = tf.reshape(point_feat, [-1, self.num_fine, 3+self.channels])
+            point_feat = tf.reshape(point_feat, [-1, self.num_fine, 3+11])
 
             global_feat = tf.tile(tf.expand_dims(features, 1), [1, self.num_fine, 1])
 
             feat = tf.concat([grid_feat, point_feat, global_feat], axis=2)
-
+    
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
-            center = tf.reshape(center, [-1, self.num_fine, 3+self.channels])
+            center = tf.reshape(center, [-1, self.num_fine, 3+11])
 
-            fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
+            fine = mlp_conv_act(feat, [512, 512, 3]) # + center
+            """
+            fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
+            fine += center
+            fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
+            """
+            
+            deconst = fine + center
 
-        p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)
-        p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)
+        with tf.variable_scope('deconst', reuse=tf.AUTO_REUSE):
+            feat2 = tf.concat([deconst, center], axis=2)
+            mesh = mlp_conv_act(deconst, [64, 64, 3])
+
+        p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels], -1)
+        p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
+        p_center_feat = tf.nn.softmax(center[:,:,3:3+self.channels], -1)
         p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
         p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
-        entropy = -tf.reduce_mean(tf.reduce_sum(p_coar_feat * tf.log(p_coar_feat), [2]), [0, 1])
-        entropy -= tf.reduce_mean(tf.reduce_sum(p_fine_feat * tf.log(p_fine_feat), [2]), [0, 1])
-        entropy += (2.7 + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
-        entropy += (2.7 + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
-        return coarse, fine, entropy
+        entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
+        entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
+        return coarse, fine, mesh, entropy
 
-    def create_loss(self, coarse, fine, gt, alpha, entropy):
-        loss_coarse = chamfer(coarse[:,:,0:3], gt[:,:,0:3])
+    def create_loss(self, fine, mesh, gt, alpha, entropy):
+        loss_coarse = chamfer(mesh[:,:,0:3], gt[:,:,0:3])
         """
         _, retb, _, retd = tf_nndistance.nn_distance(coarse[:,:,0:3], gt[:,:,0:3])
         for i in range(np.shape(gt)[0]):
@@ -73,7 +85,7 @@ class Model:
             loss_sem_coarse = tf.reduce_mean(-tf.reduce_sum(
                         0.97 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.97) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
-            loss_coarse += 0.0001 * loss_sem_coarse
+            loss_coarse += 0.01 * loss_sem_coarse
         """
         add_train_summary('train/coarse_loss', loss_coarse)
         update_coarse = add_valid_summary('valid/coarse_loss', loss_coarse)
@@ -88,13 +100,13 @@ class Model:
             loss_sem_fine = tf.reduce_mean(-tf.reduce_sum(
                         0.97 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.97) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
-            loss_fine += 0.0001 * loss_sem_fine
+            loss_fine += 0.01 * loss_sem_fine
         """
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        loss = loss_coarse + alpha * loss_fine 
-        loss += 0.1*entropy
+        loss = loss_coarse + loss_fine
+        # loss += 0.1*entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 
