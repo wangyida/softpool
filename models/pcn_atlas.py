@@ -32,12 +32,14 @@ class Model:
 
     def create_decoder(self, features):
         mask = tf.dtypes.cast(tf.sequence_mask([3+self.channels], 14), tf.float32)
+        # regional activations
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
             coarse = mlp(features, [1024, 1024, self.num_coarse * (3+11)])
             coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+11]) 
 
+        # completion according to regional activations
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
-            grid = tf.meshgrid(tf.linspace(-0.05, 0.05, self.grid_size), tf.linspace(-0.05, 0.05, self.grid_size))
+            grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
             grid = tf.expand_dims(tf.reshape(tf.stack(grid, axis=2), [-1, 2]), 0)
             grid_feat = tf.tile(grid, [features.shape[0], self.num_coarse, 1])
 
@@ -56,11 +58,8 @@ class Model:
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
             
-            mesh = fine * [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
-            mesh += center
+            mesh = fine + center
 
-        # p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)
-        # p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)
         p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels], -1)
         p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
         p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
@@ -102,8 +101,8 @@ class Model:
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        loss = loss_coarse + alpha * loss_fine
-        # loss = loss_fine
+        # loss = loss_coarse + alpha * loss_fine
+        loss = loss_fine
         loss += 0.1*entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)

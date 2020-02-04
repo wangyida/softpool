@@ -20,7 +20,7 @@ def train(args):
     is_training_pl = tf.placeholder(tf.bool, shape=(), name='is_training')
     global_step = tf.Variable(0, trainable=False, name='global_step')
     alpha = tf.train.piecewise_constant(global_step, [10000, 20000, 50000],
-                                        [0.01, 0.1, 0.5, 1.0], 'alpha_op')
+                                        [1.0, 0.5, 0.1, 0.1], 'alpha_op')
     inputs_pl = tf.placeholder(tf.float32, (1, None, 3), 'inputs')
     npts_pl = tf.placeholder(tf.int32, (args.batch_size,), 'num_points')
     if args.experiment == 'suncg':
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir', default='log/pcn_emd')
     parser.add_argument('--model_type', default='pcn_emd')
     parser.add_argument('--restore', action='store_true')
-    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=16)
     """
     parser.add_argument('--num_input_points', type=int, default=3000)
     parser.add_argument('--num_gt_points', type=int, default=16384)
