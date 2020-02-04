@@ -204,7 +204,7 @@ if __name__ == "__main__":
                 if i == 1:
                     pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=2.0)
                 npy_points = np.asarray(pcd.points)
-                npy_points[:, 1] += (i*1.002)
+                npy_points[:, 0] += (i*1.002)
                 npy_colors = np.asarray(pcd.colors)
                 points_all = np.concatenate((points_all, npy_points), 0)
                 colors_all = np.concatenate((colors_all, npy_colors), 0)
