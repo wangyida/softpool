@@ -40,7 +40,7 @@ class Model:
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
             # grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
-            grid = tf.meshgrid(tf.sin(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size)/self.grid_scale*4)*tf.linspace(0.1, 1.0, self.grid_size), tf.cos(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size)/self.grid_scale*4.0)*tf.linspace(0.1, 1.0, self.grid_size))
+            grid = [tf.sin(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size**2)/self.grid_scale*2*3.14)*tf.linspace(0, 0.05, self.grid_size), tf.cos(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size**2)/self.grid_scale*2*3.14)*tf.linspace(0, 0.05, self.grid_size)]
             grid = tf.expand_dims(tf.reshape(tf.stack(grid, axis=2), [-1, 2]), 0)
             grid_feat = tf.tile(grid, [features.shape[0], self.num_coarse, 1])
 
