@@ -46,7 +46,7 @@ class Model:
             fold1 = mlp_conv(fold1_reg, [512, 3+11])
         with tf.variable_scope('fold2', reuse=tf.AUTO_REUSE):
             fold2 = mlp_conv(tf.concat([point_feat, fold1], axis=2), [512, 512, 3+11]) 
-        mesh = fold2
+        mesh = fold2 + fold1
 
         p_coar_feat = tf.nn.softmax(tf.round(fold1[:,:,3:3+self.channels]), -1)
         p_fine_feat = tf.nn.softmax(tf.round(fold2[:,:,3:3+self.channels]), -1)
