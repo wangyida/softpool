@@ -39,8 +39,7 @@ class Model:
             coarse *= mask
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
-            # grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
-            grid = [tf.sin(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size**2)/self.grid_scale*2*3.14)*tf.linspace(0, 0.05, self.grid_size), tf.cos(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size**2)/self.grid_scale*2*3.14)*tf.linspace(0, 0.05, self.grid_size)]
+            grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
             grid = tf.expand_dims(tf.reshape(tf.stack(grid, axis=2), [-1, 2]), 0)
             grid_feat = tf.tile(grid, [features.shape[0], self.num_coarse, 1])
 
@@ -50,7 +49,6 @@ class Model:
             global_feat = tf.tile(tf.expand_dims(features, 1), [1, self.num_fine, 1])
 
             feat = tf.concat([grid_feat, point_feat, global_feat], axis=2)
-            # feat = tf.concat([grid_feat, global_feat], axis=2)
     
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+11])
@@ -108,7 +106,7 @@ class Model:
 
         # loss = alpha * loss_coarse + loss_fine
         loss = loss_fine
-        # loss += 0.1*entropy
+        loss += 0.1*entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 
