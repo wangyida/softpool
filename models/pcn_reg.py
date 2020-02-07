@@ -55,11 +55,9 @@ class Model:
             # center = tf.roll(center, shift=6, axis=-1)
 
             fine = mlp_conv_act(feat, [512, 512, 3]) # + center
-            """
             fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
-            """
             
             mesh = fine + center
 
