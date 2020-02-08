@@ -90,6 +90,7 @@ class Model:
         loss_assm = chamfer(mesh[:,:,0:3], gt[:,:,0:3])
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
+        update_coarse = add_valid_summary('valid/assm_loss', loss_assm)
 
         # loss = alpha * loss_coarse + loss_fine
         loss = loss_fine + loss_assm
