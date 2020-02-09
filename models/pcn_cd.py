@@ -50,7 +50,13 @@ class Model:
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+self.channels])
 
-            fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
+            # fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
+            fine = mlp_conv(feat, [512, 512, 3+self.channels])
+            """
+            fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
+            fine += center
+            fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
+            """
 
         p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)
         p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)
