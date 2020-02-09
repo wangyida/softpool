@@ -52,9 +52,11 @@ class Model:
 
             # fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
             fine = mlp_conv(feat, [512, 512, 3+self.channels])
+            """
             fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
+            """
 
             mesh = fine + center
 
@@ -99,8 +101,8 @@ class Model:
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        loss = loss_coarse + alpha * loss_fine 
-        loss += 0.1*entropy
+        # loss = loss_coarse + alpha * loss_fine 
+        loss = loss_fine 
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 
