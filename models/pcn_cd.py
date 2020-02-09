@@ -6,19 +6,19 @@ from tf_util import *
 
 
 class Model:
-    def __init__(self, inputs, npts, gt, alpha):
+    def __init__(self, inputs, npts, gt, alpha, num_channel):
         self.num_coarse = 1024
         self.grid_size = 4
         self.grid_scale = 0.05
-        self.channels = 11
+        self.channels = num_channel
         self.num_fine = self.grid_size ** 2 * self.num_coarse
         self.features = self.create_encoder(inputs, npts)
-        self.coarse, self.fine, self.entropy = self.create_decoder(self.features, inputs, npts)
+        self.coarse, self.fine, self.mesh, self.entropy = self.create_decoder(self.features, inputs, npts)
         self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha, self.entropy)
         self.outputs1 = self.coarse
         self.outputs2 = self.fine
-        self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.fine, gt]
-        self.visualize_titles = ['input', 'coarse output', 'fine output', 'ground truth']
+        self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.mesh, self.fine, gt]
+        self.visualize_titles = ['input', 'coarse output', 'meshes', 'fine output', 'ground truth']
 
     def create_encoder(self, inputs, npts):
         with tf.variable_scope('encoder_0', reuse=tf.AUTO_REUSE):
@@ -52,11 +52,11 @@ class Model:
 
             # fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
             fine = mlp_conv(feat, [512, 512, 3+self.channels])
-            """
             fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
-            """
+
+            mesh = fine + center
 
         p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)
         p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)
@@ -66,7 +66,7 @@ class Model:
         entropy -= tf.reduce_mean(tf.reduce_sum(p_fine_feat * tf.log(p_fine_feat), [2]), [0, 1])
         entropy += (2.7 + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
         entropy += (2.7 + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
-        return coarse, fine, entropy
+        return coarse, fine, mesh, entropy
 
     def create_loss(self, coarse, fine, gt, alpha, entropy):
         loss_coarse = chamfer(coarse[:,:,0:3], gt[:,:,0:3])
