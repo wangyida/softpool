@@ -51,9 +51,12 @@ def mlp_conv_act(inputs, layer_dims, act_dim=11, bn=None, bn_params=None):
         kernel_size=1,
         activation_fn=tf.math.sigmoid,
         scope='conv_act')
+    """
     for i in range(act_dim):
-        idx = tf.argsort(act[:,:,i], axis=-1, direction='ASCENDING', stable=False, name=None)
+        idx = tf.argsort(act[:,:,i], axis=1, direction='ASCENDING', stable=False, name=None)
+        import ipdb; ipdb.set_trace()
         feat_ord = feature[idx]
+    """
     outputs = tf.concat([feature, tf.nn.softmax(act)], axis=-1)
     return outputs
 

@@ -20,7 +20,8 @@ def plot_pcd_three_views(filename, pcds, titles, suptitle='', sizes=None, cmap='
                 if ij == 0 or ij == 4:
                     color = pcd[:, 1] - 0.5/11
                 else:
-                    color = (np.argmax(pcd[:, 3:], -1) + 1)/11 - 0.5/11
+                    # color = (np.argmax(pcd[:, 3:], -1) + 1)/11 - 0.5/11
+                    color = pcd[:, 3] - 0.5/11
             ax = fig.add_subplot(3, len(pcds), i * len(pcds) + ij + 1, projection='3d')
             ax.view_init(elev, azim)
             if np.shape(pcd)[1] == 3:
