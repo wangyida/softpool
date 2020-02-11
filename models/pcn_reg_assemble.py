@@ -55,21 +55,17 @@ class Model:
             # center = tf.roll(center, shift=6, axis=-1)
 
             fine = mlp_conv_act(feat, [512, 512, 3]) # + center
-            """
             fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
-            """
             
             mesh = fine + center
         with tf.variable_scope('assemble', reuse=tf.AUTO_REUSE):
             feat = tf.concat([mesh, center], axis=2)
             mesh = mlp_conv_act(feat, [512, 512, 3]) # + center
-            """
             mesh *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             mesh += center
             mesh -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
-            """
 
         p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels], -1)
         p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
