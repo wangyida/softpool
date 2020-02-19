@@ -31,12 +31,19 @@ class Model:
         return features
 
     def create_decoder(self, features):
-        mask = tf.dtypes.cast(tf.sequence_mask([3+self.channels], 14), tf.float32)
+        # mask = tf.dtypes.cast(tf.sequence_mask([3+self.channels], 14), tf.float32)
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            coarse = mlp(features, [1024, 1024, self.num_coarse * (3+11)])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+11]) 
-            # coarse = mlp_conv_act(coarse, [512, 512, 3]) # + center
-            coarse *= mask
+            # Still global featurte
+            coarse = mlp(features, [1024, 1024, self.num_coarse * 3])
+            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3]) 
+            # Becomes local featurte
+            coarse = mlp_conv_act(coarse, [3, 3, 3]) # + center
+            # coarse *= mask
+
+        with tf.variable_scope('order', reuse=tf.AUTO_REUSE):
+            coarse += tf.expand_dims(coarse[:,:,-1]*10, -1)
+            coarse = tf.sort(coarse,axis=1,direction='ASCENDING',name=None)
+            coarse -= tf.expand_dims(coarse[:,:,-1]*10/11, -1)
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
             grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
@@ -48,16 +55,18 @@ class Model:
 
             global_feat = tf.tile(tf.expand_dims(features, 1), [1, self.num_fine, 1])
 
-            feat = tf.concat([grid_feat, point_feat, global_feat], axis=2)
+            feat = tf.concat([grid_feat, global_feat, point_feat], axis=2)
     
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+11])
             # center = tf.roll(center, shift=6, axis=-1)
 
             fine = mlp_conv_act(feat, [512, 512, 3]) # + center
+            """
             fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
+            """
             
             mesh = fine + center
 
