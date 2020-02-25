@@ -40,11 +40,6 @@ class Model:
             coarse = mlp_conv_act(coarse, [3, 3, 3]) # + center
             # coarse *= mask
 
-        with tf.variable_scope('order', reuse=tf.AUTO_REUSE):
-            coarse += tf.expand_dims(coarse[:,:,-1]*10, -1)
-            coarse = tf.sort(coarse,axis=1,direction='ASCENDING',name=None)
-            coarse -= tf.expand_dims(coarse[:,:,-1]*10/11, -1)
-
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
             grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
             grid = tf.expand_dims(tf.reshape(tf.stack(grid, axis=2), [-1, 2]), 0)
@@ -111,8 +106,8 @@ class Model:
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        # loss = alpha * loss_coarse + loss_fine
-        loss = loss_fine
+        loss = alpha * loss_coarse + loss_fine
+        # loss = loss_fine
         loss += 0.1*entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)

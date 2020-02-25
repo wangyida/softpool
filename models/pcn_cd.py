@@ -52,9 +52,11 @@ class Model:
 
             # fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
             fine = mlp_conv(feat, [512, 512, 3+self.channels])
+            """
             fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
             fine += center
             fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
+            """
 
             mesh = fine + center
 

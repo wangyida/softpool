@@ -37,33 +37,36 @@ def mlp_conv_act(inputs, layer_dims, act_dim=11, bn=None, bn_params=None):
     for i, num_out_channel in enumerate(layer_dims[:-1]):
         inputs = tf.contrib.layers.conv1d(
             inputs, num_out_channel,
-            kernel_size=6,
+            kernel_size=1,
             normalizer_fn=bn,
             normalizer_params=bn_params,
             scope='conv_%d' % i)
     feature = tf.contrib.layers.conv1d(
         inputs, layer_dims[-1],
-        kernel_size=6,
+        kernel_size=1,
         activation_fn=None,
         scope='conv_%d' % (len(layer_dims) - 1))
     act = tf.contrib.layers.conv1d(
         inputs, act_dim,
-        kernel_size=6,
+        kernel_size=1,
         activation_fn=tf.math.sigmoid,
         scope='conv_act')
-    """
-    for i in range(act_dim):
-        idx = tf.argsort(act[:,:,i], axis=1, direction='ASCENDING', stable=False, name=None)
-        import ipdb; ipdb.set_trace()
-        feat_ord = feature[idx]
-    """
     outputs = tf.concat([feature, tf.nn.softmax(act)], axis=-1)
     return outputs
 
 def point_maxpool(inputs, npts, keepdims=False):
+    # outputs = [tf.transpose(tf.math.top_k(tf.transpose(f, perm=[0, 2, 1]), k=128).values, perm=[0, 2, 1])
+    outputs = [tf.reduce_mean(tf.transpose(tf.math.top_k(tf.transpose(f, perm=[0, 2, 1]), k=32).values, perm=[0, 2, 1]), axis=1, keepdims=True)
+        for f in tf.split(inputs, npts, axis=1)]
+    """
     outputs = [tf.reduce_max(f, axis=1, keepdims=keepdims)
         for f in tf.split(inputs, npts, axis=1)]
     return tf.concat(outputs, axis=0)
+    """
+    if keepdims:
+        return tf.concat(outputs, axis=0)
+    else:
+        return tf.squeeze(tf.concat(outputs, axis=0), axis=1)
 
 
 def point_unpool(inputs, npts):
