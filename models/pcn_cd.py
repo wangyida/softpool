@@ -32,8 +32,10 @@ class Model:
 
     def create_decoder(self, features, inputs, npts):
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            coarse = mlp(features, [1024, 1024, self.num_coarse * (3+self.channels)])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+self.channels])
+            coarse = mlp(features, [1024, 1024, self.num_coarse*1])
+            coarse = tf.reshape(coarse, [-1, self.num_coarse, 1])
+            coarse = tf.transpose(tf.math.top_k(tf.transpose(coarse, perm=[0, 2, 1]), k=self.num_coarse).values, perm=[0, 2, 1])
+            coarse = mlp_conv_act(coarse, [32, 3]) # + center
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
             grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
@@ -101,8 +103,8 @@ class Model:
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        # loss = loss_coarse + alpha * loss_fine 
-        loss = loss_fine 
+        loss = loss_coarse + alpha * loss_fine 
+        # loss = loss_fine 
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 

@@ -33,11 +33,10 @@ class Model:
     def create_decoder(self, features):
         # mask = tf.dtypes.cast(tf.sequence_mask([3+self.channels], 14), tf.float32)
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            # Still global featurte
-            coarse = mlp(features, [1024, 1024, self.num_coarse * 3])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3]) 
-            # Becomes local featurte
-            coarse = mlp_conv_act(coarse, [3, 3, 3]) # + center
+            coarse = mlp(features, [1024, 1024, self.num_coarse*1])
+            coarse = tf.reshape(coarse, [-1, self.num_coarse, 1]) 
+            coarse = tf.transpose(tf.math.top_k(tf.transpose(coarse, perm=[0, 2, 1]), k=self.num_coarse).values, perm=[0, 2, 1])
+            coarse = mlp_conv_act(coarse, [64, 16, 3]) # + center
             # coarse *= mask
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
@@ -54,7 +53,6 @@ class Model:
     
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+11])
-            # center = tf.roll(center, shift=6, axis=-1)
 
             fine = mlp_conv_act(feat, [512, 512, 3]) # + center
             """
@@ -108,7 +106,7 @@ class Model:
 
         loss = alpha * loss_coarse + loss_fine
         # loss = loss_fine
-        loss += 0.1*entropy
+        # loss += 0.1*entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 
