@@ -32,10 +32,9 @@ class Model:
 
     def create_decoder(self, features, inputs, npts):
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            coarse = mlp(features, [1024, 1024, self.num_coarse*1])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 1])
-            coarse = tf.transpose(tf.math.top_k(tf.transpose(coarse, perm=[0, 2, 1]), k=self.num_coarse).values, perm=[0, 2, 1])
-            coarse = mlp_conv_act(coarse, [32, 3]) # + center
+            coarse = mlp(features, [1024, 1024, self.num_coarse*14])
+            coarse = tf.reshape(coarse, [-1, self.num_coarse, 14])
+            coarse = mlp_conv_act(coarse, [64, 16, 3]) # + center
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
             grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
@@ -52,13 +51,8 @@ class Model:
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+self.channels])
 
-            # fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
-            fine = mlp_conv(feat, [512, 512, 3+self.channels])
-            """
-            fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
-            fine += center
-            fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
-            """
+            fine = mlp_conv(feat, [512, 512, 3])
+            fine = tf.concat([fine, center[:,:,3:]], axis=-1)
 
             mesh = fine + center
 

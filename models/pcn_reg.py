@@ -33,9 +33,8 @@ class Model:
     def create_decoder(self, features):
         # mask = tf.dtypes.cast(tf.sequence_mask([3+self.channels], 14), tf.float32)
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            coarse = mlp(features, [1024, 1024, self.num_coarse*1])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 1]) 
-            coarse = tf.transpose(tf.math.top_k(tf.transpose(coarse, perm=[0, 2, 1]), k=self.num_coarse).values, perm=[0, 2, 1])
+            coarse = mlp(features, [1024, 1024, self.num_coarse*14])
+            coarse = tf.reshape(coarse, [-1, self.num_coarse, 14]) 
             coarse = mlp_conv_act(coarse, [64, 16, 3]) # + center
             # coarse *= mask
 
@@ -54,12 +53,8 @@ class Model:
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+11])
 
-            fine = mlp_conv_act(feat, [512, 512, 3]) # + center
-            """
-            fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
-            fine += center
-            fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
-            """
+            fine = mlp_conv(feat, [512, 512, 3]) # + center
+            fine = tf.concat([fine, center[:,:,3:]], axis=-1)
             
             mesh = fine + center
 
@@ -69,7 +64,7 @@ class Model:
         p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
         p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
         entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
-        entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
+        # entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
         # entropy += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_center_feat, logits=p_fine_feat))
         return coarse, fine, mesh, entropy
 
