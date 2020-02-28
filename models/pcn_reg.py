@@ -7,8 +7,8 @@ from tf_util import *
 
 class Model:
     def __init__(self, inputs, npts, gt, alpha, num_channel):
-        self.num_coarse = 64
-        self.grid_size = 16
+        self.num_coarse = 256
+        self.grid_size = 8
         self.grid_scale = 0.05
         self.channels = num_channel
         self.num_fine = self.grid_size ** 2 * self.num_coarse
@@ -33,9 +33,18 @@ class Model:
     def create_decoder(self, features):
         # mask = tf.dtypes.cast(tf.sequence_mask([3+self.channels], 14), tf.float32)
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            coarse = mlp(features, [1024, 1024, self.num_coarse*14])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 14]) 
-            coarse = mlp_conv_act(coarse, [64, 16, 3]) # + center
+            coarse_unord = mlp(features, [1024, 1024, self.num_coarse*14])
+            coarse_unord = tf.reshape(coarse_unord, [-1, self.num_coarse, 14]) 
+            coarse = tf.zeros_like(coarse_unord)
+            for idx_r in range(3, 14):
+                idx_reg = tf.math.top_k(coarse_unord[:,:,idx_r], k=self.num_coarse).indices
+                coarse_ord = tf.gather(coarse_unord, indices=idx_reg, batch_dims=1)
+                coarse += mlp_conv_act(coarse_ord, [512, 512, 3]) # + center
+            """
+            idx_reg = tf.math.top_k(coarse[:,:,3], k=self.num_coarse).indices
+            coarse = tf.gather(coarse, indices=idx_reg, batch_dims=1)
+            coarse = mlp_conv_act(coarse, [512, 512, 3]) # + center
+            """
             # coarse *= mask
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):

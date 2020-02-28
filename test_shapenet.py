@@ -115,10 +115,10 @@ def test(args):
             write_point_cloud(os.path.join(args.results_dir, 'output2', synset_id, '%s.ply' % model_id), pcd, write_ascii=True)
             #######
             os.makedirs(os.path.join(args.results_dir, 'regions', synset_id), exist_ok=True)
-            val_min = np.min(completion2[0][:, 3:])
-            val_max = np.max(completion2[0][:, 3:])
             for idx in range (3, 14):
-                pts_color = matplotlib.cm.Oranges((completion2[0][:, idx]) / (val_max))[:,0:3]
+                val_min = np.min(completion2[0][:, idx])
+                val_max = np.max(completion2[0][:, idx])
+                pts_color = matplotlib.cm.Purples((completion2[0][:, idx]-val_min) / (val_max-val_min))[:,0:3]
                 pcd.colors = Vector3dVector(pts_color)
                 write_point_cloud(os.path.join(args.results_dir, 'regions', synset_id, '%s_%s.ply' % (model_id, idx)), pcd, write_ascii=True)
             os.makedirs(os.path.join(args.results_dir, 'gt', synset_id), exist_ok=True)
