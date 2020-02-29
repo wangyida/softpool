@@ -35,16 +35,18 @@ class Model:
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
             coarse_unord = mlp(features, [1024, 1024, self.num_coarse*14])
             coarse_unord = tf.reshape(coarse_unord, [-1, self.num_coarse, 14]) 
-            coarse = tf.zeros_like(coarse_unord)
-            for idx_r in range(3, 14):
-                idx_reg = tf.math.top_k(coarse_unord[:,:,idx_r], k=self.num_coarse).indices
-                coarse_ord = tf.gather(coarse_unord, indices=idx_reg, batch_dims=1)
-                coarse += mlp_conv_act(coarse_ord, [512, 512, 3]) # + center
+            coarse_bag = []
+            for idx_r in range(3, 11):
+                idx_reg = tf.math.top_k(coarse_unord[:,:,idx_r], k=self.num_coarse//8).indices
+                coarse_bag.append(tf.gather(coarse_unord, indices=idx_reg, batch_dims=1))
+                # coarse += mlp_conv_act(coarse_ord, [512, 512, 3]) # + center
+            coarse_ord = tf.concat(coarse_bag[:], axis = 1)
             """
             idx_reg = tf.math.top_k(coarse[:,:,3], k=self.num_coarse).indices
             coarse = tf.gather(coarse, indices=idx_reg, batch_dims=1)
-            coarse = mlp_conv_act(coarse, [512, 512, 3]) # + center
             """
+            coarse = mlp_conv_act(coarse_ord, [512, 512, 3]) # + center
+            coarse = tf.concat([coarse[:,:,:3], coarse_ord[:,:,3:]], axis=-1)
             # coarse *= mask
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
@@ -62,8 +64,8 @@ class Model:
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+11])
 
-            fine = mlp_conv(feat, [512, 512, 3]) # + center
-            fine = tf.concat([fine, center[:,:,3:]], axis=-1)
+            fine = mlp_conv_act(feat, [512, 512, 3]) # + center
+            fine = tf.concat([fine[:,:,:3], center[:,:,3:]], axis=-1)
             
             mesh = fine + center
 
