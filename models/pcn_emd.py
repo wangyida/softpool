@@ -31,10 +31,10 @@ class Model:
         return features
 
     def create_decoder(self, features, inputs, npts):
-        mask = tf.dtypes.cast(tf.sequence_mask([3+self.channels], 14), tf.float32)
+        mask = tf.dtypes.cast(tf.sequence_mask([3+self.channels], (3+self.channels)), tf.float32)
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            coarse = mlp(features, [1024, 1024, self.num_coarse * (3+11)])
-            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+11])
+            coarse = mlp(features, [1024, 1024, self.num_coarse * (3+self.channels)])
+            coarse = tf.reshape(coarse, [-1, self.num_coarse, 3+self.channels])
             coarse *= mask
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
@@ -43,22 +43,19 @@ class Model:
             grid_feat = tf.tile(grid, [features.shape[0], self.num_coarse, 1])
 
             point_feat = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
-            point_feat = tf.reshape(point_feat, [-1, self.num_fine, 3+11])
+            point_feat = tf.reshape(point_feat, [-1, self.num_fine, 3+self.channels])
 
             global_feat = tf.tile(tf.expand_dims(features, 1), [1, self.num_fine, 1])
 
             feat = tf.concat([grid_feat, point_feat, global_feat], axis=2)
 
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
-            center = tf.reshape(center, [-1, self.num_fine, 3+11])
+            center = tf.reshape(center, [-1, self.num_fine, 3+self.channels])
 
-            fine = mlp_conv(feat, [512, 512, 3+11]) # + center
-            fine *= [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
-            fine += center
-            fine -= (center * [1,1,1,0,0,0,0,0,0,0,0,0,0,0])
-            
-            mesh = fine * [1,1,1,0,0,0,0,0,0,0,0,0,0,0]
-            mesh += center
+            fine = mlp_conv(feat, [512, 512, 3+self.channels]) + center
+            fine = tf.concat([fine[:,:,:3], center[:,:,3:]], axis=-1)
+
+            mesh = fine + center
 
         p_coar_feat = tf.nn.softmax(tf.round(coarse[:,:,3:3+self.channels]), -1)
         p_fine_feat = tf.nn.softmax(tf.round(fine[:,:,3:3+self.channels]), -1)

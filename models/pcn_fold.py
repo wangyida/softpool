@@ -22,7 +22,7 @@ class Model:
 
     def create_encoder(self, inputs, npts):
         with tf.variable_scope('encoder_0', reuse=tf.AUTO_REUSE):
-            features_reg = mlp_conv(inputs[:,:,0:3], [128, 256+11])
+            features_reg = mlp_conv(inputs[:,:,0:3], [128, 256+self.channels])
             tmp_s, tmp_u, tmp_v = tf.linalg.svd(features_reg[:,:,0:256])
             features_3d = tf.matmul(tmp_u, tf.matmul(tf.linalg.diag(tmp_s), tmp_v, adjoint_b=True))
             features = features_reg[:,:,0:256]
@@ -39,13 +39,13 @@ class Model:
             grid = tf.expand_dims(tf.reshape(tf.stack(grid, axis=2), [-1, 2]), 0)
             grid_feat = tf.tile(grid, [features.shape[0], self.num_coarse, 1])
             point_feat = tf.tile(tf.expand_dims(features, 1), [1, self.grid_size ** 2, 1])
-            fold1_reg = mlp_conv(tf.concat([point_feat, grid_feat], axis=2), [512, 512+11])
+            fold1_reg = mlp_conv(tf.concat([point_feat, grid_feat], axis=2), [512, 512+self.channels])
             tmp_s, tmp_u, tmp_v = tf.linalg.svd(fold1_reg[:,:,0:512])
             fold1_3d = tf.matmul(tmp_u, tf.matmul(tf.linalg.diag(tmp_s), tmp_v, adjoint_b=True))
         with tf.variable_scope('fold1_1', reuse=tf.AUTO_REUSE):
-            fold1 = mlp_conv(fold1_reg, [512, 3+11])
+            fold1 = mlp_conv(fold1_reg, [512, 3+self.channels])
         with tf.variable_scope('fold2', reuse=tf.AUTO_REUSE):
-            fold2 = mlp_conv(tf.concat([point_feat, fold1], axis=2), [512, 512, 3+11]) 
+            fold2 = mlp_conv(tf.concat([point_feat, fold1], axis=2), [512, 512, 3+self.channels]) 
         mesh = fold2 + fold1
 
         p_coar_feat = tf.nn.softmax(tf.round(fold1[:,:,3:3+self.channels]), -1)
@@ -62,7 +62,7 @@ class Model:
 
     def create_loss(self, fold2, gt, alpha, entropy):
         loss = chamfer(fold2[:,:,0:3], gt[:,:,0:3])
-        loss += 0.1*entropy
+        # loss += 0.1*entropy
         """
         _, retb, _, retd = tf_nndistance.nn_distance(fold2[:,:,0:3], gt[:,:,0:3])
         for i in range(np.shape(gt)[0]):

@@ -33,11 +33,11 @@ def mlp_conv(inputs, layer_dims, bn=None, bn_params=None):
         scope='conv_%d' % (len(layer_dims) - 1))
     return outputs
 
-def mlp_conv_act(inputs, layer_dims, act_dim=11, bn=None, bn_params=None):
+def mlp_conv_act(inputs, layer_dims, act_dim=8, bn=None, bn_params=None):
     for i, num_out_channel in enumerate(layer_dims[:-1]):
         inputs = tf.contrib.layers.conv1d(
             inputs, num_out_channel,
-            kernel_size=12,
+            kernel_size=8,
             normalizer_fn=bn,
             normalizer_params=bn_params,
             scope='conv_%d' % i)
@@ -55,14 +55,8 @@ def mlp_conv_act(inputs, layer_dims, act_dim=11, bn=None, bn_params=None):
     return outputs
 
 def point_maxpool(inputs, npts, keepdims=False):
-    # outputs = [tf.transpose(tf.math.top_k(tf.transpose(f, perm=[0, 2, 1]), k=128).values, perm=[0, 2, 1])
-    outputs = [tf.reduce_mean(tf.transpose(tf.math.top_k(tf.transpose(f, perm=[0, 2, 1]), k=8).values, perm=[0, 2, 1]), axis=1, keepdims=True)
+    outputs = [tf.reduce_mean(tf.transpose(tf.math.top_k(tf.transpose(f, perm=[0, 2, 1]), k=1).values, perm=[0, 2, 1]), axis=1, keepdims=True)
         for f in tf.split(inputs, npts, axis=1)]
-    """
-    outputs = [tf.reduce_max(f, axis=1, keepdims=keepdims)
-        for f in tf.split(inputs, npts, axis=1)]
-    return tf.concat(outputs, axis=0)
-    """
     if keepdims:
         return tf.concat(outputs, axis=0)
     else:
@@ -74,6 +68,13 @@ def point_unpool(inputs, npts):
     outputs = [tf.tile(f, [1, npts[i], 1]) for i,f in enumerate(inputs)]
     return tf.concat(outputs, axis=1)
 
+def point_softpool(inputs, npts_output, orders):
+    inputs = tf.nn.softmax(inputs, axis=-1) 
+    inputs_ordered = []
+    for idx in range(orders):
+        idx_reg = tf.math.top_k(inputs[:,:,idx], k=npts_output//orders).indices
+        inputs_ordered.append(tf.gather(inputs, indices=idx_reg, batch_dims=1))
+    return tf.concat(inputs_ordered[:], axis = 1)
 
 def chamfer(pcd1, pcd2):
     dist1, _, dist2, _ = tf_nndistance.nn_distance(pcd1, pcd2)

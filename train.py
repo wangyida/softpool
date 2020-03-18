@@ -147,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir', default='log/pcn_emd')
     parser.add_argument('--model_type', default='pcn_emd')
     parser.add_argument('--restore', action='store_true')
-    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--batch_size', type=int, default=8)
     """
     parser.add_argument('--num_input_points', type=int, default=3000)
     parser.add_argument('--num_gt_points', type=int, default=16384)
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     parser.add_argument('--steps_per_visu', type=int, default=1000)
     parser.add_argument('--steps_per_save', type=int, default=10000)
     parser.add_argument('--visu_freq', type=int, default=5)
-    parser.add_argument('--num_channel', type=int, default=11)
+    parser.add_argument('--num_channel', type=int, default=8)
     args = parser.parse_args()
 
     train(args)

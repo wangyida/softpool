@@ -24,7 +24,7 @@ def test(args):
     model_module = importlib.import_module('.%s' % args.model_type, 'models')
     model = model_module.Model(inputs, npts, gt, tf.constant(1.0), args.num_channel)
 
-    output = tf.placeholder(tf.float32, (1, args.num_gt_points, 14))
+    output = tf.placeholder(tf.float32, (1, args.num_gt_points, 3+args.num_channel))
     cd_op = chamfer(output[:,:,0:3], gt[:,:,0:3])
     emd_op = earth_mover(output[:,:,0:3], gt[:,:,0:3])
 
@@ -66,7 +66,7 @@ def test(args):
         partial = partial[:,:3]
         complete = resample_pcd(complete, 16384)
         start = time.time()
-        completion1, completion2, mesh_out = sess.run([model.outputs1, model.outputs2, model.mesh], feed_dict={inputs: [partial], npts: [partial.shape[0]]})
+        completion1, completion2, mesh_out = sess.run([model.outputs1, model.outputs2, model.mesh], feed_dict={inputs: [partial], npts: [partial.shape[0]], gt: [complete]})
         completion1[0][:, (3+args.num_channel):] *= 0
         completion2[0][:, (3+args.num_channel):] *= 0
         mesh_out[0][:, (3+args.num_channel):] *= 0
@@ -89,7 +89,7 @@ def test(args):
             plot_pcd_three_views(plot_path, [partial, completion1[0], completion2[0], mesh_out[0], complete],
                                  ['input', 'coarse', 'fine', 'mesh', 'ground truth'],
                                  'CD %.4f  EMD %.4f' % (cd, emd),
-                                 [5, 0.5, 0.5, 0.5, 0.5])
+                                 [5, 0.5, 0.5, 0.5, 0.5], num_channel=args.num_channel)
         if args.save_pcd:
             os.makedirs(os.path.join(args.results_dir, 'input', synset_id), exist_ok=True)
             pts_coord = partial[:,0:3]
@@ -100,33 +100,36 @@ def test(args):
             pcd.colors = Vector3dVector(pts_color)
             write_point_cloud(os.path.join(args.results_dir, 'input', synset_id, '%s.ply' % model_id), pcd, write_ascii=True)
             os.makedirs(os.path.join(args.results_dir, 'output1', synset_id), exist_ok=True)
-            pts_coord = mesh_out[0][:,0:3]
-            pts_color = matplotlib.cm.Paired((np.argmax(mesh_out[0][:, 3:], -1) + 1)/11 - 0.5/11)[:,0:3]
+            pts_coord = completion1[0][:,0:3]
+            pts_color = matplotlib.cm.Set1((np.argmax(completion1[0][:, 3:3+args.num_channel], -1) + 1)/args.num_channel - 0.5/args.num_channel)[:,0:3]
+            # pts_color = matplotlib.cm.tab20((np.argmax(completion1[0][:, 3:3+args.num_channel], -1) + 1)/args.num_channel - 0.5/args.num_channel)[:,0:3]
             # save_pcd(os.path.join(args.results_dir, 'output1', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color), -1))
             pcd.points = Vector3dVector(pts_coord)
             pcd.colors = Vector3dVector(pts_color)
             write_point_cloud(os.path.join(args.results_dir, 'output1', synset_id, '%s.ply' % model_id), pcd, write_ascii=True)
             os.makedirs(os.path.join(args.results_dir, 'output2', synset_id), exist_ok=True)
             pts_coord = completion2[0][:,0:3]
-            pts_color = matplotlib.cm.Paired((np.argmax(completion2[0][:, 3:], -1) + 1)/11 - 0.5/11)[:,0:3]
+            pts_color = matplotlib.cm.Set1((np.argmax(completion2[0][:, 3:3+args.num_channel], -1) + 1)/args.num_channel - 0.5/args.num_channel)[:,0:3]
+            # pts_color = matplotlib.cm.tab20((np.argmax(completion2[0][:, 3:3+args.num_channel], -1) + 1)/args.num_channel - 0.5/args.num_channel)[:,0:3]
             # save_pcd(os.path.join(args.results_dir, 'output2', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color), -1))
             pcd.points = Vector3dVector(pts_coord)
             pcd.colors = Vector3dVector(pts_color)
             write_point_cloud(os.path.join(args.results_dir, 'output2', synset_id, '%s.ply' % model_id), pcd, write_ascii=True)
             #######
             os.makedirs(os.path.join(args.results_dir, 'regions', synset_id), exist_ok=True)
-            for idx in range (3, 14):
+            for idx in range (3, 3+args.num_channel):
                 val_min = np.min(completion2[0][:, idx])
                 val_max = np.max(completion2[0][:, idx])
-                pts_color = matplotlib.cm.Purples((completion2[0][:, idx]-val_min) / (val_max-val_min))[:,0:3]
+                pts_color = 0.8 * matplotlib.cm.Reds((completion2[0][:, idx]-val_min) / (val_max-val_min))[:,0:3]
+                pts_color += 0.2 * matplotlib.cm.gist_gray((completion2[0][:, idx]-val_min) / (val_max-val_min))[:,0:3]
                 pcd.colors = Vector3dVector(pts_color)
-                write_point_cloud(os.path.join(args.results_dir, 'regions', synset_id, '%s_%s.ply' % (model_id, idx)), pcd, write_ascii=True)
+                write_point_cloud(os.path.join(args.results_dir, 'regions', synset_id, '%s_%s.ply' % (model_id, idx-3)), pcd, write_ascii=True)
             os.makedirs(os.path.join(args.results_dir, 'gt', synset_id), exist_ok=True)
             pts_coord = complete[:,0:3]
             if args.experiment == 'shapenet':
                 pts_color = matplotlib.cm.cool(complete[:,1])[:,0:3]
             elif args.experiment == 'suncg':
-                pts_color = matplotlib.cm.Paired(complete[:,3] - 0.5/11)[:,0:3]
+                pts_color = matplotlib.cm.Set1(complete[:,3] - 0.5/args.num_channel)[:,0:3]
             # save_pcd(os.path.join(args.results_dir, 'gt', synset_id, '%s.ply' % model_id), np.concatenate((pts_coord, pts_color), -1))
             pcd.points = Vector3dVector(pts_coord)
             pcd.colors = Vector3dVector(pts_color)
@@ -159,7 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_gt_points', type=int, default=16384)
     parser.add_argument('--plot_freq', type=int, default=100)
     parser.add_argument('--save_pcd', action='store_true')
-    parser.add_argument('--num_channel', type=int, default=11)
+    parser.add_argument('--num_channel', type=int, default=8)
     args = parser.parse_args()
 
     test(args)
