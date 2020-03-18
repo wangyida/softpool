@@ -66,7 +66,7 @@ def test(args):
         partial = partial[:,:3]
         complete = resample_pcd(complete, 16384)
         start = time.time()
-        completion1, completion2, mesh_out = sess.run([model.outputs1, model.outputs2, model.mesh], feed_dict={inputs: [partial], npts: [partial.shape[0]], gt: [complete]})
+        completion1, completion2, mesh_out = sess.run([model.outputs1, model.outputs2, model.canonical], feed_dict={inputs: [partial], npts: [partial.shape[0]], gt: [complete]})
         completion1[0][:, (3+args.num_channel):] *= 0
         completion2[0][:, (3+args.num_channel):] *= 0
         mesh_out[0][:, (3+args.num_channel):] *= 0

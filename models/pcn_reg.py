@@ -17,9 +17,10 @@ class Model:
         self.channels = num_channel
         self.num_fine = self.grid_size ** 2 * self.num_coarse
         inputs_can, gt_can = self.canon_pose(gt, inputs, npts)
-        self.features = self.create_encoder(inputs_can, npts)
-        self.coarse, self.fine, self.mesh, self.entropy = self.create_decoder(self.features)
-        self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha, self.entropy)
+        self.features = self.create_encoder(inputs, npts)
+        self.coarse, self.fine, self.mesh = self.create_decoder(self.features)
+        _, self.canonical, _ = self.create_decoder(self.create_encoder(inputs_can, npts))
+        self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha)
         self.outputs1 = self.coarse
         self.outputs2 = self.fine
         self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, gt_can, self.fine, gt]
@@ -85,15 +86,7 @@ class Model:
             
             mesh = fine
 
-        p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels], -1)
-        p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
-        p_regions_feat = tf.nn.softmax(regions, -1)
-        p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
-        p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
-        # entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
-        # entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
-        entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_regions_feat, logits=p_fine_feat))
-        return coarse, fine, mesh, entropy
+        return coarse, fine, mesh
 
     """
     def create_decoder_sp(self, features):
@@ -130,7 +123,15 @@ class Model:
         return coarse, fine, mesh, entropy
     """
 
-    def create_loss(self, coarse, fine, gt, alpha, entropy):
+    def create_loss(self, coarse, fine, gt, alpha):
+        p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels], -1)
+        p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
+        p_can_feat = tf.nn.softmax(self.canonical[:,:,3:3+self.channels], -1)
+        p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
+        p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
+        # entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
+        # entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
+        entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_can_feat, logits=p_fine_feat))
         loss_coarse = chamfer(coarse[:,:,0:3], gt[:,:,0:3])
         """
         _, retb, _, retd = tf_nndistance.nn_distance(coarse[:,:,0:3], gt[:,:,0:3])
@@ -161,7 +162,7 @@ class Model:
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        loss = alpha * loss_coarse + loss_fine # + entropy
+        loss = alpha * loss_coarse + loss_fine + entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 
