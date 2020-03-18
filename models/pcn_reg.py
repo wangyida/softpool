@@ -16,13 +16,13 @@ class Model:
         self.grid_scale = 0.05
         self.channels = num_channel
         self.num_fine = self.grid_size ** 2 * self.num_coarse
-        inputs, gt = self.canon_pose(gt, inputs, npts)
-        self.features = self.create_encoder(inputs, npts)
+        inputs_can, gt_can = self.canon_pose(gt, inputs, npts)
+        self.features = self.create_encoder(inputs_can, npts)
         self.coarse, self.fine, self.mesh, self.entropy = self.create_decoder(self.features)
         self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha, self.entropy)
         self.outputs1 = self.coarse
         self.outputs2 = self.fine
-        self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.mesh, self.fine, gt]
+        self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, gt_can, self.fine, gt]
         self.visualize_titles = ['input', 'coarse output', 'meshes', 'fine output', 'ground truth']
 
     def create_encoder(self, inputs, npts):
