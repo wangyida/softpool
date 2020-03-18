@@ -38,6 +38,7 @@ class Model:
     def canon_pose(self, gt, inputs, npts):
         tmp_s, tmp_u, tmp_v = tf.linalg.svd(gt[:,:,:3])
         rot = tf.matmul(tf.linalg.diag(tmp_s), tmp_v, adjoint_b=True)
+        rot = tmp_v
         gt_can = tf.concat([tf.matmul(gt[:,:,:3], rot), gt[:,:,3:]], axis=-1)
         inputs_can = tf.concat([tf.matmul(f, rot[idx,:,:]) for idx, f in enumerate(tf.split(inputs, npts, axis=1))], axis=1)
         return inputs_can, gt_can
