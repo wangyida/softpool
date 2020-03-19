@@ -58,7 +58,7 @@ def test(args):
             synset_id = 'all_rooms'
             partial = read_pcd(os.path.join(args.data_dir, 'pcd_partial', '%s.pcd' % model_id))
             complete = read_pcd(os.path.join(args.data_dir, 'pcd_complete', '%s.pcd' % model_id))
-        rotate = False
+        rotate = True
         if rotate:    
             angle = np.random.rand(1)*360
             partial = np.stack([np.cos(angle)*partial[:,0] - np.sin(angle)*partial[:,2], partial[:,1], np.sin(angle)*partial[:,0] + np.cos(angle)*partial[:,2]], axis=-1)
@@ -66,7 +66,7 @@ def test(args):
         partial = partial[:,:3]
         complete = resample_pcd(complete, 16384)
         start = time.time()
-        completion1, completion2, mesh_out = sess.run([model.outputs1, model.outputs2, model.canonical], feed_dict={inputs: [partial], npts: [partial.shape[0]], gt: [complete]})
+        completion1, completion2, mesh_out = sess.run([model.outputs1, model.outputs2, model.gt_can], feed_dict={inputs: [partial], npts: [partial.shape[0]], gt: [complete]})
         completion1[0][:, (3+args.num_channel):] *= 0
         completion2[0][:, (3+args.num_channel):] *= 0
         mesh_out[0][:, (3+args.num_channel):] *= 0

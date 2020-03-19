@@ -16,14 +16,14 @@ class Model:
         self.grid_scale = 0.05
         self.channels = num_channel
         self.num_fine = self.grid_size ** 2 * self.num_coarse
-        inputs_can, gt_can = self.canon_pose(gt, inputs, npts)
+        self.inputs_can, self.gt_can = self.canon_pose(gt, inputs, npts)
         self.features = self.create_encoder(inputs, npts)
         self.coarse, self.fine, self.mesh = self.create_decoder(self.features)
-        self.canonical, _, _ = self.create_decoder(self.create_encoder(inputs_can, npts))
+        self.canonical, _, _ = self.create_decoder(self.create_encoder(self.inputs_can, npts))
         self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha)
         self.outputs1 = self.coarse
         self.outputs2 = self.fine
-        self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, gt_can, self.fine, gt]
+        self.visualize_ops = [tf.split(inputs[0], npts, axis=0), self.coarse, self.gt_can, self.fine, gt]
         self.visualize_titles = ['input', 'coarse output', 'meshes', 'fine output', 'ground truth']
 
     def create_encoder(self, inputs, npts):
@@ -162,7 +162,7 @@ class Model:
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        loss = alpha * loss_coarse + loss_fine + entropy
+        loss = alpha * loss_coarse + loss_fine # + entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 
