@@ -132,7 +132,7 @@ class Model:
         # entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
         entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_can_feat, logits=p_coar_feat))
         loss_coarse = chamfer(coarse[:,:,0:3], gt[:,:,0:3])
-        loss_coarse += chamfer(self.canonical[:,:,0:3], self.gt_can[:,:,0:3])
+        # loss_coarse += chamfer(self.canonical[:,:,0:3], self.gt_can[:,:,0:3])
         """
         _, retb, _, retd = tf_nndistance.nn_distance(coarse[:,:,0:3], gt[:,:,0:3])
         for i in range(np.shape(gt)[0]):
