@@ -58,10 +58,9 @@ class Model:
         with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
             coarse = mlp(features, [1024, 1024, self.num_coarse*self.channels])
             coarse = tf.reshape(coarse, [-1, self.num_coarse, self.channels])
-            coarse_ord = point_softpool(coarse, npts_output=self.num_coarse, orders=self.channels)
-            coarse = mlp_conv_act(coarse_ord, [512, 512, 3], act_dim=self.channels)
-            # learned_label = tf.nn.softmax(coarse[:,:,3:], axis=-1)
-            coarse = tf.concat([coarse[:,:,:3], coarse_ord[:,:,:]], axis=-1)
+            feat_spool = point_softpool(coarse, npts_output=self.num_coarse, orders=self.channels)
+            coarse = mlp_conv_act(feat_spool, [512, 512, 3], act_dim=self.channels)
+            coarse = tf.concat([coarse[:,:,:3], feat_spool[:,:,:]], axis=-1)
 
         with tf.variable_scope('folding', reuse=tf.AUTO_REUSE):
             grid = tf.meshgrid(tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size), tf.linspace(-self.grid_scale, self.grid_scale, self.grid_size))
@@ -75,14 +74,14 @@ class Model:
 
             feat = tf.concat([grid_feat, global_feat, point_feat], axis=2)
 
-            regions = tf.tile(tf.expand_dims(coarse_ord, 2), [1, 1, self.grid_size ** 2, 1])
-            regions = tf.reshape(regions, [-1, self.num_fine, self.channels])
+            feat_spool = tf.tile(tf.expand_dims(feat_spool, 2), [1, 1, self.grid_size ** 2, 1])
+            feat_spool = tf.reshape(feat_spool, [-1, self.num_fine, self.channels])
 
             center = tf.tile(tf.expand_dims(coarse, 2), [1, 1, self.grid_size ** 2, 1])
             center = tf.reshape(center, [-1, self.num_fine, 3+self.channels])
 
             fine = mlp_conv_act(feat, [512, 512, 3], act_dim=self.channels) # + center
-            # fine = tf.concat([fine[:,:,:3], regions], axis=-1)
+            fine = tf.concat([fine[:,:,:3], feat_spool], axis=-1)
             
             mesh = fine
 
@@ -104,17 +103,17 @@ class Model:
 
             feat = tf.concat([grid_feat, point_feat], axis=2)
 
-            regions = tf.tile(feature_ord, [1, self.grid_size ** 2, 1])
-            regions = tf.reshape(regions, [-1, self.num_fine, self.channels])
+            feat_spool = tf.tile(feature_ord, [1, self.grid_size ** 2, 1])
+            feat_spool = tf.reshape(feat_spool, [-1, self.num_fine, self.channels])
 
             fine = mlp_conv_act(feat, [512, 512, 3], act_dim=self.channels) # + center
-            fine = tf.concat([fine[:,:,:3], regions], axis=-1)
+            fine = tf.concat([fine[:,:,:3], feat_spool], axis=-1)
             
             mesh = fine
 
         p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels], -1)
         p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
-        p_regions_feat = tf.nn.softmax(regions, -1)
+        p_regions_feat = tf.nn.softmax(feat_spool, -1)
         p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
         p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
         # entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
@@ -125,15 +124,15 @@ class Model:
 
     def create_loss(self, coarse, fine, gt, alpha):
         p_coar_feat = tf.nn.softmax(coarse[:,:,3:3+self.channels], -1)
-        p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
+        # p_fine_feat = tf.nn.softmax(fine[:,:,3:3+self.channels], -1)
         p_can_feat = tf.nn.softmax(self.canonical[:,:,3:3+self.channels], -1)
         p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
-        p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
+        # p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
         # entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
         # entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
         entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_can_feat, logits=p_coar_feat))
         loss_coarse = chamfer(coarse[:,:,0:3], gt[:,:,0:3])
-        loss_coarse += chamfer(self.canonical[:,:,0:3], gt_can[:,:,0:3])
+        loss_coarse += chamfer(self.canonical[:,:,0:3], self.gt_can[:,:,0:3])
         """
         _, retb, _, retd = tf_nndistance.nn_distance(coarse[:,:,0:3], gt[:,:,0:3])
         for i in range(np.shape(gt)[0]):
