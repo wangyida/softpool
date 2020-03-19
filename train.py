@@ -85,14 +85,18 @@ def train(args):
     for step in range(init_step+1, args.max_step+1):
         epoch = step * args.batch_size // num_train + 1
         ids, inputs, npts, gt = next(train_gen)
-        rotate = False
+        rotate = True
         if rotate:
-            angle = np.random.rand(args.batch_size)*360
-            inputs = np.stack((np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,2]), axis=-1)
+            angle_xz = np.random.rand(args.batch_size)*360
+            angle_xy = np.random.rand(args.batch_size)*360
+            inputs = np.stack((np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,2]), axis=-1)
+            inputs = np.stack((np.repeat(np.cos(angle_xy), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle_xy), npts, axis=0)*inputs[:,:,1], np.repeat(np.sin(angle_xy), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle_xy), npts, axis=0)*inputs[:,:,1], inputs[:,:,2]), axis=-1)
             if args.experiment == 'suncg': 
-                gt = np.stack((np.expand_dims(np.cos(angle), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle), -1)*gt[:,:,2], gt[:,:,3], gt[:,:,4], gt[:,:,5]), axis=-1)
+                gt = np.stack((np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,2], gt[:,:,3], gt[:,:,4], gt[:,:,5]), axis=-1)
+                gt = np.stack((np.expand_dims(np.cos(angle_xy), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xy), -1)*gt[:,:,1], np.expand_dims(np.sin(angle_xy), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xy), -1)*gt[:,:,1], gt[:,:,2], gt[:,:,3], gt[:,:,4], gt[:,:,5]), axis=-1)
             elif args.experiment == 'shapenet': 
-                gt = np.stack((np.expand_dims(np.cos(angle), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle), -1)*gt[:,:,2]), axis=-1)
+                gt = np.stack((np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,2]), axis=-1)
+                gt = np.stack((np.expand_dims(np.cos(angle_xy), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xy), -1)*gt[:,:,1], np.expand_dims(np.sin(angle_xy), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xy), -1)*gt[:,:,1], gt[:,:,2]), axis=-1)
         start = time.time()
         feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: True}
         _, loss, summary = sess.run([train_op, model.loss, train_summary], feed_dict=feed_dict)
@@ -112,8 +116,8 @@ def train(args):
                 start = time.time()
                 ids, inputs, npts, gt = next(valid_gen)
                 if args.experiment == 'shapenet' and rotate:
-                    inputs = np.stack((np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle), npts, axis=0)*inputs[:,:,2]), axis=-1)
-                    gt = np.stack((np.expand_dims(np.cos(angle), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle), -1)*gt[:,:,2]), axis=-1)
+                    inputs = np.stack((np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,2]), axis=-1)
+                    gt = np.stack((np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,2]), axis=-1)
                 feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: False}
                 loss, _ = sess.run([model.loss, model.update], feed_dict=feed_dict)
                 total_loss += loss

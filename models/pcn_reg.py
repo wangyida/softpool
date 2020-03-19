@@ -19,7 +19,7 @@ class Model:
         inputs_can, gt_can = self.canon_pose(gt, inputs, npts)
         self.features = self.create_encoder(inputs, npts)
         self.coarse, self.fine, self.mesh = self.create_decoder(self.features)
-        _, self.canonical, _ = self.create_decoder(self.create_encoder(inputs_can, npts))
+        self.canonical, _, _ = self.create_decoder(self.create_encoder(inputs_can, npts))
         self.loss, self.update = self.create_loss(self.coarse, self.fine, gt, alpha)
         self.outputs1 = self.coarse
         self.outputs2 = self.fine
@@ -131,7 +131,7 @@ class Model:
         p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
         # entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
         # entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
-        entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_can_feat, logits=p_fine_feat))
+        entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_can_feat, logits=p_coar_feat))
         loss_coarse = chamfer(coarse[:,:,0:3], gt[:,:,0:3])
         """
         _, retb, _, retd = tf_nndistance.nn_distance(coarse[:,:,0:3], gt[:,:,0:3])
