@@ -128,9 +128,9 @@ class Model:
         p_can_feat = tf.nn.softmax(self.canonical[:,:,3:3+self.channels], -1)
         p_coar_samp = tf.reduce_mean(p_coar_feat, [1])
         # p_fine_samp = tf.reduce_mean(p_fine_feat, [1])
-        entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
+        # entropy = tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_coar_samp * tf.log(p_coar_samp), [1]), [0]))
         # entropy += tf.nn.relu(tf.log(self.channels*1.0) + tf.reduce_mean(tf.reduce_sum(p_fine_samp * tf.log(p_fine_samp), [1]), [0]))
-        entropy += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_can_feat, logits=p_coar_feat))
+        entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_can_feat, logits=p_coar_feat))
         loss_coarse = chamfer(coarse[:,:,0:3], gt[:,:,0:3])
         loss_coarse += chamfer(self.canonical[:,:,0:3], self.gt_can[:,:,0:3])
         """
@@ -162,7 +162,8 @@ class Model:
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        loss = alpha * loss_coarse + loss_fine + entropy
+        # loss = alpha * loss_coarse + loss_fine + entropy
+        loss = loss_coarse + entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
 
