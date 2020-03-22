@@ -18,6 +18,7 @@ def save_view_point(pcd, filename):
     o3d.io.write_pinhole_camera_parameters(filename, param)
     vis.destroy_window()
 
+
 def load_view_point(pcd, filename):
     vis = o3d.visualization.Visualizer()
     vis.create_window()
@@ -28,6 +29,7 @@ def load_view_point(pcd, filename):
     vis.run()
     vis.destroy_window()
 
+
 def display_inlier_outlier(cloud, ind):
     inlier_cloud = cloud.select_down_sample(ind)
     outlier_cloud = cloud.select_down_sample(ind, invert=True)
@@ -37,8 +39,8 @@ def display_inlier_outlier(cloud, ind):
     inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
     o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 
-def custom_draw_geometry_with_rotation(pcd):
 
+def custom_draw_geometry_with_rotation(pcd):
     def rotate_view(vis):
         ctr = vis.get_view_control()
         # param = o3d.io.read_pinhole_camera_trajectory("/Users/yidawang/Documents/gitfarm/sem-pts-com/camera_trajectory.json").parameters[0]
@@ -50,6 +52,7 @@ def custom_draw_geometry_with_rotation(pcd):
 
     o3d.visualization.draw_geometries_with_animation_callback([pcd],
                                                               rotate_view)
+
 
 def custom_draw_geometry_with_camera_trajectory(pcd):
     custom_draw_geometry_with_camera_trajectory.index = -1
@@ -97,10 +100,12 @@ def custom_draw_geometry_with_camera_trajectory(pcd):
     vis = custom_draw_geometry_with_camera_trajectory.vis
     vis.create_window()
     vis.add_geometry(pcd)
-    vis.get_render_option().load_from_json("/Users/yidawang/Documents/gitfarm/sem-pts-com/renderoption.json")
+    vis.get_render_option().load_from_json(
+        "/Users/yidawang/Documents/gitfarm/sem-pts-com/renderoption.json")
     vis.register_animation_callback(move_forward)
     vis.run()
     vis.destroy_window()
+
 
 if __name__ == "__main__":
 
@@ -159,8 +164,9 @@ if __name__ == "__main__":
     if results.file_path != '':
         pcd = o3d.io.read_point_cloud(results.file_path)
         print("Load a ply point cloud, print it, and render it")
-        pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(
-            radius=0.05, max_nn=64))
+        pcd.estimate_normals(
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(
+                radius=0.05, max_nn=64))
         cam_view = "/Users/yidawang/Documents/gitfarm/sem-pts-com/qualitative_lists/render_plane.json"
         print("Recompute the normal of the downsampled point cloud")
         # save_view_point(pcd, cam_view)
@@ -171,8 +177,6 @@ if __name__ == "__main__":
         # display_inlier_outlier(pcd, ind)
 
         custom_draw_geometry_with_rotation(pcd)
-
-
         """
         print("Downsample the point cloud with a voxel of 0.02")
         pcd = pcd.voxel_down_sample(voxel_size=0.02)
@@ -195,16 +199,17 @@ if __name__ == "__main__":
     elif results.files_list != '':
         # Get the number of validation samples
         with open(results.files_list, "r") as f:
-            points_all = np.zeros((1,3))
-            colors_all = np.zeros((1,3)) 
+            points_all = np.zeros((1, 3))
+            colors_all = np.zeros((1, 3))
             reader = csv.reader(f)
             data = list(reader)
             for i in range(results.numbers):
                 pcd = o3d.io.read_point_cloud(data[i][0])
                 if i == 1:
-                    pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=2.0)
+                    pcd, ind = pcd.remove_statistical_outlier(
+                        nb_neighbors=8, std_ratio=2.0)
                 npy_points = np.asarray(pcd.points)
-                npy_points[:, 0] += (i*1.002)
+                npy_points[:, 0] += (i * 1.002)
                 npy_colors = np.asarray(pcd.colors)
                 points_all = np.concatenate((points_all, npy_points), 0)
                 colors_all = np.concatenate((colors_all, npy_colors), 0)
@@ -224,14 +229,14 @@ if __name__ == "__main__":
         """
         if results.files_list2 != '':
             with open(results.files_list2, "r") as f:
-                points_all2 = np.zeros((1,3))
-                colors_all2 = np.zeros((1,3)) 
+                points_all2 = np.zeros((1, 3))
+                colors_all2 = np.zeros((1, 3))
                 reader = csv.reader(f)
                 data = list(reader)
                 for i in range(results.numbers):
                     pcd = o3d.io.read_point_cloud(data[i][0])
                     npy_points = np.asarray(pcd.points)
-                    npy_points[:, 0] += (i*1.1002)
+                    npy_points[:, 0] += (i * 1.1002)
                     npy_points[:, 2] += 1.0002
                     # npy_points[:, 1] += .4002
                     npy_colors = np.asarray(pcd.colors)
@@ -242,15 +247,15 @@ if __name__ == "__main__":
                     colors_all = np.concatenate((colors_all, colors_all2), 0)
         if results.files_list3 != '':
             with open(results.files_list3, "r") as f:
-                points_all3 = np.zeros((1,3))
-                colors_all3 = np.zeros((1,3)) 
+                points_all3 = np.zeros((1, 3))
+                colors_all3 = np.zeros((1, 3))
                 reader = csv.reader(f)
                 data = list(reader)
                 for i in range(results.numbers):
                     pcd = o3d.io.read_point_cloud(data[i][0])
                     npy_points = np.asarray(pcd.points)
-                    npy_points[:, 0] += (i*1.1002)
-                    npy_points[:, 2] += 2*1.0002
+                    npy_points[:, 0] += (i * 1.1002)
+                    npy_points[:, 2] += 2 * 1.0002
                     # npy_points[:, 1] += 2*.4002
                     npy_colors = np.asarray(pcd.colors)
                     points_all3 = np.concatenate((points_all3, npy_points), 0)
@@ -260,15 +265,15 @@ if __name__ == "__main__":
                     colors_all = np.concatenate((colors_all, colors_all3), 0)
         if results.files_list4 != '':
             with open(results.files_list4, "r") as f:
-                points_all4 = np.zeros((1,3))
-                colors_all4 = np.zeros((1,3)) 
+                points_all4 = np.zeros((1, 3))
+                colors_all4 = np.zeros((1, 3))
                 reader = csv.reader(f)
                 data = list(reader)
                 for i in range(results.numbers):
                     pcd = o3d.io.read_point_cloud(data[i][0])
                     npy_points = np.asarray(pcd.points)
-                    npy_points[:, 0] += (i*1.1002)
-                    npy_points[:, 2] += 3*1.0002
+                    npy_points[:, 0] += (i * 1.1002)
+                    npy_points[:, 2] += 3 * 1.0002
                     # npy_points[:, 1] += 2*.4002
                     npy_colors = np.asarray(pcd.colors)
                     points_all4 = np.concatenate((points_all4, npy_points), 0)
@@ -278,15 +283,15 @@ if __name__ == "__main__":
                     colors_all = np.concatenate((colors_all, colors_all4), 0)
         if results.files_list5 != '':
             with open(results.files_list5, "r") as f:
-                points_all5 = np.zeros((1,3))
-                colors_all5 = np.zeros((1,3)) 
+                points_all5 = np.zeros((1, 3))
+                colors_all5 = np.zeros((1, 3))
                 reader = csv.reader(f)
                 data = list(reader)
                 for i in range(results.numbers):
                     pcd = o3d.io.read_point_cloud(data[i][0])
                     npy_points = np.asarray(pcd.points)
-                    npy_points[:, 0] += (i*1.1002)
-                    npy_points[:, 2] += 4*1.0002
+                    npy_points[:, 0] += (i * 1.1002)
+                    npy_points[:, 2] += 4 * 1.0002
                     # npy_points[:, 1] += 2*.4002
                     npy_colors = np.asarray(pcd.colors)
                     points_all5 = np.concatenate((points_all5, npy_points), 0)
@@ -296,15 +301,15 @@ if __name__ == "__main__":
                     colors_all = np.concatenate((colors_all, colors_all5), 0)
         if results.files_list6 != '':
             with open(results.files_list6, "r") as f:
-                points_all6 = np.zeros((1,3))
-                colors_all6 = np.zeros((1,3)) 
+                points_all6 = np.zeros((1, 3))
+                colors_all6 = np.zeros((1, 3))
                 reader = csv.reader(f)
                 data = list(reader)
                 for i in range(results.numbers):
                     pcd = o3d.io.read_point_cloud(data[i][0])
                     npy_points = np.asarray(pcd.points)
-                    npy_points[:, 0] += (i*1.1002)
-                    npy_points[:, 2] += 5*1.0002
+                    npy_points[:, 0] += (i * 1.1002)
+                    npy_points[:, 2] += 5 * 1.0002
                     # npy_points[:, 1] += 2*.4002
                     npy_colors = np.asarray(pcd.colors)
                     points_all6 = np.concatenate((points_all6, npy_points), 0)
@@ -312,13 +317,14 @@ if __name__ == "__main__":
                     print(pcd)
                     points_all = np.concatenate((points_all, points_all6), 0)
                     colors_all = np.concatenate((colors_all, colors_all6), 0)
-        pcd.points = o3d.utility.Vector3dVector(points_all[:,0:3])
-        pcd.colors = o3d.utility.Vector3dVector(colors_all[:,0:3])
+        pcd.points = o3d.utility.Vector3dVector(points_all[:, 0:3])
+        pcd.colors = o3d.utility.Vector3dVector(colors_all[:, 0:3])
         # o3d.visualization.draw_geometries([pcd])
 
         print("Recompute the normal of the downsampled point cloud")
-        pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(
-            radius=0.1, max_nn=32))
+        pcd.estimate_normals(
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(
+                radius=0.1, max_nn=32))
 
         o3d.visualization.draw_geometries([pcd])
         custom_draw_geometry_with_rotation(pcd)
@@ -327,4 +333,3 @@ if __name__ == "__main__":
         cl, ind = pcd.remove_statistical_outlier(nb_neighbors=8, std_ratio=2.0)
         o3d.visualization.draw_geometries([cl])
         display_inlier_outlier(pcd, ind)
-

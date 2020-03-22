@@ -19,9 +19,11 @@ class pcd_df(DataFlow):
 
     def get_data(self):
         for model_id in model_list:
-            complete = read_pcd(os.path.join(self.complete_dir, '%s.pcd' % model_id))
+            complete = read_pcd(
+                os.path.join(self.complete_dir, '%s.pcd' % model_id))
             # complete = resample_pcd(complete, 16384)
-            partial = read_pcd(os.path.join(self.partial_dir, '%s.pcd' % model_id))
+            partial = read_pcd(
+                os.path.join(self.partial_dir, '%s.pcd' % model_id))
             yield model_id.replace('/', '_'), partial, complete
             """
             for i in range(self.num_scans):
@@ -41,7 +43,8 @@ if __name__ == '__main__':
 
     with open(args.list_path) as file:
         model_list = file.read().splitlines()
-    df = pcd_df(model_list, args.num_scans, args.partial_dir, args.complete_dir)
+    df = pcd_df(model_list, args.num_scans, args.partial_dir,
+                args.complete_dir)
     if os.path.exists(args.output_path):
         os.system('rm %s' % args.output_path)
     dataflow.LMDBSerializer.save(df, args.output_path)

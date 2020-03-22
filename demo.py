@@ -11,7 +11,16 @@ from open3d import *
 
 
 def plot_pcd(ax, pcd):
-    ax.scatter(pcd[:, 0], pcd[:, 1], pcd[:, 2], zdir='y', c=pcd[:, 0], s=0.5, cmap='Reds', vmin=-1, vmax=0.5)
+    ax.scatter(
+        pcd[:, 0],
+        pcd[:, 1],
+        pcd[:, 2],
+        zdir='y',
+        c=pcd[:, 0],
+        s=0.5,
+        cmap='Reds',
+        vmin=-1,
+        vmax=0.5)
     ax.set_axis_off()
     ax.set_xlim(-0.3, 0.3)
     ax.set_ylim(-0.3, 0.3)
@@ -28,7 +37,7 @@ if __name__ == '__main__':
 
     inputs = tf.placeholder(tf.float32, (1, None, 3))
     gt = tf.placeholder(tf.float32, (1, args.num_gt_points, 3))
-    npts = tf.placeholder(tf.int32, (1,))
+    npts = tf.placeholder(tf.int32, (1, ))
     model_module = importlib.import_module('.%s' % args.model_type, 'models')
     model = model_module.Model(inputs, npts, gt, tf.constant(1.0))
 
@@ -42,7 +51,11 @@ if __name__ == '__main__':
 
     partial = read_point_cloud(args.input_path)
     partial = np.array(partial.points)
-    complete = sess.run(model.outputs, feed_dict={inputs: [partial], npts: [partial.shape[0]]})[0]
+    complete = sess.run(
+        model.outputs, feed_dict={
+            inputs: [partial],
+            npts: [partial.shape[0]]
+        })[0]
 
     fig = plt.figure(figsize=(8, 4))
     ax = fig.add_subplot(121, projection='3d')

@@ -13,7 +13,7 @@ from visu_util import plot_pcd_three_views
 
 def test(args):
     inputs = tf.placeholder(tf.float32, (1, None, 3))
-    npts = tf.placeholder(tf.int32, (1,))
+    npts = tf.placeholder(tf.int32, (1, ))
     gt = tf.placeholder(tf.float32, (1, args.num_gt_points, 3))
     model_module = importlib.import_module('.%s' % args.model_type, 'models')
     model = model_module.Model(inputs, npts, gt, tf.constant(1.0))
@@ -42,8 +42,7 @@ def test(args):
         bbox -= center
         yaw = np.arctan2(bbox[3, 1] - bbox[0, 1], bbox[3, 0] - bbox[0, 0])
         rotation = np.array([[np.cos(yaw), -np.sin(yaw), 0],
-                            [np.sin(yaw), np.cos(yaw), 0],
-                            [0, 0, 1]])
+                             [np.sin(yaw), np.cos(yaw), 0], [0, 0, 1]])
         bbox = np.dot(bbox, rotation)
         scale = bbox[3, 0] - bbox[0, 0]
         bbox /= scale
@@ -52,19 +51,27 @@ def test(args):
         partial = np.dot(partial, [[1, 0, 0], [0, 0, 1], [0, 1, 0]])
 
         start = time.time()
-        completion = sess.run(model.outputs, feed_dict={inputs: [partial], npts: [partial.shape[0]]})
+        completion = sess.run(
+            model.outputs,
+            feed_dict={
+                inputs: [partial],
+                npts: [partial.shape[0]]
+            })
         total_time += time.time() - start
         completion = completion[0]
 
         completion_w = np.dot(completion, [[1, 0, 0], [0, 0, 1], [0, 1, 0]])
         completion_w = np.dot(completion_w * scale, rotation.T) + center
-        pcd_path = os.path.join(args.results_dir, 'completions', '%s.pcd' % car_id)
+        pcd_path = os.path.join(args.results_dir, 'completions',
+                                '%s.pcd' % car_id)
         save_pcd(pcd_path, completion_w)
 
         if i % args.plot_freq == 0:
-            plot_path = os.path.join(args.results_dir, 'plots', '%s.png' % car_id)
-            plot_pcd_three_views(plot_path, [partial, completion], ['input', 'output'],
-                                 '%d input points' % partial.shape[0], [5, 0.5])
+            plot_path = os.path.join(args.results_dir, 'plots',
+                                     '%s.png' % car_id)
+            plot_pcd_three_views(
+                plot_path, [partial, completion], ['input', 'output'],
+                '%d input points' % partial.shape[0], [5, 0.5])
     print('Average # input points:', total_points / len(car_ids))
     print('Average time:', total_time / len(car_ids))
     sess.close()
@@ -73,7 +80,8 @@ def test(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_type', default='pcn_emd')
-    parser.add_argument('--checkpoint', default='data/trained_models/pcn_emd_car')
+    parser.add_argument(
+        '--checkpoint', default='data/trained_models/pcn_emd_car')
     parser.add_argument('--pcd_dir', default='data/kitti/cars')
     parser.add_argument('--bbox_dir', default='data/kitti/bboxes')
     parser.add_argument('--results_dir', default='results/kitti_pcn_emd')

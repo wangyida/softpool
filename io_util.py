@@ -11,13 +11,13 @@ def read_pcd(filename):
     if pcd.colors:
         return np.concatenate([np.array(pcd.points), np.array(pcd.colors)], 1)
     else:
-        colors = matplotlib.cm.cool(np.array(pcd.points)[:,0])
-        return np.concatenate([np.array(pcd.points), colors[:,0:3]], 1)
+        colors = matplotlib.cm.cool(np.array(pcd.points)[:, 0])
+        return np.concatenate([np.array(pcd.points), colors[:, 0:3]], 1)
 
 
 def save_pcd(filename, points):
     set_verbosity_level(VerbosityLevel.Error)
     pcd = PointCloud()
-    pcd.points = Vector3dVector(points[:,0:3])
-    pcd.colors = Vector3dVector(points[:,3:6])
+    pcd.points = Vector3dVector(points[:, 0:3])
+    pcd.colors = Vector3dVector(points[:, 3:6])
     write_point_cloud(filename, pcd)
