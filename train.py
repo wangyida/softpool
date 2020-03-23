@@ -85,7 +85,7 @@ def train(args):
     for step in range(init_step+1, args.max_step+1):
         epoch = step * args.batch_size // num_train + 1
         ids, inputs, npts, gt = next(train_gen)
-        rotate = True
+        rotate = False 
         if rotate:
             angle_xz = np.random.rand(args.batch_size)*360
             angle_xy = np.random.rand(args.batch_size)*360

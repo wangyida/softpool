@@ -133,7 +133,6 @@ class Model:
         entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=p_can_feat, logits=p_coar_feat))
         loss_coarse = chamfer(coarse[:,:,0:3], gt[:,:,0:3])
         loss_coarse += chamfer(self.canonical[:,:,0:3], self.gt_can[:,:,0:3])
-        """
         _, retb, _, retd = tf_nndistance.nn_distance(coarse[:,:,0:3], gt[:,:,0:3])
         for i in range(np.shape(gt)[0]):
             index = tf.expand_dims(retb[i], -1)
@@ -143,12 +142,10 @@ class Model:
                         0.97 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.97) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
             loss_coarse += 0.01 * loss_sem_coarse
-        """
         add_train_summary('train/coarse_loss', loss_coarse)
         update_coarse = add_valid_summary('valid/coarse_loss', loss_coarse)
 
         loss_fine = chamfer(fine[:,:,0:3], gt[:,:,0:3])
-        """
         _, retb, _, retd = tf_nndistance.nn_distance(fine[:,:,0:3], gt[:,:,0:3])
         for i in range(np.shape(gt)[0]):
             index = tf.expand_dims(retb[i], -1)
@@ -158,11 +155,10 @@ class Model:
                         0.97 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.97) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
             loss_fine += 0.01 * loss_sem_fine
-        """
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
-        loss = alpha * loss_coarse + loss_fine + entropy
+        loss = alpha * loss_coarse + loss_fine # + entropy
         # loss = loss_coarse + entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
