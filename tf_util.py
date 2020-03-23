@@ -37,7 +37,7 @@ def mlp_conv_act(inputs, layer_dims, act_dim=8, bn=None, bn_params=None):
     for i, num_out_channel in enumerate(layer_dims[:-1]):
         inputs = tf.contrib.layers.conv1d(
             inputs, num_out_channel,
-            kernel_size=1,
+            kernel_size=8,
             normalizer_fn=bn,
             normalizer_params=bn_params,
             scope='conv_%d' % i)
