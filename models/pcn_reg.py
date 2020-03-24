@@ -146,7 +146,6 @@ class Model:
         update_coarse = add_valid_summary('valid/coarse_loss', loss_coarse)
 
         loss_fine = chamfer(fine[:,:,0:3], gt[:,:,0:3])
-        """
         _, retb, _, retd = tf_nndistance.nn_distance(fine[:,:,0:3], gt[:,:,0:3])
         for i in range(np.shape(gt)[0]):
             index = tf.expand_dims(retb[i], -1)
@@ -156,7 +155,6 @@ class Model:
                         0.97 * sem_gt * tf.log(1e-6 + sem_feat) + (1 - 0.97) *
                         (1 - sem_gt) * tf.log(1e-6 + 1 - sem_feat), [1]))
             loss_fine += 0.01 * loss_sem_fine
-        """
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
 
