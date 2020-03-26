@@ -99,7 +99,8 @@ def test(args):
         completion2[0][:, (3 + args.num_channel):] *= 0
         mesh_out[0][:, (3 + args.num_channel):] *= 0
         total_time += time.time() - start
-        cd, emd = sess.run([cd_op, emd_op],
+        # cd, emd = sess.run([cd_op, emd_op],
+        cd, emd = sess.run([cd_op, cd_op],
                            feed_dict={
                                output: completion2,
                                gt: [complete]
