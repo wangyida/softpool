@@ -114,7 +114,7 @@ def train(args):
             for i in range(num_eval_steps):
                 start = time.time()
                 ids, inputs, npts, gt = next(valid_gen)
-                if args.experiment == 'shapenet' and rotate:
+                if args.experiment == 'shapenet' and args.rotate:
                     inputs = np.stack((np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,2]), axis=-1)
                     gt = np.stack((np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,2]), axis=-1)
                 feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: False}
