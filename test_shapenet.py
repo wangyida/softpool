@@ -68,9 +68,8 @@ def test(args):
             complete = read_pcd(
                 os.path.join(args.data_dir, 'pcd_complete',
                              '%s.pcd' % model_id))
-        rotate = True
-        if rotate:
-            angle = np.random.rand(1) * 360
+        if args.rotate:
+            angle = np.random.rand(1)*2*np.pi 
             partial = np.stack([
                 np.cos(angle) * partial[:, 0] - np.sin(angle) * partial[:, 2],
                 partial[:, 1],
@@ -240,6 +239,7 @@ if __name__ == '__main__':
     parser.add_argument('--results_dir', default='results/shapenet_pcn_emd')
     parser.add_argument('--num_gt_points', type=int, default=16384)
     parser.add_argument('--plot_freq', type=int, default=100)
+    parser.add_argument('--rotate', action='store_true')
     parser.add_argument('--save_pcd', action='store_true')
     parser.add_argument('--num_channel', type=int, default=8)
     args = parser.parse_args()
