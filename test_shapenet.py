@@ -68,7 +68,7 @@ def test(args):
             complete = read_pcd(
                 os.path.join(args.data_dir, 'pcd_complete',
                              '%s.pcd' % model_id))
-        rotate = False
+        rotate = True
         if rotate:
             angle = np.random.rand(1) * 360
             partial = np.stack([
