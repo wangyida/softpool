@@ -157,7 +157,7 @@ class Model:
             loss_fine += 0.01 * loss_sem_fine
         add_train_summary('train/fine_loss', loss_fine)
         update_fine = add_valid_summary('valid/fine_loss', loss_fine)
-        loss = alpha * loss_coarse + loss_fine # + entropy
+        loss = alpha * loss_coarse + loss_fine + entropy
         # loss = loss_coarse + entropy
         add_train_summary('train/loss', loss)
         update_loss = add_valid_summary('valid/loss', loss)
