@@ -7,12 +7,14 @@ from pc_distance import tf_nndistance, tf_approxmatch
 def mlp(features, layer_dims, bn=None, bn_params=None):
     for i, num_outputs in enumerate(layer_dims[:-1]):
         features = tf.contrib.layers.fully_connected(
-            features, num_outputs,
+            features,
+            num_outputs,
             normalizer_fn=bn,
             normalizer_params=bn_params,
             scope='fc_%d' % i)
     outputs = tf.contrib.layers.fully_connected(
-        features, layer_dims[-1],
+        features,
+        layer_dims[-1],
         activation_fn=None,
         scope='fc_%d' % (len(layer_dims) - 1))
     return outputs
@@ -21,43 +23,52 @@ def mlp(features, layer_dims, bn=None, bn_params=None):
 def mlp_conv(inputs, layer_dims, bn=None, bn_params=None):
     for i, num_out_channel in enumerate(layer_dims[:-1]):
         inputs = tf.contrib.layers.conv1d(
-            inputs, num_out_channel,
+            inputs,
+            num_out_channel,
             kernel_size=1,
             normalizer_fn=bn,
             normalizer_params=bn_params,
             scope='conv_%d' % i)
     outputs = tf.contrib.layers.conv1d(
-        inputs, layer_dims[-1],
+        inputs,
+        layer_dims[-1],
         kernel_size=1,
         activation_fn=None,
         scope='conv_%d' % (len(layer_dims) - 1))
     return outputs
 
+
 def mlp_conv_act(inputs, layer_dims, act_dim=8, bn=None, bn_params=None):
     for i, num_out_channel in enumerate(layer_dims[:-1]):
         inputs = tf.contrib.layers.conv1d(
-            inputs, num_out_channel,
+            inputs,
+            num_out_channel,
             kernel_size=1,
             rate=2,
             normalizer_fn=bn,
             normalizer_params=bn_params,
             scope='conv_%d' % i)
     feature = tf.contrib.layers.conv1d(
-        inputs, layer_dims[-1],
+        inputs,
+        layer_dims[-1],
         kernel_size=1,
         activation_fn=None,
         scope='conv_%d' % (len(layer_dims) - 1))
     act = tf.contrib.layers.conv1d(
-        inputs, act_dim,
-        kernel_size=1,
-        activation_fn=None,
-        scope='conv_act')
+        inputs, act_dim, kernel_size=1, activation_fn=None, scope='conv_act')
     outputs = tf.concat([feature, act], axis=-1)
     return outputs
 
+
 def point_maxpool(inputs, npts, keepdims=False):
-    outputs = [tf.reduce_mean(tf.transpose(tf.math.top_k(tf.transpose(f, perm=[0, 2, 1]), k=1).values, perm=[0, 2, 1]), axis=1, keepdims=True)
-        for f in tf.split(inputs, npts, axis=1)]
+    outputs = [
+        tf.reduce_mean(
+            tf.transpose(
+                tf.math.top_k(tf.transpose(f, perm=[0, 2, 1]), k=1).values,
+                perm=[0, 2, 1]),
+            axis=1,
+            keepdims=True) for f in tf.split(inputs, npts, axis=1)
+    ]
     if keepdims:
         return tf.concat(outputs, axis=0)
     else:
@@ -66,16 +77,19 @@ def point_maxpool(inputs, npts, keepdims=False):
 
 def point_unpool(inputs, npts):
     inputs = tf.split(inputs, inputs.shape[0], axis=0)
-    outputs = [tf.tile(f, [1, npts[i], 1]) for i,f in enumerate(inputs)]
+    outputs = [tf.tile(f, [1, npts[i], 1]) for i, f in enumerate(inputs)]
     return tf.concat(outputs, axis=1)
 
+
 def point_softpool(inputs, npts_output, orders):
-    inputs = tf.nn.softmax(inputs, axis=-1) 
+    inputs = tf.nn.softmax(inputs, axis=-1)
     inputs_ordered = []
     for idx in range(orders):
-        idx_reg = tf.math.top_k(inputs[:,:,idx], k=npts_output//orders).indices
+        idx_reg = tf.math.top_k(
+            inputs[:, :, idx], k=npts_output // orders).indices
         inputs_ordered.append(tf.gather(inputs, indices=idx_reg, batch_dims=1))
-    return tf.concat(inputs_ordered[:], axis = 1)
+    return tf.concat(inputs_ordered[:], axis=1)
+
 
 def chamfer(pcd1, pcd2):
     dist1, _, dist2, _ = tf_nndistance.nn_distance(pcd1, pcd2)

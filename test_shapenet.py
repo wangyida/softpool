@@ -69,7 +69,7 @@ def test(args):
                 os.path.join(args.data_dir, 'pcd_complete',
                              '%s.pcd' % model_id))
         if args.rotate:
-            angle = np.random.rand(1)*2*np.pi 
+            angle = np.random.rand(1) * 2 * np.pi
             partial = np.stack([
                 np.cos(angle) * partial[:, 0] - np.sin(angle) * partial[:, 2],
                 partial[:, 1],

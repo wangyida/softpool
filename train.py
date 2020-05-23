@@ -22,20 +22,29 @@ def train(args):
     alpha = tf.train.piecewise_constant(global_step, [10000, 20000, 50000],
                                         [1.0, 0.5, 0.1, 0.1], 'alpha_op')
     inputs_pl = tf.placeholder(tf.float32, (1, None, 3), 'inputs')
-    npts_pl = tf.placeholder(tf.int32, (args.batch_size,), 'num_points')
+    npts_pl = tf.placeholder(tf.int32, (args.batch_size, ), 'num_points')
     if args.experiment == 'suncg':
-        gt_pl = tf.placeholder(tf.float32, (args.batch_size, args.num_gt_points, 6), 'ground_truths')
+        gt_pl = tf.placeholder(tf.float32,
+                               (args.batch_size, args.num_gt_points, 6),
+                               'ground_truths')
     elif args.experiment == 'shapenet':
-        gt_pl = tf.placeholder(tf.float32, (args.batch_size, args.num_gt_points, 3), 'ground_truths')
+        gt_pl = tf.placeholder(tf.float32,
+                               (args.batch_size, args.num_gt_points, 3),
+                               'ground_truths')
 
     model_module = importlib.import_module('.%s' % args.model_type, 'models')
-    model = model_module.Model(inputs_pl, npts_pl, gt_pl, alpha, args.num_channel)
+    model = model_module.Model(inputs_pl, npts_pl, gt_pl, alpha,
+                               args.num_channel)
     add_train_summary('alpha', alpha)
 
     if args.lr_decay:
-        learning_rate = tf.train.exponential_decay(args.base_lr, global_step,
-                                                   args.lr_decay_steps, args.lr_decay_rate,
-                                                   staircase=True, name='lr')
+        learning_rate = tf.train.exponential_decay(
+            args.base_lr,
+            global_step,
+            args.lr_decay_steps,
+            args.lr_decay_rate,
+            staircase=True,
+            name='lr')
         learning_rate = tf.maximum(learning_rate, args.lr_clip)
         add_train_summary('learning_rate', learning_rate)
     else:
@@ -47,10 +56,18 @@ def train(args):
     train_op = trainer.minimize(model.loss, global_step)
 
     df_train, num_train = lmdb_dataflow(
-        args.lmdb_train, args.batch_size, args.num_input_points, args.num_gt_points, is_training=True)
+        args.lmdb_train,
+        args.batch_size,
+        args.num_input_points,
+        args.num_gt_points,
+        is_training=True)
     train_gen = df_train.get_data()
     df_valid, num_valid = lmdb_dataflow(
-        args.lmdb_valid, args.batch_size, args.num_input_points, args.num_gt_points, is_training=False)
+        args.lmdb_valid,
+        args.batch_size,
+        args.num_input_points,
+        args.num_gt_points,
+        is_training=False)
     valid_gen = df_valid.get_data()
 
     config = tf.ConfigProto()
@@ -65,8 +82,9 @@ def train(args):
     else:
         sess.run(tf.global_variables_initializer())
         if os.path.exists(args.log_dir):
-            delete_key = input(colored('%s exists. Delete? [y (or enter)/N]'
-                                       % args.log_dir, 'white', 'on_red'))
+            delete_key = input(
+                colored('%s exists. Delete? [y (or enter)/N]' % args.log_dir,
+                        'white', 'on_red'))
             if delete_key == 'y' or delete_key == "":
                 os.system('rm -rf %s/*' % args.log_dir)
                 os.makedirs(os.path.join(args.log_dir, 'plots'))
@@ -74,31 +92,76 @@ def train(args):
             os.makedirs(os.path.join(args.log_dir, 'plots'))
         with open(os.path.join(args.log_dir, 'args.txt'), 'w') as log:
             for arg in sorted(vars(args)):
-                log.write(arg + ': ' + str(getattr(args, arg)) + '\n')     # log of arguments
-        os.system('cp models/%s.py %s' % (args.model_type, args.log_dir))  # bkp of model def
-        os.system('cp train.py %s' % args.log_dir)                         # bkp of train procedure
+                log.write(arg + ': ' + str(getattr(args, arg)) +
+                          '\n')  # log of arguments
+        os.system('cp models/%s.py %s' % (args.model_type,
+                                          args.log_dir))  # bkp of model def
+        os.system('cp train.py %s' % args.log_dir)  # bkp of train procedure
         writer = tf.summary.FileWriter(args.log_dir, sess.graph)
 
     total_time = 0
     train_start = time.time()
     init_step = sess.run(global_step)
-    for step in range(init_step+1, args.max_step+1):
+    for step in range(init_step + 1, args.max_step + 1):
         epoch = step * args.batch_size // num_train + 1
         ids, inputs, npts, gt = next(train_gen)
         start = time.time()
         if args.rotate:
-            angle_xz = np.random.rand(args.batch_size)*2*np.pi
-            angle_xy = np.random.rand(args.batch_size)*2*np.pi
-            inputs = np.stack((np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,2]), axis=-1)
-            inputs = np.stack((np.repeat(np.cos(angle_xy), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle_xy), npts, axis=0)*inputs[:,:,1], np.repeat(np.sin(angle_xy), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle_xy), npts, axis=0)*inputs[:,:,1], inputs[:,:,2]), axis=-1)
-            if args.experiment == 'suncg': 
-                gt = np.stack((np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,2], gt[:,:,3], gt[:,:,4], gt[:,:,5]), axis=-1)
-                gt = np.stack((np.expand_dims(np.cos(angle_xy), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xy), -1)*gt[:,:,1], np.expand_dims(np.sin(angle_xy), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xy), -1)*gt[:,:,1], gt[:,:,2], gt[:,:,3], gt[:,:,4], gt[:,:,5]), axis=-1)
-            elif args.experiment == 'shapenet': 
-                gt = np.stack((np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,2]), axis=-1)
-                gt = np.stack((np.expand_dims(np.cos(angle_xy), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xy), -1)*gt[:,:,1], np.expand_dims(np.sin(angle_xy), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xy), -1)*gt[:,:,1], gt[:,:,2]), axis=-1)
-        feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: True}
-        _, loss, summary = sess.run([train_op, model.loss, train_summary], feed_dict=feed_dict)
+            angle_xz = np.random.rand(args.batch_size) * 2 * np.pi
+            angle_xy = np.random.rand(args.batch_size) * 2 * np.pi
+            inputs = np.stack(
+                (np.repeat(np.cos(angle_xz), npts, axis=0) * inputs[:, :, 0] -
+                 np.repeat(np.sin(angle_xz), npts, axis=0) * inputs[:, :, 2],
+                 inputs[:, :, 1],
+                 np.repeat(np.sin(angle_xz), npts, axis=0) * inputs[:, :, 0] +
+                 np.repeat(np.cos(angle_xz), npts, axis=0) * inputs[:, :, 2]),
+                axis=-1)
+            inputs = np.stack(
+                (np.repeat(np.cos(angle_xy), npts, axis=0) * inputs[:, :, 0] -
+                 np.repeat(np.sin(angle_xy), npts, axis=0) * inputs[:, :, 1],
+                 np.repeat(np.sin(angle_xy), npts, axis=0) * inputs[:, :, 0] +
+                 np.repeat(np.cos(angle_xy), npts, axis=0) * inputs[:, :, 1],
+                 inputs[:, :, 2]),
+                axis=-1)
+            if args.experiment == 'suncg':
+                gt = np.stack(
+                    (np.expand_dims(np.cos(angle_xz), -1) * gt[:, :, 0] -
+                     np.expand_dims(np.sin(angle_xz), -1) * gt[:, :, 2],
+                     gt[:, :, 1],
+                     np.expand_dims(np.sin(angle_xz), -1) * gt[:, :, 0] +
+                     np.expand_dims(np.cos(angle_xz), -1) * gt[:, :, 2],
+                     gt[:, :, 3], gt[:, :, 4], gt[:, :, 5]),
+                    axis=-1)
+                gt = np.stack(
+                    (np.expand_dims(np.cos(angle_xy), -1) * gt[:, :, 0] -
+                     np.expand_dims(np.sin(angle_xy), -1) * gt[:, :, 1],
+                     np.expand_dims(np.sin(angle_xy), -1) * gt[:, :, 0] +
+                     np.expand_dims(np.cos(angle_xy), -1) * gt[:, :, 1],
+                     gt[:, :, 2], gt[:, :, 3], gt[:, :, 4], gt[:, :, 5]),
+                    axis=-1)
+            elif args.experiment == 'shapenet':
+                gt = np.stack(
+                    (np.expand_dims(np.cos(angle_xz), -1) * gt[:, :, 0] -
+                     np.expand_dims(np.sin(angle_xz), -1) * gt[:, :, 2],
+                     gt[:, :, 1],
+                     np.expand_dims(np.sin(angle_xz), -1) * gt[:, :, 0] +
+                     np.expand_dims(np.cos(angle_xz), -1) * gt[:, :, 2]),
+                    axis=-1)
+                gt = np.stack(
+                    (np.expand_dims(np.cos(angle_xy), -1) * gt[:, :, 0] -
+                     np.expand_dims(np.sin(angle_xy), -1) * gt[:, :, 1],
+                     np.expand_dims(np.sin(angle_xy), -1) * gt[:, :, 0] +
+                     np.expand_dims(np.cos(angle_xy), -1) * gt[:, :, 1],
+                     gt[:, :, 2]),
+                    axis=-1)
+        feed_dict = {
+            inputs_pl: inputs[:, :, 0:3],
+            npts_pl: npts,
+            gt_pl: gt,
+            is_training_pl: True
+        }
+        _, loss, summary = sess.run([train_op, model.loss, train_summary],
+                                    feed_dict=feed_dict)
         total_time += time.time() - start
         writer.add_summary(summary, step)
         if step % args.steps_per_print == 0:
@@ -115,28 +178,55 @@ def train(args):
                 start = time.time()
                 ids, inputs, npts, gt = next(valid_gen)
                 if args.experiment == 'shapenet' and args.rotate:
-                    inputs = np.stack((np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,0] - np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,2], inputs[:,:,1], np.repeat(np.sin(angle_xz), npts, axis=0)*inputs[:,:,0] + np.repeat(np.cos(angle_xz), npts, axis=0)*inputs[:,:,2]), axis=-1)
-                    gt = np.stack((np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,0] - np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,2], gt[:,:,1], np.expand_dims(np.sin(angle_xz), -1)*gt[:,:,0] + np.expand_dims(np.cos(angle_xz), -1)*gt[:,:,2]), axis=-1)
-                feed_dict = {inputs_pl: inputs[:,:,0:3], npts_pl: npts, gt_pl: gt, is_training_pl: False}
-                loss, _ = sess.run([model.loss, model.update], feed_dict=feed_dict)
+                    inputs = np.stack((
+                        np.repeat(np.cos(angle_xz), npts, axis=0) *
+                        inputs[:, :, 0] - np.repeat(
+                            np.sin(angle_xz), npts, axis=0) * inputs[:, :, 2],
+                        inputs[:, :, 1],
+                        np.repeat(np.sin(angle_xz), npts, axis=0) *
+                        inputs[:, :, 0] + np.repeat(
+                            np.cos(angle_xz), npts, axis=0) * inputs[:, :, 2]),
+                                      axis=-1)
+                    gt = np.stack(
+                        (np.expand_dims(np.cos(angle_xz), -1) * gt[:, :, 0] -
+                         np.expand_dims(np.sin(angle_xz), -1) * gt[:, :, 2],
+                         gt[:, :, 1],
+                         np.expand_dims(np.sin(angle_xz), -1) * gt[:, :, 0] +
+                         np.expand_dims(np.cos(angle_xz), -1) * gt[:, :, 2]),
+                        axis=-1)
+                feed_dict = {
+                    inputs_pl: inputs[:, :, 0:3],
+                    npts_pl: npts,
+                    gt_pl: gt,
+                    is_training_pl: False
+                }
+                loss, _ = sess.run([model.loss, model.update],
+                                   feed_dict=feed_dict)
                 total_loss += loss
                 total_time += time.time() - start
-            summary = sess.run(valid_summary, feed_dict={is_training_pl: False})
+            summary = sess.run(
+                valid_summary, feed_dict={is_training_pl: False})
             writer.add_summary(summary, step)
-            print(colored('epoch %d  step %d  loss %.8f - time per batch %.4f' %
-                          (epoch, step, total_loss / num_eval_steps, total_time / num_eval_steps),
-                          'grey', 'on_green'))
+            print(
+                colored(
+                    'epoch %d  step %d  loss %.8f - time per batch %.4f' %
+                    (epoch, step, total_loss / num_eval_steps,
+                     total_time / num_eval_steps), 'grey', 'on_green'))
             total_time = 0
             if step % args.steps_per_visu == 0:
                 all_pcds = sess.run(model.visualize_ops, feed_dict=feed_dict)
                 for i in range(0, args.batch_size, args.visu_freq):
-                    plot_path = os.path.join(args.log_dir, 'plots',
-                                            'epoch_%d_step_%d_%s.png' % (epoch, step, ids[i]))
+                    plot_path = os.path.join(
+                        args.log_dir, 'plots',
+                        'epoch_%d_step_%d_%s.png' % (epoch, step, ids[i]))
                     pcds = [x[i] for x in all_pcds]
-                    plot_pcd_three_views(plot_path, pcds, model.visualize_titles)
+                    plot_pcd_three_views(plot_path, pcds,
+                                         model.visualize_titles)
         if step % args.steps_per_save == 0:
             saver.save(sess, os.path.join(args.log_dir, 'model'), step)
-            print(colored('Model saved at %s' % args.log_dir, 'white', 'on_blue'))
+            print(
+                colored('Model saved at %s' % args.log_dir, 'white',
+                        'on_blue'))
 
     print('Total time', datetime.timedelta(seconds=time.time() - train_start))
     sess.close()
@@ -144,8 +234,12 @@ def train(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lmdb_train', default='/media/wangyida/HDD/database/pcn/suncg/train.lmdb')
-    parser.add_argument('--lmdb_valid', default='/media/wangyida/HDD/database/pcn/suncg/valid.lmdb')
+    parser.add_argument(
+        '--lmdb_train',
+        default='/media/wangyida/HDD/database/pcn/suncg/train.lmdb')
+    parser.add_argument(
+        '--lmdb_valid',
+        default='/media/wangyida/HDD/database/pcn/suncg/valid.lmdb')
     parser.add_argument('--experiment', default='suncg')
     parser.add_argument('--log_dir', default='log/pcn_emd')
     parser.add_argument('--model_type', default='pcn_emd')

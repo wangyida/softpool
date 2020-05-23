@@ -16,8 +16,13 @@ class Model:
     def create_encoder(self, inputs):
         with tf.variable_scope('encoder_0', reuse=tf.AUTO_REUSE):
             features = mlp_conv(inputs, [128, 256])
-            features_global = tf.reduce_max(features, axis=1, keep_dims=True, name='maxpool_0')
-            features = tf.concat([features, tf.tile(features_global, [1, tf.shape(inputs)[1], 1])], axis=2)
+            features_global = tf.reduce_max(
+                features, axis=1, keep_dims=True, name='maxpool_0')
+            features = tf.concat([
+                features,
+                tf.tile(features_global, [1, tf.shape(inputs)[1], 1])
+            ],
+                                 axis=2)
         with tf.variable_scope('encoder_1', reuse=tf.AUTO_REUSE):
             features = mlp_conv(features, [512, 1024])
             features = tf.reduce_max(features, axis=1, name='maxpool_1')
