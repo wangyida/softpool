@@ -1,5 +1,12 @@
-*.pyc
-log
-__pycache__
-pc_distance/__pycache__
-models/__pycache__
+tensorflow/*.pyc
+tensorflow/log
+tensorflow/trained_model
+tensorflow/__pycache__
+tensorflow/pc_distance/__pycache__
+tensorflow/models/__pycache__
+pytorch/*.pyc
+pytorch/log
+pytorch/trained_model
+pytorch/__pycache__
+pytorch/pc_distance/__pycache__
+pytorch/models/__pycache__
