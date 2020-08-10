@@ -13,7 +13,7 @@ sys.path.append("./MDS/")
 import MDS_module
 
 
-def SoftPool(x, N_p=32, descending=True):
+def SoftPool(x, N_p=32, descending=False):
     featdim = list(x.shape)[1]
     bth_size = list(x.shape)[0]
     sp_cube = torch.zeros(bth_size, featdim, N_p, featdim).cuda()
