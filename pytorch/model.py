@@ -13,12 +13,12 @@ sys.path.append("./MDS/")
 import MDS_module
 
 
-def SoftPool(x, N_p=32, descending=False):
+def SoftPool(x, N_p=32):
     featdim = list(x.shape)[1]
     bth_size = list(x.shape)[0]
     sp_cube = torch.zeros(bth_size, featdim, N_p, featdim).cuda()
     for idx in range(featdim):
-        x_val, x_idx = torch.sort(x[:, idx, :], dim=1)
+        x_val, x_idx = torch.sort(x[:, idx, :], dim=1, descending=False)
         index = x_idx[:, :N_p].unsqueeze(1).repeat(1, featdim, 1)
         sp_cube[:, :, :, idx] = torch.gather(x, dim=2, index=index)
     return sp_cube
