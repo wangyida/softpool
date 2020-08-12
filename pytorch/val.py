@@ -157,6 +157,6 @@ with torch.no_grad():
 
         os.makedirs('pcds/spblocks', exist_ok=True)
         softpoolblock = softpool[idx].data.cpu()[:, 0:3, :]
-        softpoolblock = softpoolblock.reshape((256, 256, 3))
+        softpoolblock = softpoolblock.reshape((64, 16, 3))
         plt.imsave(
             os.path.join('./pcds/spblocks/', '%s.png' % model), softpoolblock)
