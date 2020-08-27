@@ -15,7 +15,7 @@ def resample_pcd(pcd, n):
     if idx.shape[0] < n:
         idx = np.concatenate(
             [idx, np.random.randint(pcd.shape[0], size=n - pcd.shape[0])])
-    return pcd[idx[:n]]
+    return pcd[idx[:n]], idx[:n]
 
 
 class ShapeNet(data.Dataset):
@@ -39,24 +39,32 @@ class ShapeNet(data.Dataset):
         def read_pcd(filename):
             # pcd = o3d.io.read_point_cloud(filename)
             pcd = o3d.read_point_cloud(filename)
-            return torch.from_numpy(np.array(pcd.points)).float()
+            return torch.from_numpy(np.array(pcd.points)).float(), torch.from_numpy(np.array(pcd.colors)).float()
 
         if self.train:
-            partial = read_pcd(
+            partial, _ = read_pcd(
                 os.path.join(
                     "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial/",
                     '%s.pcd' % model_id))
         else:
-            partial = read_pcd(
+            partial, _ = read_pcd(
                 os.path.join(
                     "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial/",
                     '%s.pcd' % model_id))
-        complete = read_pcd(
+        complete, colors = read_pcd(
             os.path.join(
                 "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete/",
                 '%s.pcd' % model_id))
-        return model_id, resample_pcd(partial, 5000), resample_pcd(
-            complete, self.npoints)
+        partial_sampled, _ = resample_pcd(partial, 5000)
+        complete_sampled, idx_sampled = resample_pcd(complete, self.npoints)
+        labels_sampled = np.round(colors[idx_sampled]*11)
+        """
+        complete_seg = []
+        for i in range (1, 12):
+            import ipdb; ipdb.set_trace()
+            complete_seg.append(resample_pcd(complete_sampled[labels_sampled == i], 512))
+        """
+        return model_id, partial_sampled, complete_sampled, labels_sampled
 
     def __len__(self):
         return self.len

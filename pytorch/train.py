@@ -42,12 +42,30 @@ class FullModel(nn.Module):
         self.model = model
         self.EMD = emd.emdModule()
 
-    def forward(self, inputs, gt, eps, iters):
-        output1, output2, expansion_penalty, softpool = self.model(inputs)
+    def forward(self, inputs, gt, seg, eps, iters):
+        output1, output2, expansion_penalty, softpool, out_seg = self.model(inputs)
+        """
+        for i in range(16):
+            out_seg[i] = out_seg[i].transpose(1, 2).contiguous()
+            gt_seg = gt[(torch.abs((i-seg[:, :, 0]*11))<0.1).nonzero()]
+        """
         gt = gt[:, :, :3]
 
-        dist, _ = self.EMD(output1, gt, eps, iters)
+        dist, indexes = self.EMD(output1, gt, eps, iters)
         emd1 = torch.sqrt(dist).mean(1)
+
+        gt_seg = seg[:,:,0]
+        size = list(gt_seg.size())
+        gt_seg = torch.gather(gt_seg, dim=1, index=indexes.long()).view(-1)
+        ones = torch.sparse.torch.eye(16).cuda()
+        gt_seg = ones.index_select(0, gt_seg.long())
+        size.append(16)
+        gt_seg = gt_seg.view(*size)
+        """
+        c_entropy = nn.CrossEntropyLoss()
+        import ipdb; ipdb.set_trace()
+        enp = c_entropy(out_seg, gt_seg)
+        """
 
         dist, _ = self.EMD(output2, gt, eps, iters)
         emd2 = torch.sqrt(dist).mean(1)
@@ -131,13 +149,14 @@ for epoch in range(opt.nepoch):
 
     for i, data in enumerate(dataloader, 0):
         optimizer.zero_grad()
-        id, input, gt = data
+        id, input, gt, seg = data
         input = input.float().cuda()
         gt = gt.float().cuda()
+        seg = seg.float().cuda()
         input = input.transpose(2, 1).contiguous()
 
         output1, output2, emd1, emd2, expansion_penalty = network(
-            input, gt.contiguous(), 0.005, 50)
+            input, gt.contiguous(), seg.contiguous(), 0.005, 50)
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean()
         loss_net.backward()
         train_loss.update(emd2.mean().item())
@@ -193,12 +212,13 @@ for epoch in range(opt.nepoch):
         network.module.model.eval()
         with torch.no_grad():
             for i, data in enumerate(dataloader_test, 0):
-                id, input, gt = data
+                id, input, gt, seg = data
                 input = input.float().cuda()
                 gt = gt.float().cuda()
+                seg = seg.float().cuda()
                 input = input.transpose(2, 1).contiguous()
                 output1, output2, emd1, emd2, expansion_penalty = network(
-                    input, gt.contiguous(), 0.004, 3000)
+                    input, gt.contiguous(), seg.contiguous(), 0.004, 3000)
                 val_loss.update(emd2.mean().item())
                 idx = random.randint(0, input.size()[0] - 1)
                 """

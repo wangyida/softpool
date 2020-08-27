@@ -85,7 +85,7 @@ with torch.no_grad():
             gt[j, :, :] = torch.from_numpy(
                 resample_pcd(np.array(pcd.points), opt.num_points))
 
-        output1, output2, expansion_penalty, softpool = network(
+        output1, output2, expansion_penalty, softpool, out_seg = network(
             partial.transpose(2, 1).contiguous())
         dist, _ = EMD(output1, gt, 0.002, 10000)
         emd1 = torch.sqrt(dist).mean()

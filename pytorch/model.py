@@ -13,14 +13,15 @@ sys.path.append("./MDS/")
 import MDS_module
 
 
-def SoftPool(x, N_p=64):
-    featdim = list(x.shape)[1]
+def SoftPool(x):
     bth_size = list(x.shape)[0]
-    sp_cube = torch.zeros(bth_size, featdim, featdim, N_p).cuda()
+    featdim = list(x.shape)[1]
+    points = list(x.shape)[2]
+    sp_cube = torch.zeros(bth_size, featdim, featdim, points).cuda()
     for idx in range(featdim):
         x_val, x_idx = torch.sort(x[:, idx, :], dim=1)
-        index = x_idx[:, :N_p].unsqueeze(1).repeat(1, featdim, 1)
-        sp_cube[:, idx, :, :] = torch.gather(x, dim=2, index=index)
+        index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
+        sp_cube[:, :, idx, :] = torch.gather(x, dim=2, index=index)
     return sp_cube
 
 
@@ -107,7 +108,8 @@ class SoftPoolfeat(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
-        x = SoftPool(x, N_p=self.N_p)
+        x = SoftPool(x)
+        x = x[:, :, :, :self.N_p]
         return x
 
 
@@ -164,14 +166,16 @@ class PointNetRes(nn.Module):
         self.N_p = 64
         self.dim_pn = 16
         self.bottleneck_size = 16
+        """
         self.conv8 = torch.nn.Conv2d(
             self.dim_pn,
             self.bottleneck_size,
             kernel_size=(self.dim_pn, 1),
             stride=(1, 1))
+        """
         self.conv9 = torch.nn.Conv2d(
             self.bottleneck_size,
-            self.bottleneck_size,
+            1,
             kernel_size=(1, self.N_p),
             stride=(1, 1))
         self.flat = nn.Flatten()
@@ -192,8 +196,9 @@ class PointNetRes(nn.Module):
         # x = x.view(-1, 1024)
         # x = x.view(-1, 1024, 1).repeat(1, 1, npoints)
         x = SoftPool(x)
+        x = x[:, :, :, :self.N_p]
         self.softpool = x
-        x = self.conv8(x)
+        # x = self.conv8(x)
         x = self.conv9(x)
         x = x.view(-1, 16)
         x = x.view(-1, 16, 1).repeat(1, 1, npoints)
@@ -226,7 +231,7 @@ class MSN(nn.Module):
         """
         self.N_p = 64
         self.encoder = nn.Sequential(
-            SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p),
+                SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p),
             # nn.Linear(dim_pn, 1),
             # nn.Linear(dim_pn, self.n_primitives),
             nn.Conv2d(
@@ -259,19 +264,24 @@ class MSN(nn.Module):
         partial = x
         x = self.encoder(x)
         outs = []
+        out_seg = []
         for i in range(0, self.n_primitives):
             rand_grid = Variable(
                 torch.cuda.FloatTensor(
                     x.size(0), 2, self.num_points // self.n_primitives))
             rand_grid.data.uniform_(0, 1)
             # y = x.unsqueeze(2).expand(x.size(0),x.size(1), rand_grid.size(2)).contiguous()
-            y = x[:, i, :].unsqueeze(2).expand(
+            y = x[:, :, i].unsqueeze(2).expand(
                 x.size(0), x.size(1), rand_grid.size(2)).contiguous()
+            out_seg.append(y)
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
-
         outs = torch.cat(outs, 2).contiguous()
         out1 = outs.transpose(1, 2).contiguous()
+        out_seg = torch.cat(out_seg, 2).contiguous()
+        out_seg = out_seg.transpose(1, 2).contiguous()
+        sm = nn.Softmax(dim=2)
+        out_seg = sm(out_seg)
 
         dist, _, mean_mst_dis = self.expansion(
             out1, self.num_points // self.n_primitives, 1.5)
@@ -291,4 +301,4 @@ class MSN(nn.Module):
         delta = self.res(xx)
         xx = xx[:, 0:3, :]
         out2 = (xx + delta).transpose(2, 1).contiguous()
-        return out1, out2, loss_mst, self.res.softpool
+        return out1, out2, loss_mst, self.res.softpool, out_seg
