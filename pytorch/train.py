@@ -61,11 +61,8 @@ class FullModel(nn.Module):
         gt_seg = ones.index_select(0, gt_seg.long())
         size.append(16)
         gt_seg = gt_seg.view(*size)
-        """
-        c_entropy = nn.CrossEntropyLoss()
-        import ipdb; ipdb.set_trace()
-        enp = c_entropy(out_seg, gt_seg)
-        """
+        enp = -torch.mean(torch.sum((out_seg) * torch.log(gt_seg+0.01), dim=2))
+        emd1 += 0.1*enp
 
         dist, _ = self.EMD(output2, gt, eps, iters)
         emd2 = torch.sqrt(dist).mean(1)
