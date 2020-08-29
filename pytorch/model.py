@@ -232,8 +232,6 @@ class MSN(nn.Module):
         self.N_p = 64
         self.encoder = nn.Sequential(
                 SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p),
-            # nn.Linear(dim_pn, 1),
-            # nn.Linear(dim_pn, self.n_primitives),
             nn.Conv2d(
                 dim_pn,
                 bottleneck_size,
