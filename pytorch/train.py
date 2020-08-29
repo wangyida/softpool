@@ -61,7 +61,7 @@ class FullModel(nn.Module):
         gt_seg = ones.index_select(0, gt_seg.long())
         size.append(16)
         gt_seg = gt_seg.view(*size)
-        enp = -torch.mean(torch.sum((out_seg) * torch.log(gt_seg+0.01), dim=2))
+        enp = -torch.mean(torch.sum((gt_seg) * torch.log(out_seg+0.01), dim=2))-torch.mean(torch.sum((1-gt_seg) * torch.log(1-out_seg+0.01), dim=2))
         emd1 += 0.1*enp
 
         dist, _ = self.EMD(output2, gt, eps, iters)
