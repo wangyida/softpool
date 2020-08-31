@@ -271,9 +271,7 @@ class MSN(nn.Module):
             # y = x.unsqueeze(2).expand(x.size(0),x.size(1), rand_grid.size(2)).contiguous()
             y = x[:, :, i].unsqueeze(2).expand(
                 x.size(0), x.size(1), rand_grid.size(2)).contiguous()
-            seg_temp = y
-            seg_temp[:,i] += 1
-            out_seg.append(seg_temp)
+            out_seg.append(y)
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
         outs = torch.cat(outs, 2).contiguous()
