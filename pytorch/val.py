@@ -43,12 +43,12 @@ if opt.model != '':
     print("Previous weight loaded ")
 
 network.eval()
-with open(os.path.join('./data/valid_suncg.list')) as file:
+with open(os.path.join('./data/valid_suncg_fur.list')) as file:
     model_list = [line.strip().replace('/', '/') for line in file]
 
-partial_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial/"
+partial_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
 # partial_dir = "/home/wangyida/Documents/gitfarm/forknet/results_pcds/"
-gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/"
+gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
