@@ -21,9 +21,9 @@ def resample_pcd(pcd, n):
 class ShapeNet(data.Dataset):
     def __init__(self, train=True, npoints=8192):
         if train:
-            self.list_path = './data/train_suncg.list'
+            self.list_path = './data/train_suncg_fur.list'
         else:
-            self.list_path = './data/valid_suncg.list'
+            self.list_path = './data/valid_suncg_fur.list'
         self.npoints = npoints
         self.train = train
 
@@ -44,16 +44,16 @@ class ShapeNet(data.Dataset):
         if self.train:
             partial, _ = read_pcd(
                 os.path.join(
-                    "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial/",
+                    "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial_fur/",
                     '%s.pcd' % model_id))
         else:
             partial, _ = read_pcd(
                 os.path.join(
-                    "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial/",
+                    "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/",
                     '%s.pcd' % model_id))
         complete, colors = read_pcd(
             os.path.join(
-                "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete/",
+                "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete_fur/",
                 '%s.pcd' % model_id))
         partial_sampled, _ = resample_pcd(partial, 5000)
         complete_sampled, idx_sampled = resample_pcd(complete, self.npoints)
