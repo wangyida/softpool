@@ -1,5 +1,6 @@
 import open3d as o3d
 import torch
+import h5py 
 import numpy as np
 import torch.utils.data as data
 import torchvision.transforms as transforms
@@ -20,10 +21,17 @@ def resample_pcd(pcd, n):
 
 class ShapeNet(data.Dataset):
     def __init__(self, train=True, npoints=8192):
+        self.dataset = 'shapenet'
         if train:
-            self.list_path = './data/train_suncg_fur.list'
+            if self.dataset == 'suncg':
+                self.list_path = './data/train_suncg_fur.list'
+            elif self.dataset == 'shapenet':
+                self.list_path = './data/train_shapenet.list'
         else:
-            self.list_path = './data/valid_suncg_fur.list'
+            if self.dataset == 'suncg':
+                self.list_path = './data/valid_suncg_fur.list'
+            elif self.dataset == 'shapenet':
+                self.list_path = './data/valid_shapenet.list'
         self.npoints = npoints
         self.train = train
 
@@ -36,25 +44,52 @@ class ShapeNet(data.Dataset):
         model_id = self.model_list[index]
         scan_id = index
 
-        def read_pcd(filename):
-            # pcd = o3d.io.read_point_cloud(filename)
-            pcd = o3d.read_point_cloud(filename)
-            return torch.from_numpy(np.array(pcd.points)).float(), torch.from_numpy(np.array(pcd.colors)).float()
+        def read_pcd(filename, d_format='pcd'):
+            # if d_format == 'pcd':
+            if self.dataset == 'suncg':
+                pcd = o3d.read_point_cloud(filename)
+                coord = torch.from_numpy(np.array(pcd.points)).float()
+                color = torch.from_numpy(np.array(pcd.colors)).float()
+                return coord, color
+            # elif d_format == 'h5':
+            elif self.dataset == 'shapenet':
+                fh5 = h5py.File(filename, 'r')
+                coord = torch.from_numpy(np.array(fh5['data'])).float()
+                color = torch.from_numpy(np.array(fh5['data'])).float()
+                return coord, color
 
         if self.train:
-            partial, _ = read_pcd(
-                os.path.join(
-                    "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial_fur/",
-                    '%s.pcd' % model_id))
+            if self.dataset == 'suncg':
+                partial, _ = read_pcd(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial_fur/",
+                        '%s.pcd' % model_id))
+            elif self.dataset == 'shapenet':
+                partial, _ = read_pcd(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/shapenet/train/partial/",
+                        '%s.h5' % model_id))
         else:
-            partial, _ = read_pcd(
+            if self.dataset == 'suncg':
+                partial, _ = read_pcd(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/",
+                        '%s.pcd' % model_id))
+            elif self.dataset == 'shapenet':
+                partial, _ = read_pcd(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/shapenet/test/partial/",
+                        '%s.h5' % model_id))
+        if self.dataset == 'suncg':
+            complete, colors = read_pcd(
                 os.path.join(
-                    "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/",
+                    "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete_fur/",
                     '%s.pcd' % model_id))
-        complete, colors = read_pcd(
-            os.path.join(
-                "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete_fur/",
-                '%s.pcd' % model_id))
+        elif self.dataset == 'shapenet':
+            complete, colors = read_pcd(
+                os.path.join(
+                    "/media/wangyida/HDD/database/shapenet/train/gt/",
+                    '%s.h5' % model_id))
         partial_sampled, _ = resample_pcd(partial, 5000)
         complete_sampled, idx_sampled = resample_pcd(complete, self.npoints)
         labels_sampled = np.round(colors[idx_sampled]*11)

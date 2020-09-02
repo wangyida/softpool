@@ -8,6 +8,7 @@ import argparse
 import random
 import numpy as np
 import torch
+import h5py 
 import os
 import visdom
 sys.path.append("./emd/")
@@ -43,12 +44,14 @@ if opt.model != '':
     print("Previous weight loaded ")
 
 network.eval()
-with open(os.path.join('./data/valid_suncg_fur.list')) as file:
+# with open(os.path.join('./data/valid_suncg_fur.list')) as file:
+with open(os.path.join('./data/valid_shapenet.list')) as file:
     model_list = [line.strip().replace('/', '/') for line in file]
 
-partial_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
-# partial_dir = "/home/wangyida/Documents/gitfarm/forknet/results_pcds/"
-gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
+# partial_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
+# gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
+partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
+gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
@@ -77,13 +80,19 @@ with torch.no_grad():
         partial = torch.zeros((1, 5000, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
+            """
             pcd = o3d.read_point_cloud(
                 os.path.join(partial_dir, model + '.pcd'))
+            """
+            fh5 = h5py.File(os.path.join(partial_dir, model + '.h5'), 'r')
             partial[j, :, :] = torch.from_numpy(
-                resample_pcd(np.array(pcd.points), 5000))
+                resample_pcd(np.array(fh5['data']), 5000))
+            """
             pcd = o3d.read_point_cloud(os.path.join(gt_dir, model + '.pcd'))
+            """
+            fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
             gt[j, :, :] = torch.from_numpy(
-                resample_pcd(np.array(pcd.points), opt.num_points))
+                resample_pcd(np.array(fh5['data']), opt.num_points))
 
         output1, output2, expansion_penalty, softpool, out_seg = network(
             partial.transpose(2, 1).contiguous())
