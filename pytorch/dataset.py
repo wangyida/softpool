@@ -21,7 +21,7 @@ def resample_pcd(pcd, n):
 
 class ShapeNet(data.Dataset):
     def __init__(self, train=True, npoints=8192):
-        self.dataset = 'shapenet'
+        self.dataset = 'suncg'
         if train:
             if self.dataset == 'suncg':
                 self.list_path = './data/train_suncg_fur.list'
