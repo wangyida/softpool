@@ -121,6 +121,7 @@ with torch.no_grad():
         os.makedirs('pcds/output1', exist_ok=True)
         pts_coord = output1[idx].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
+        # import ipdb; ipdb.set_trace()
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
         pcd = o3d.PointCloud()
