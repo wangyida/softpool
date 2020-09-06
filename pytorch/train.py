@@ -43,7 +43,7 @@ class FullModel(nn.Module):
         self.EMD = emd.emdModule()
 
     def forward(self, inputs, gt, seg, eps, iters):
-        output1, output2, expansion_penalty, softpool, out_seg = self.model(inputs)
+        output1, output2, expansion_penalty, softpool, out_seg, partial_regions = self.model(inputs)
         """
         for i in range(16):
             out_seg[i] = out_seg[i].transpose(1, 2).contiguous()

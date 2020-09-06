@@ -18,11 +18,13 @@ def SoftPool(x):
     featdim = list(x.shape)[1]
     points = list(x.shape)[2]
     sp_cube = torch.zeros(bth_size, featdim, featdim, points).cuda()
+    sp_idx = torch.zeros(bth_size, 3, featdim, points).cuda()
     for idx in range(featdim):
         x_val, x_idx = torch.sort(x[:, idx, :], dim=1)
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         sp_cube[:, :, idx, :] = torch.gather(x, dim=2, index=index)
-    return sp_cube
+        sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 3, 1)
+    return sp_cube, sp_idx
 
 
 class STN3d(nn.Module):
@@ -108,9 +110,10 @@ class SoftPoolfeat(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
-        x = SoftPool(x)
+        x, sp_idx = SoftPool(x)
         x = x[:, :, :, :self.N_p]
-        return x
+        sp_idx = sp_idx[:, :, :, :self.N_p]
+        return x, sp_idx
 
 
 class PointGenCon(nn.Module):
@@ -195,7 +198,7 @@ class PointNetRes(nn.Module):
         """
         # x = x.view(-1, 1024)
         # x = x.view(-1, 1024, 1).repeat(1, 1, npoints)
-        x = SoftPool(x)
+        x, _ = SoftPool(x)
         x = x[:, :, :, :self.N_p]
         self.softpool = x
         # x = self.conv8(x)
@@ -230,8 +233,9 @@ class MSN(nn.Module):
         )
         """
         self.N_p = 50
+        self.sorter = nn.Sequential(
+                SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
         self.encoder = nn.Sequential(
-                SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p),
             nn.Conv2d(
                 dim_pn,
                 bottleneck_size,
@@ -260,10 +264,13 @@ class MSN(nn.Module):
 
     def forward(self, x):
         partial = x
+        x, sp_idx = self.sorter(x)
+        partial_regions= []
         x = self.encoder(x)
         outs = []
         out_seg = []
         for i in range(0, self.n_primitives):
+            partial_regions.append(torch.gather(partial, dim=2, index=sp_idx[:,:,i,:].long()))
             rand_grid = Variable(
                 torch.cuda.FloatTensor(
                     x.size(0), 2, self.num_points // self.n_primitives))
@@ -274,6 +281,8 @@ class MSN(nn.Module):
             out_seg.append(y)
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
+        partial_regions = torch.cat(partial_regions, 2).contiguous()
+        partial_regions = partial_regions.transpose(1, 2).contiguous()
         outs = torch.cat(outs, 2).contiguous()
         out1 = outs.transpose(1, 2).contiguous()
         out_seg = torch.cat(out_seg, 2).contiguous()
@@ -299,4 +308,4 @@ class MSN(nn.Module):
         delta = self.res(xx)
         xx = xx[:, 0:3, :]
         out2 = (xx + delta).transpose(2, 1).contiguous()
-        return out1, out2, loss_mst, self.res.softpool, out_seg
+        return out1, out2, loss_mst, self.res.softpool, out_seg, partial_regions

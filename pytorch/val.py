@@ -74,11 +74,19 @@ labels_generated_points = torch.Tensor(
 labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
+labels_inputs_points = torch.Tensor(
+    range(1, (opt.n_primitives + 1) * (3200 // opt.n_primitives) +
+          1)).view(3200 // opt.n_primitives,
+                   (opt.n_primitives + 1)).transpose(0, 1)
+labels_inputs_points = (labels_inputs_points) % (opt.n_primitives + 1)
+labels_inputs_points = labels_inputs_points.contiguous().view(-1)
+
 with torch.no_grad():
     for i, model in enumerate(model_list):
         print(model)
         subfold = model[:model.rfind('/')]
         partial = torch.zeros((1, 5000, 3), device='cuda')
+        partial_regions = torch.zeros((1, 3200, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
             """
@@ -95,7 +103,7 @@ with torch.no_grad():
             gt[j, :, :] = torch.from_numpy(
                 resample_pcd(np.array(fh5['data']), opt.num_points))
 
-        output1, output2, expansion_penalty, softpool, out_seg = network(
+        output1, output2, expansion_penalty, softpool, out_seg, partial_regions = network(
             partial.transpose(2, 1).contiguous())
         dist, _ = EMD(output1, gt, 0.002, 10000)
         emd1 = torch.sqrt(dist).mean()
@@ -119,6 +127,20 @@ with torch.no_grad():
               ' val [%d/%d]  emd1: %f emd2: %f expansion_penalty: %f' %
               (i + 1, len(model_list), emd1.item(), emd2.item(),
                expansion_penalty.mean().item()))
+        os.makedirs('pcds/regions', exist_ok=True)
+        os.makedirs('pcds/regions/'+subfold, exist_ok=True)
+        pts_coord = partial_regions[idx].data.cpu()[:, 0:3]
+        maxi = labels_inputs_points.max()
+        # import ipdb; ipdb.set_trace()
+        pts_color = matplotlib.cm.rainbow(
+            labels_inputs_points[0:partial_regions.size(1)] / maxi)[:, 0:3]
+        pcd = o3d.PointCloud()
+        pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
+        pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
+        o3d.write_point_cloud(
+            os.path.join('./pcds/regions/', '%s.pcd' % model),
+            pcd,
+            compressed=True)
         os.makedirs('pcds/output1', exist_ok=True)
         os.makedirs('pcds/output1/'+subfold, exist_ok=True)
         pts_coord = output1[idx].data.cpu()[:, 0:3]
