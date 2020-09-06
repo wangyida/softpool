@@ -77,6 +77,7 @@ labels_generated_points = labels_generated_points.contiguous().view(-1)
 with torch.no_grad():
     for i, model in enumerate(model_list):
         print(model)
+        subfold = model[:model.rfind('/')]
         partial = torch.zeros((1, 5000, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
@@ -119,6 +120,7 @@ with torch.no_grad():
               (i + 1, len(model_list), emd1.item(), emd2.item(),
                expansion_penalty.mean().item()))
         os.makedirs('pcds/output1', exist_ok=True)
+        os.makedirs('pcds/output1/'+subfold, exist_ok=True)
         pts_coord = output1[idx].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         # import ipdb; ipdb.set_trace()
@@ -132,6 +134,7 @@ with torch.no_grad():
             pcd,
             compressed=True)
         os.makedirs('pcds/output2', exist_ok=True)
+        os.makedirs('pcds/output2/'+subfold, exist_ok=True)
         pts_coord = output2[idx].data.cpu()[:, 0:3]
         mini = output2[idx].min()
         pts_color = matplotlib.cm.cool(output2[idx].data.cpu()[:, 1] -
@@ -144,6 +147,7 @@ with torch.no_grad():
             pcd,
             compressed=True)
         os.makedirs('pcds/input', exist_ok=True)
+        os.makedirs('pcds/input/'+subfold, exist_ok=True)
         pts_coord = partial[idx].data.cpu()[:, 0:3]
         mini = partial[idx].min()
         pts_color = matplotlib.cm.cool(partial[idx].data.cpu()[:, 1] -
@@ -156,6 +160,7 @@ with torch.no_grad():
             pcd,
             compressed=True)
         os.makedirs('pcds/gt', exist_ok=True)
+        os.makedirs('pcds/gt/'+subfold, exist_ok=True)
         pts_coord = gt[idx].data.cpu()[:, 0:3]
         mini = gt[idx].min()
         pts_color = matplotlib.cm.cool(gt[idx].data.cpu()[:, 1] - mini)[:, 0:3]
@@ -166,6 +171,7 @@ with torch.no_grad():
             os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
 
         os.makedirs('pcds/spblocks', exist_ok=True)
+        os.makedirs('pcds/spblocks/'+subfold, exist_ok=True)
         softpoolblock = softpool[idx].data.cpu()[:, 0:3, :]
         softpoolblock = softpoolblock.reshape((64, 16, 3))
         plt.imsave(
