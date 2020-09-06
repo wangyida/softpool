@@ -26,7 +26,7 @@ def SoftPool(x):
 
 
 class STN3d(nn.Module):
-    def __init__(self, num_points=2500, dim_pn=16):
+    def __init__(self, num_points=2500, dim_pn=64):
         super(STN3d, self).__init__()
         self.num_points = num_points
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -88,7 +88,7 @@ class PointNetfeat(nn.Module):
 
 
 class SoftPoolfeat(nn.Module):
-    def __init__(self, num_points=8192, global_feat=True, dim_pn=16, N_p=64):
+    def __init__(self, num_points=8192, global_feat=True, dim_pn=64, N_p=50):
         super(SoftPoolfeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -214,9 +214,9 @@ class PointNetRes(nn.Module):
 class MSN(nn.Module):
     def __init__(self,
                  num_points=8192,
-                 bottleneck_size=16,
-                 n_primitives=16,
-                 dim_pn=16):
+                 bottleneck_size=64,
+                 n_primitives=64,
+                 dim_pn=64):
         super(MSN, self).__init__()
         self.num_points = num_points
         self.bottleneck_size = bottleneck_size
@@ -229,7 +229,7 @@ class MSN(nn.Module):
         nn.ReLU()
         )
         """
-        self.N_p = 64
+        self.N_p = 50
         self.encoder = nn.Sequential(
                 SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p),
             nn.Conv2d(
@@ -240,12 +240,12 @@ class MSN(nn.Module):
             nn.Conv2d(
                 dim_pn,
                 bottleneck_size,
-                kernel_size=(1, 16),
+                kernel_size=(1, 12),
                 stride=(1, 1)),
             nn.Conv2d(
                 dim_pn,
                 bottleneck_size,
-                kernel_size=(1, 18),
+                kernel_size=(1, 8),
                 stride=(1, 1)),
             nn.Flatten(start_dim=2, end_dim=3),
             # nn.Flatten(),
