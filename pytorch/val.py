@@ -192,9 +192,11 @@ with torch.no_grad():
         o3d.write_point_cloud(
             os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
 
+        """
         os.makedirs('pcds/spblocks', exist_ok=True)
         os.makedirs('pcds/spblocks/'+subfold, exist_ok=True)
         softpoolblock = softpool[idx].data.cpu()[:, 0:3, :]
-        softpoolblock = softpoolblock.reshape((64, 16, 3))
+        softpoolblock = softpoolblock.reshape((64, 32, 3))
         plt.imsave(
             os.path.join('./pcds/spblocks/', '%s.png' % model), softpoolblock)
+        """

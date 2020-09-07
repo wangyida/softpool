@@ -149,8 +149,8 @@ class PointNetRes(nn.Module):
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         # self.conv3 = torch.nn.Conv1d(128, 1024, 1)
         # self.conv4 = torch.nn.Conv1d(1088, 512, 1)
-        self.conv3 = torch.nn.Conv1d(128, 16, 1)
-        self.conv4 = torch.nn.Conv1d(80, 512, 1)
+        self.conv3 = torch.nn.Conv1d(128, 32, 1)
+        self.conv4 = torch.nn.Conv1d(64+32, 512, 1)
         self.conv5 = torch.nn.Conv1d(512, 256, 1)
         self.conv6 = torch.nn.Conv1d(256, 128, 1)
         self.conv7 = torch.nn.Conv1d(128, 3, 1)
@@ -158,7 +158,7 @@ class PointNetRes(nn.Module):
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
         # self.bn3 = torch.nn.BatchNorm1d(1024)
-        self.bn3 = torch.nn.BatchNorm1d(16)
+        self.bn3 = torch.nn.BatchNorm1d(32)
         self.bn4 = torch.nn.BatchNorm1d(512)
         self.bn5 = torch.nn.BatchNorm1d(256)
         self.bn6 = torch.nn.BatchNorm1d(128)
@@ -166,9 +166,9 @@ class PointNetRes(nn.Module):
         self.th = nn.Tanh()
 
         # softpool
-        self.N_p = 64
-        self.dim_pn = 16
-        self.bottleneck_size = 16
+        self.N_p = 50
+        self.dim_pn = 32
+        self.bottleneck_size = 32
         """
         self.conv8 = torch.nn.Conv2d(
             self.dim_pn,
@@ -203,8 +203,8 @@ class PointNetRes(nn.Module):
         self.softpool = x
         # x = self.conv8(x)
         x = self.conv9(x)
-        x = x.view(-1, 16)
-        x = x.view(-1, 16, 1).repeat(1, 1, npoints)
+        x = x.view(-1, 32)
+        x = x.view(-1, 32, 1).repeat(1, 1, npoints)
         # end
         x = torch.cat([x, pointfeat], 1)
         x = F.relu(self.bn4(self.conv4(x)))
@@ -252,8 +252,8 @@ class MSN(nn.Module):
                 kernel_size=(1, 8),
                 stride=(1, 1)),
             nn.Flatten(start_dim=2, end_dim=3),
-            # nn.Flatten(),
             nn.BatchNorm1d(bottleneck_size),
+            nn.Linear(bottleneck_size, bottleneck_size),
             nn.ReLU())
         self.decoder = nn.ModuleList([
             PointGenCon(bottleneck_size=2 + self.bottleneck_size)
@@ -276,7 +276,7 @@ class MSN(nn.Module):
                     x.size(0), 2, self.num_points // self.n_primitives))
             rand_grid.data.uniform_(0, 1)
             # y = x.unsqueeze(2).expand(x.size(0),x.size(1), rand_grid.size(2)).contiguous()
-            y = x[:, :, 1].unsqueeze(2).expand(
+            y = x[:, :, i].unsqueeze(2).expand(
                 x.size(0), x.size(1), rand_grid.size(2)).contiguous()
             out_seg.append(y)
             y = torch.cat((rand_grid, y), 1).contiguous()
