@@ -20,7 +20,7 @@ def SoftPool(x):
     sp_cube = torch.zeros(bth_size, featdim, featdim, points).cuda()
     sp_idx = torch.zeros(bth_size, 3, featdim, points).cuda()
     for idx in range(featdim):
-        x_val, x_idx = torch.sort(x[:, idx, :], descending=True, dim=1)
+        x_val, x_idx = torch.sort(x[:, idx, :], dim=1)
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         sp_cube[:, :, idx, :] = torch.gather(x, dim=2, index=index)
         sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 3, 1)
@@ -249,11 +249,11 @@ class MSN(nn.Module):
             nn.Conv2d(
                 dim_pn,
                 bottleneck_size,
-                kernel_size=(1, 8),
+                kernel_size=(64, 8),
                 stride=(1, 1)),
-            nn.Flatten(start_dim=2, end_dim=3),
+            nn.Flatten(start_dim=1, end_dim=3),
             nn.BatchNorm1d(bottleneck_size),
-            nn.Linear(bottleneck_size, bottleneck_size),
+            # nn.Linear(bottleneck_size, bottleneck_size),
             nn.ReLU())
         self.decoder = nn.ModuleList([
             PointGenCon(bottleneck_size=2 + self.bottleneck_size)
@@ -275,9 +275,8 @@ class MSN(nn.Module):
                 torch.cuda.FloatTensor(
                     x.size(0), 2, self.num_points // self.n_primitives))
             rand_grid.data.uniform_(0, 1)
-            # y = x.unsqueeze(2).expand(x.size(0),x.size(1), rand_grid.size(2)).contiguous()
-            y = x[:, :, i].unsqueeze(2).expand(
-                x.size(0), x.size(1), rand_grid.size(2)).contiguous()
+            y = x.unsqueeze(2).expand(x.size(0),x.size(1), rand_grid.size(2)).contiguous()
+            # y = x[:, :, i].unsqueeze(2).expand(x.size(0), x.size(1), rand_grid.size(2)).contiguous()
             out_seg.append(y)
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
