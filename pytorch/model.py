@@ -20,8 +20,7 @@ def SoftPool(x):
     sp_cube = torch.zeros(bth_size, featdim, featdim, points).cuda()
     sp_idx = torch.zeros(bth_size, 3, featdim, points).cuda()
     for idx in range(featdim):
-        # x_val, x_idx = torch.sort(x[:, idx, :], dim=1)
-        x_val, x_idx = torch.sort(x[:, 0, :], dim=1)
+        x_val, x_idx = torch.sort(x[:, idx, :], dim=1)
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         sp_cube[:, :, idx, :] = torch.gather(x, dim=2, index=index)
         sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 3, 1)
