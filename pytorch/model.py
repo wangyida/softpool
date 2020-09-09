@@ -254,7 +254,7 @@ class MSN(nn.Module):
             # nn.Linear(bottleneck_size, bottleneck_size),
             nn.ReLU())
         self.decoder = nn.ModuleList([
-            PointGenCon(bottleneck_size=2 + self.bottleneck_size)
+            PointGenCon(bottleneck_size=3 + self.bottleneck_size)
             for i in range(0, self.n_primitives)
         ])
         self.res = PointNetRes()
@@ -271,8 +271,8 @@ class MSN(nn.Module):
             partial_regions.append(torch.gather(partial, dim=2, index=sp_idx[:,:,i,:].long()))
             rand_grid = Variable(
                 torch.cuda.FloatTensor(
-                    x.size(0), 2, self.num_points // self.n_primitives))
-            rand_grid.data.uniform_(0, 1)
+                    x.size(0), 3, self.num_points // self.n_primitives))
+            rand_grid.data.uniform_(-1, 1)
             y = x.unsqueeze(2).expand(x.size(0),x.size(1), rand_grid.size(2)).contiguous()
             # y = x[:, :, i].unsqueeze(2).expand(x.size(0), x.size(1), rand_grid.size(2)).contiguous()
             out_seg.append(y)

@@ -54,9 +54,6 @@ class FullModel(nn.Module):
         dist, indexes = self.EMD(output1, gt, eps, iters)
         emd1 = torch.sqrt(dist).mean(1)
 
-        dist, _ = self.EMD(partial_regions, inputs[:,:,:1024].transpose(1, 2), eps, iters)
-        emd1 += torch.sqrt(dist).mean(1)
-
         """
         gt_seg = seg[:,:,0]
         size = list(gt_seg.size())
