@@ -90,7 +90,7 @@ class PointNetfeat(nn.Module):
 
 
 class SoftPoolfeat(nn.Module):
-    def __init__(self, num_points=8192, global_feat=True, dim_pn=64, N_p=50):
+    def __init__(self, num_points=8192, global_feat=True, dim_pn=64, N_p=20):
         super(SoftPoolfeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -107,12 +107,15 @@ class SoftPoolfeat(nn.Module):
 
     def forward(self, x):
         batchsize = x.size()[0]
+        partial = x.unsqueeze(2).repeat(1,1,64,1)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
         x, sp_idx = SoftPool(x)
         x = x[:, :, :, :self.N_p]
         sp_idx = sp_idx[:, :, :, :self.N_p]
+        partial = torch.gather(partial, dim=3, index=sp_idx.long())
+        x = torch.cat((partial, x), 1).contiguous()
         return x, sp_idx
 
 
@@ -166,7 +169,7 @@ class PointNetRes(nn.Module):
         self.th = nn.Tanh()
 
         # softpool
-        self.N_p = 50
+        self.N_p = 20
         self.dim_pn = 32
         self.bottleneck_size = 32
         """
@@ -232,24 +235,19 @@ class MSN(nn.Module):
         nn.ReLU()
         )
         """
-        self.N_p = 50
+        self.N_p = 20
         self.sorter = nn.Sequential(
                 SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
         self.encoder = nn.Sequential(
             nn.Conv2d(
-                dim_pn,
-                bottleneck_size,
-                kernel_size=(1, 32),
-                stride=(1, 1)),
-            nn.Conv2d(
-                dim_pn,
+                dim_pn+3,
                 bottleneck_size,
                 kernel_size=(1, 12),
                 stride=(1, 1)),
             nn.Conv2d(
                 dim_pn,
                 bottleneck_size,
-                kernel_size=(64, 8),
+                kernel_size=(64, 9),
                 stride=(1, 1)),
             nn.Flatten(start_dim=1, end_dim=3),
             nn.BatchNorm1d(bottleneck_size),

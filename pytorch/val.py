@@ -75,8 +75,8 @@ labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
 labels_inputs_points = torch.Tensor(
-    range(1, (opt.n_primitives + 1) * (3200 // opt.n_primitives) +
-          1)).view(3200 // opt.n_primitives,
+    range(1, (opt.n_primitives + 1) * (1280 // opt.n_primitives) +
+          1)).view(1280 // opt.n_primitives,
                    (opt.n_primitives + 1)).transpose(0, 1)
 labels_inputs_points = (labels_inputs_points) % (opt.n_primitives + 1)
 labels_inputs_points = labels_inputs_points.contiguous().view(-1)
@@ -85,8 +85,8 @@ with torch.no_grad():
     for i, model in enumerate(model_list):
         print(model)
         subfold = model[:model.rfind('/')]
-        partial = torch.zeros((1, 5000, 3), device='cuda')
-        partial_regions = torch.zeros((1, 3200, 3), device='cuda')
+        partial = torch.zeros((1, 2048, 3), device='cuda')
+        partial_regions = torch.zeros((1, 1280, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
             """
@@ -95,7 +95,7 @@ with torch.no_grad():
             """
             fh5 = h5py.File(os.path.join(partial_dir, model + '.h5'), 'r')
             partial[j, :, :] = torch.from_numpy(
-                resample_pcd(np.array(fh5['data']), 5000))
+                resample_pcd(np.array(fh5['data']), 2048))
             """
             pcd = o3d.read_point_cloud(os.path.join(gt_dir, model + '.pcd'))
             """
