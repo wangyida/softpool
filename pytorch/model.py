@@ -90,7 +90,7 @@ class PointNetfeat(nn.Module):
 
 
 class SoftPoolfeat(nn.Module):
-    def __init__(self, num_points=8192, global_feat=True, dim_pn=64, N_p=20):
+    def __init__(self, num_points=8192, global_feat=True, dim_pn=64, N_p=16):
         super(SoftPoolfeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -169,7 +169,7 @@ class PointNetRes(nn.Module):
         self.th = nn.Tanh()
 
         # softpool
-        self.N_p = 20
+        self.N_p = 16
         self.dim_pn = 32
         self.bottleneck_size = 32
         """
@@ -235,19 +235,19 @@ class MSN(nn.Module):
         nn.ReLU()
         )
         """
-        self.N_p = 20
+        self.N_p = 16
         self.sorter = nn.Sequential(
                 SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
         self.encoder = nn.Sequential(
             nn.Conv2d(
                 dim_pn+3,
                 bottleneck_size,
-                kernel_size=(1, 12),
+                kernel_size=(1, 10),
                 stride=(1, 1)),
             nn.Conv2d(
                 dim_pn,
                 bottleneck_size,
-                kernel_size=(64, 9),
+                kernel_size=(64, 7),
                 stride=(1, 1)),
             nn.Flatten(start_dim=1, end_dim=3),
             nn.BatchNorm1d(bottleneck_size),
