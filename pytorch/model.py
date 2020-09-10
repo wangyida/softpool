@@ -235,9 +235,10 @@ class MSN(nn.Module):
         nn.ReLU()
         )
         """
-        self.N_p = 16
-        self.sorter = nn.Sequential(
+        self.N_p = 32
+        self.spcoder = nn.Sequential(
                 SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
+        """
         self.encoder = nn.Sequential(
             nn.Conv2d(
                 dim_pn + 3,
@@ -253,8 +254,9 @@ class MSN(nn.Module):
             nn.BatchNorm1d(bottleneck_size),
             # nn.Linear(bottleneck_size, bottleneck_size),
             nn.ReLU())
+        """
         self.decoder = nn.ModuleList([
-            PointGenCon(bottleneck_size=2 + self.bottleneck_size)
+            PointGenCon(bottleneck_size=2 + 3 + self.bottleneck_size)
             for i in range(0, self.n_primitives)
         ])
         self.res = PointNetRes()
@@ -262,9 +264,9 @@ class MSN(nn.Module):
 
     def forward(self, x):
         partial = x
-        x, sp_idx = self.sorter(x)
+        x, sp_idx = self.spcoder(x)
         partial_regions= []
-        x = self.encoder(x)
+        # x = self.encoder(x)
         outs = []
         out_seg = []
         for i in range(0, self.n_primitives):
@@ -277,8 +279,9 @@ class MSN(nn.Module):
             mesh_grid = torch.meshgrid([torch.linspace(0.0, 1.0, 8), torch.linspace(0.0, 1.0, 4)])
             mesh_grid = torch.cat((torch.reshape(mesh_grid[0], (self.num_points // self.n_primitives, 1)), torch.reshape(mesh_grid[1], (self.num_points // self.n_primitives, 1))), dim=1)
             mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(x.shape[0], 1, 1)
-            y = x.unsqueeze(2).expand(x.size(0),x.size(1), mesh_grid.size(2)).contiguous()
+            # y = x.unsqueeze(2).expand(x.size(0),x.size(1), mesh_grid.size(2)).contiguous()
             # y = x[:, :, i].unsqueeze(2).expand(x.size(0), x.size(1), rand_grid.size(2)).contiguous()
+            y = x[:, :, i, :]
             out_seg.append(y)
             y = torch.cat((mesh_grid.cuda(), y), 1).contiguous()
             outs.append(self.decoder[i](y))
