@@ -237,26 +237,19 @@ class MSN(nn.Module):
         """
         self.N_p = 32
         self.spcoder = nn.Sequential(
-                SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
-        """
+            SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
         self.encoder = nn.Sequential(
             nn.Conv2d(
                 dim_pn + 3,
                 bottleneck_size,
-                kernel_size=(1, 10),
+                kernel_size=(dim_pn, 1),
                 stride=(1, 1)),
-            nn.Conv2d(
-                dim_pn,
-                bottleneck_size,
-                kernel_size=(64, 7),
-                stride=(1, 1)),
-            nn.Flatten(start_dim=1, end_dim=3),
+            nn.Flatten(start_dim=2, end_dim=3),
             nn.BatchNorm1d(bottleneck_size),
             # nn.Linear(bottleneck_size, bottleneck_size),
             nn.ReLU())
-        """
         self.decoder = nn.ModuleList([
-            PointGenCon(bottleneck_size=2 + 3 + self.bottleneck_size)
+            PointGenCon(bottleneck_size=2 + self.bottleneck_size)
             for i in range(0, self.n_primitives)
         ])
         self.res = PointNetRes()
@@ -266,7 +259,7 @@ class MSN(nn.Module):
         partial = x
         x, sp_idx = self.spcoder(x)
         partial_regions= []
-        # x = self.encoder(x)
+        x = self.encoder(x)
         outs = []
         out_seg = []
         for i in range(0, self.n_primitives):
@@ -281,7 +274,8 @@ class MSN(nn.Module):
             mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(x.shape[0], 1, 1)
             # y = x.unsqueeze(2).expand(x.size(0),x.size(1), mesh_grid.size(2)).contiguous()
             # y = x[:, :, i].unsqueeze(2).expand(x.size(0), x.size(1), rand_grid.size(2)).contiguous()
-            y = x[:, :, i, :]
+            # y = x[:, :, i, :]
+            y = x
             out_seg.append(y)
             y = torch.cat((mesh_grid.cuda(), y), 1).contiguous()
             outs.append(self.decoder[i](y))
