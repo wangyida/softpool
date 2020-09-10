@@ -273,9 +273,9 @@ class MSN(nn.Module):
                 torch.cuda.FloatTensor(
                     x.size(0), 2, self.num_points // self.n_primitives))
             rand_grid.data.uniform_(0, 1)
-            # import ipdb; ipdb.set_trace()
+            # here self.num_points // self.n_primitives = 8*4
             mesh_grid = torch.meshgrid([torch.linspace(0.0, 1.0, 8), torch.linspace(0.0, 1.0, 4)])
-            mesh_grid = torch.cat((torch.reshape(mesh_grid[0], (32, 1)), torch.reshape(mesh_grid[1], (32,1))), dim=1)
+            mesh_grid = torch.cat((torch.reshape(mesh_grid[0], (self.num_points // self.n_primitives, 1)), torch.reshape(mesh_grid[1], (self.num_points // self.n_primitives, 1))), dim=1)
             mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(x.shape[0], 1, 1)
             y = x.unsqueeze(2).expand(x.size(0),x.size(1), mesh_grid.size(2)).contiguous()
             # y = x[:, :, i].unsqueeze(2).expand(x.size(0), x.size(1), rand_grid.size(2)).contiguous()
