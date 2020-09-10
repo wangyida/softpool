@@ -240,7 +240,7 @@ class MSN(nn.Module):
                 SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
         self.encoder = nn.Sequential(
             nn.Conv2d(
-                dim_pn+3,
+                dim_pn + 3,
                 bottleneck_size,
                 kernel_size=(1, 10),
                 stride=(1, 1)),
@@ -254,7 +254,7 @@ class MSN(nn.Module):
             # nn.Linear(bottleneck_size, bottleneck_size),
             nn.ReLU())
         self.decoder = nn.ModuleList([
-            PointGenCon(bottleneck_size=3 + self.bottleneck_size)
+            PointGenCon(bottleneck_size=2 + self.bottleneck_size)
             for i in range(0, self.n_primitives)
         ])
         self.res = PointNetRes()
@@ -271,12 +271,16 @@ class MSN(nn.Module):
             partial_regions.append(torch.gather(partial, dim=2, index=sp_idx[:,:,i,:].long()))
             rand_grid = Variable(
                 torch.cuda.FloatTensor(
-                    x.size(0), 3, self.num_points // self.n_primitives))
-            rand_grid.data.uniform_(-1, 1)
-            y = x.unsqueeze(2).expand(x.size(0),x.size(1), rand_grid.size(2)).contiguous()
+                    x.size(0), 2, self.num_points // self.n_primitives))
+            rand_grid.data.uniform_(0, 1)
+            # import ipdb; ipdb.set_trace()
+            mesh_grid = torch.meshgrid([torch.linspace(0.0, 1.0, 8), torch.linspace(0.0, 1.0, 4)])
+            mesh_grid = torch.cat((torch.reshape(mesh_grid[0], (32, 1)), torch.reshape(mesh_grid[1], (32,1))), dim=1)
+            mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(x.shape[0], 1, 1)
+            y = x.unsqueeze(2).expand(x.size(0),x.size(1), mesh_grid.size(2)).contiguous()
             # y = x[:, :, i].unsqueeze(2).expand(x.size(0), x.size(1), rand_grid.size(2)).contiguous()
             out_seg.append(y)
-            y = torch.cat((rand_grid, y), 1).contiguous()
+            y = torch.cat((mesh_grid.cuda(), y), 1).contiguous()
             outs.append(self.decoder[i](y))
         partial_regions = torch.cat(partial_regions, 2).contiguous()
         partial_regions = partial_regions.transpose(1, 2).contiguous()
