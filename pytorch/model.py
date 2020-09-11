@@ -203,7 +203,6 @@ class PointNetRes(nn.Module):
         # x = x.view(-1, 1024, 1).repeat(1, 1, npoints)
         x, _ = SoftPool(x)
         x = x[:, :, :, :self.N_p]
-        self.softpool = x
         # x = self.conv8(x)
         x = self.conv9(x)
         x = x.view(-1, 32)
@@ -341,4 +340,4 @@ class MSN(nn.Module):
         delta = self.res(xx)
         xx = xx[:, 0:3, :]
         out2 = (xx + delta).transpose(2, 1).contiguous()
-        return out1, out2, loss_mst, self.res.softpool, out_seg, partial_regions
+        return out1, out2, loss_mst, out_seg, partial_regions

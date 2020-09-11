@@ -86,7 +86,7 @@ with torch.no_grad():
         print(model)
         subfold = model[:model.rfind('/')]
         partial = torch.zeros((1, 2048, 3), device='cuda')
-        partial_regions = torch.zeros((1, 1280, 3), device='cuda')
+        partial_regions = torch.zeros((1, 2048, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
             """
@@ -103,7 +103,7 @@ with torch.no_grad():
             gt[j, :, :] = torch.from_numpy(
                 resample_pcd(np.array(fh5['data']), opt.num_points))
 
-        output1, output2, expansion_penalty, softpool, out_seg, partial_regions = network(
+        output1, output2, expansion_penalty, out_seg, partial_regions = network(
             partial.transpose(2, 1).contiguous())
         dist, _ = EMD(output1, gt, 0.002, 10000)
         emd1 = torch.sqrt(dist).mean()
