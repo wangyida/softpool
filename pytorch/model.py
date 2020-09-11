@@ -241,13 +241,11 @@ class MSN(nn.Module):
             nn.Conv2d(
                 dim_pn + 3,
                 bottleneck_size,
-                kernel_size=(dim_pn, 1),
-                stride=(1, 1)),
-            nn.Flatten(start_dim=2, end_dim=3),
-            nn.BatchNorm1d(bottleneck_size),
-            # nn.Linear(bottleneck_size, bottleneck_size),
-            nn.ReLU())
-        """
+                kernel_size=(dim_pn, 3),
+                stride=(1, 2),
+                padding=(0, 1),
+                padding_mode='same'),
+            nn.Tanh(),
             nn.Conv2d(
                 bottleneck_size,
                 2 * bottleneck_size,
@@ -255,29 +253,26 @@ class MSN(nn.Module):
                 stride=(1, 2),
                 padding=(0, 1),
                 padding_mode='same'),
-            nn.Conv2d(
+            nn.Tanh(),
+            nn.ConvTranspose2d(
                 2 * bottleneck_size,
-                4 * bottleneck_size,
-                kernel_size=(1, 3),
-                stride=(1, 2),
-                padding=(0, 1),
-                padding_mode='same'),
-            nn.ConvTranspose2d(
-                4 * bottleneck_size,
                 bottleneck_size,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)),
+            nn.Tanh(),
             nn.ConvTranspose2d(
                 bottleneck_size,
                 bottleneck_size,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)),
-        """
+            nn.Tanh(),
+            nn.Flatten(start_dim=2, end_dim=3))
+            # nn.BatchNorm1d(bottleneck_size),
         self.decoder = nn.ModuleList([
-            # PointGenCon(bottleneck_size=self.bottleneck_size)
-            PointGenCon(bottleneck_size=2 + self.bottleneck_size)
+            PointGenCon(bottleneck_size=self.bottleneck_size)
+            # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
             for i in range(0, self.n_primitives)
         ])
         self.res = PointNetRes()
@@ -305,7 +300,7 @@ class MSN(nn.Module):
             # y = x[:, :, i, :]
             y = x
             out_seg.append(y)
-            y = torch.cat((mesh_grid.cuda(), y), 1).contiguous()
+            # y = torch.cat((mesh_grid.cuda(), y), 1).contiguous()
             outs.append(self.decoder[i](y))
         partial_regions = torch.cat(partial_regions, 2).contiguous()
         partial_regions = partial_regions.transpose(1, 2).contiguous()

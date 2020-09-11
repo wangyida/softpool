@@ -75,8 +75,8 @@ labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
 labels_inputs_points = torch.Tensor(
-    range(1, (opt.n_primitives + 1) * (1280 // opt.n_primitives) +
-          1)).view(1280 // opt.n_primitives,
+    range(1, (opt.n_primitives + 1) * (2048 // opt.n_primitives) +
+          1)).view(2048 // opt.n_primitives,
                    (opt.n_primitives + 1)).transpose(0, 1)
 labels_inputs_points = (labels_inputs_points) % (opt.n_primitives + 1)
 labels_inputs_points = labels_inputs_points.contiguous().view(-1)
