@@ -140,7 +140,6 @@ with torch.no_grad():
         o3d.write_point_cloud(
             os.path.join('./pcds/regions/', '%s.pcd' % model),
             pcd,
-            write_ascii=True,
             compressed=True)
         os.makedirs('pcds/output1', exist_ok=True)
         os.makedirs('pcds/output1/'+subfold, exist_ok=True)
