@@ -283,7 +283,8 @@ class MSN(nn.Module):
             # nn.Linear(bottleneck_size, bottleneck_size),
             nn.ReLU())
         self.decoder = nn.ModuleList([
-            PointGenCon(bottleneck_size=2 + self.bottleneck_size)
+            PointGenCon(bottleneck_size=self.bottleneck_size)
+            # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
             for i in range(0, self.n_primitives)
         ])
         self.res = PointNetRes()
@@ -311,7 +312,7 @@ class MSN(nn.Module):
             # y = x[:, :, i, :]
             y = x
             out_seg.append(y)
-            y = torch.cat((mesh_grid.cuda(), y), 1).contiguous()
+            # y = torch.cat((mesh_grid.cuda(), y), 1).contiguous()
             outs.append(self.decoder[i](y))
         partial_regions = torch.cat(partial_regions, 2).contiguous()
         partial_regions = partial_regions.transpose(1, 2).contiguous()
