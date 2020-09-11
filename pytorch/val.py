@@ -133,7 +133,7 @@ with torch.no_grad():
         maxi = labels_inputs_points.max()
         # import ipdb; ipdb.set_trace()
         pts_color = matplotlib.cm.rainbow(
-            labels_inputs_points[0:partial_regions.size(1)] / partial_regions.size(1))[:, 0:3]
+            labels_inputs_points[0:partial_regions.size(1)] / maxi)[:, 0:3]
         pcd = o3d.PointCloud()
         pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
         pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
