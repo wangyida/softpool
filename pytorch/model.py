@@ -243,36 +243,38 @@ class MSN(nn.Module):
                 bottleneck_size,
                 kernel_size=(dim_pn, 1),
                 stride=(1, 1)),
-            nn.Conv2d(
-                bottleneck_size,
-                2 * bottleneck_size,
-                kernel_size=(1, 3),
-                stride=(1, 2),
-                padding=(0, 1),
-                padding_mode='same'),
-            nn.Conv2d(
-                2 * bottleneck_size,
-                4 * bottleneck_size,
-                kernel_size=(1, 3),
-                stride=(1, 2),
-                padding=(0, 1),
-                padding_mode='same'),
-            nn.ConvTranspose2d(
-                4 * bottleneck_size,
-                bottleneck_size,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)),
-            nn.ConvTranspose2d(
-                bottleneck_size,
-                bottleneck_size,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)),
             nn.Flatten(start_dim=2, end_dim=3),
             nn.BatchNorm1d(bottleneck_size),
             # nn.Linear(bottleneck_size, bottleneck_size),
             nn.ReLU())
+        """
+            nn.Conv2d(
+                bottleneck_size,
+                2 * bottleneck_size,
+                kernel_size=(1, 3),
+                stride=(1, 2),
+                padding=(0, 1),
+                padding_mode='same'),
+            nn.Conv2d(
+                2 * bottleneck_size,
+                4 * bottleneck_size,
+                kernel_size=(1, 3),
+                stride=(1, 2),
+                padding=(0, 1),
+                padding_mode='same'),
+            nn.ConvTranspose2d(
+                4 * bottleneck_size,
+                bottleneck_size,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                bottleneck_size,
+                bottleneck_size,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)),
+        """
         self.decoder = nn.ModuleList([
             PointGenCon(bottleneck_size=self.bottleneck_size)
             # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
