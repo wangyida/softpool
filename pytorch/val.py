@@ -140,6 +140,7 @@ with torch.no_grad():
         o3d.write_point_cloud(
             os.path.join('./pcds/regions/', '%s.pcd' % model),
             pcd,
+            write_ascii=True,
             compressed=True)
         os.makedirs('pcds/output1', exist_ok=True)
         os.makedirs('pcds/output1/'+subfold, exist_ok=True)
@@ -154,6 +155,7 @@ with torch.no_grad():
         o3d.write_point_cloud(
             os.path.join('./pcds/output1/', '%s.pcd' % model),
             pcd,
+            write_ascii=True,
             compressed=True)
         os.makedirs('pcds/output2', exist_ok=True)
         os.makedirs('pcds/output2/'+subfold, exist_ok=True)
@@ -180,6 +182,7 @@ with torch.no_grad():
         o3d.write_point_cloud(
             os.path.join('./pcds/input/', '%s.pcd' % model),
             pcd,
+            write_ascii=True,
             compressed=True)
         os.makedirs('pcds/gt', exist_ok=True)
         os.makedirs('pcds/gt/'+subfold, exist_ok=True)
