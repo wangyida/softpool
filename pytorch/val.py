@@ -103,7 +103,7 @@ with torch.no_grad():
             gt[j, :, :] = torch.from_numpy(
                 resample_pcd(np.array(fh5['data']), opt.num_points))
 
-        output1, output2, expansion_penalty, out_seg, partial_regions = network(
+        output1, output2, output3, expansion_penalty, out_seg, partial_regions = network(
             partial.transpose(2, 1).contiguous())
         dist, _ = EMD(output1, gt, 0.002, 10000)
         emd1 = torch.sqrt(dist).mean()
@@ -154,6 +154,21 @@ with torch.no_grad():
         pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
         o3d.write_point_cloud(
             os.path.join('./pcds/output1/', '%s.pcd' % model),
+            pcd,
+            write_ascii=True,
+            compressed=True)
+        os.makedirs('pcds/output3', exist_ok=True)
+        os.makedirs('pcds/output3/'+subfold, exist_ok=True)
+        pts_coord = output3[idx].data.cpu()[:, 0:3]
+        maxi = labels_generated_points.max()
+        # import ipdb; ipdb.set_trace()
+        pts_color = matplotlib.cm.rainbow(
+            labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
+        pcd = o3d.PointCloud()
+        pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
+        pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
+        o3d.write_point_cloud(
+            os.path.join('./pcds/output3/', '%s.pcd' % model),
             pcd,
             write_ascii=True,
             compressed=True)
