@@ -55,7 +55,7 @@ class FullModel(nn.Module):
         emd1 = torch.sqrt(dist).mean(1)
 
         dist, _ = self.EMD(output3, gt, eps, iters)
-        emd1 += torch.sqrt(dist).mean(1)
+        emd3 = torch.sqrt(dist).mean(1)
 
         """
         gt_seg = seg[:,:,0]
@@ -72,7 +72,7 @@ class FullModel(nn.Module):
         dist, _ = self.EMD(output2, gt, eps, iters)
         emd2 = torch.sqrt(dist).mean(1)
 
-        return output1, output2, emd1, emd2, expansion_penalty
+        return output1, output2, emd1, emd2, emd3, expansion_penalty
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -157,9 +157,9 @@ for epoch in range(opt.nepoch):
         seg = seg.float().cuda()
         input = input.transpose(2, 1).contiguous()
 
-        output1, output2, emd1, emd2, expansion_penalty = network(
+        output1, output2, emd1, emd2, emd3, expansion_penalty = network(
             input, gt.contiguous(), seg.contiguous(), 0.005, 50)
-        loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean()
+        loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean() + emd3.mean()
         loss_net.backward()
         train_loss.update(emd2.mean().item())
         optimizer.step()
@@ -203,9 +203,9 @@ for epoch in range(opt.nepoch):
                        '%s/network.pth' % (dir_name))
 
         print(opt.env +
-              ' train [%d: %d/%d]  emd1: %f emd2: %f expansion_penalty: %f' %
+                ' train [%d: %d/%d]  emd1: %f emd2: %f emd3: %f expansion_penalty: %f' %
               (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
-               emd2.mean().item(), expansion_penalty.mean().item()))
+               emd2.mean().item(), emd3.mean(), expansion_penalty.mean().item()))
     train_curve.append(train_loss.avg)
 
     # VALIDATION
@@ -219,7 +219,7 @@ for epoch in range(opt.nepoch):
                 gt = gt.float().cuda()
                 seg = seg.float().cuda()
                 input = input.transpose(2, 1).contiguous()
-                output1, output2, emd1, emd2, expansion_penalty = network(
+                output1, output2, emd1, emd2, emd3, expansion_penalty = network(
                     input, gt.contiguous(), seg.contiguous(), 0.004, 3000)
                 val_loss.update(emd2.mean().item())
                 idx = random.randint(0, input.size()[0] - 1)
@@ -256,10 +256,10 @@ for epoch in range(opt.nepoch):
                 """
                 print(
                     opt.env +
-                    ' val [%d: %d/%d]  emd1: %f emd2: %f expansion_penalty: %f'
+                    ' val [%d: %d/%d]  emd1: %f emd2: %f emd3: %f expansion_penalty: %f'
                     %
                     (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
-                     emd2.mean().item(), expansion_penalty.mean().item()))
+                     emd2.mean().item(), emd3.mean().item(), expansion_penalty.mean().item()))
 
     val_curve.append(val_loss.avg)
     """

@@ -64,7 +64,7 @@ class STN3d(nn.Module):
 
 
 class PointNetfeat(nn.Module):
-    def __init__(self, num_points=8192, global_feat=True, dim_pn=256):
+    def __init__(self, num_points=8192, global_feat=True, dim_pn=1024):
         super(PointNetfeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.dim_pn = dim_pn
@@ -226,14 +226,12 @@ class MSN(nn.Module):
         self.num_points = num_points
         self.bottleneck_size = bottleneck_size
         self.n_primitives = n_primitives
-        """
-        self.encoder = nn.Sequential(
+        self.pncoder = nn.Sequential(
         PointNetfeat(num_points, global_feat=True),
-        nn.Linear(dim_pn, self.bottleneck_size),
-        nn.BatchNorm1d(self.bottleneck_size),
-        nn.ReLU()
+            nn.Linear(1024, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU()
         )
-        """
         self.N_p = 32
         self.spcoder = nn.Sequential(
             SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
@@ -276,7 +274,7 @@ class MSN(nn.Module):
             for i in range(0, self.n_primitives)
         ])
         self.decoder2 = nn.ModuleList([
-            PointGenCon(bottleneck_size=3 + self.bottleneck_size)
+            PointGenCon(bottleneck_size=3 + 256)
             # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
             for i in range(0, self.n_primitives)
         ])
@@ -286,6 +284,8 @@ class MSN(nn.Module):
     def forward(self, x):
         partial = x
         sp_feat, sp_idx = self.spcoder(x)
+        pn_feat = self.pncoder(x)
+        pn_feat = pn_feat.unsqueeze(2).expand(x.size(0), 256, 32).contiguous()
         partial_regions= []
         x = self.encoder(sp_feat)
         outs = []
@@ -307,8 +307,7 @@ class MSN(nn.Module):
             y = x
             out_seg.append(y)
             outs.append(self.decoder[i](y))
-            # import ipdb; ipdb.set_trace()
-            pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(x.size(0),x.size(1), mesh_grid.size(2)).contiguous()
+            # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(x.size(0),x.size(1), mesh_grid.size(2)).contiguous()
             y2 = torch.cat((self.decoder[i](y), pn_feat), 1).contiguous()
             outs2.append(self.decoder2[i](y2))
         partial_regions = torch.cat(partial_regions, 2).contiguous()
