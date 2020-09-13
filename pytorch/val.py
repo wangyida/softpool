@@ -29,6 +29,8 @@ parser.add_argument(
     help='number of primitives in the atlas')
 parser.add_argument(
     '--env', type=str, default="MSN_VAL", help='visdom environment')
+parser.add_argument(
+    '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 
 opt = parser.parse_args()
 print(opt)
@@ -44,14 +46,17 @@ if opt.model != '':
     print("Previous weight loaded ")
 
 network.eval()
-# with open(os.path.join('./data/valid_suncg_fur.list')) as file:
-with open(os.path.join('./data/valid_shapenet.list')) as file:
-    model_list = [line.strip().replace('/', '/') for line in file]
+if opt.dataset == 'suncg':
+    with open(os.path.join('./data/valid_suncg_fur.list')) as file:
+        model_list = [line.strip().replace('/', '/') for line in file]
+    partial_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
+    gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
+elif opt.dataset == 'shapenet':
+    with open(os.path.join('./data/valid_shapenet.list')) as file:
+        model_list = [line.strip().replace('/', '/') for line in file]
+    partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
+    gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
 
-# partial_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
-# gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
-partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
-gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
@@ -89,19 +94,21 @@ with torch.no_grad():
         partial_regions = torch.zeros((1, 2048, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
-            """
-            pcd = o3d.read_point_cloud(
-                os.path.join(partial_dir, model + '.pcd'))
-            """
-            fh5 = h5py.File(os.path.join(partial_dir, model + '.h5'), 'r')
-            partial[j, :, :] = torch.from_numpy(
-                resample_pcd(np.array(fh5['data']), 2048))
-            """
-            pcd = o3d.read_point_cloud(os.path.join(gt_dir, model + '.pcd'))
-            """
-            fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
-            gt[j, :, :] = torch.from_numpy(
-                resample_pcd(np.array(fh5['data']), opt.num_points))
+            if opt.dataset == 'suncg':
+                pcd = o3d.read_point_cloud(
+                    os.path.join(partial_dir, model + '.pcd'))
+                partial[j, :, :] = torch.from_numpy(
+                    resample_pcd(np.array(pcd.points), 2048))
+                pcd = o3d.read_point_cloud(os.path.join(gt_dir, model + '.pcd'))
+                gt[j, :, :] = torch.from_numpy(
+                    resample_pcd(np.array(pcd.points), opt.num_points))
+            elif opt.dataset == 'shapenet':
+                fh5 = h5py.File(os.path.join(partial_dir, model + '.h5'), 'r')
+                partial[j, :, :] = torch.from_numpy(
+                    resample_pcd(np.array(fh5['data']), 2048))
+                fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
+                gt[j, :, :] = torch.from_numpy(
+                    resample_pcd(np.array(fh5['data']), opt.num_points))
 
         output1, output2, output3, expansion_penalty, out_seg, partial_regions = network(
             partial.transpose(2, 1).contiguous())
@@ -109,6 +116,8 @@ with torch.no_grad():
         emd1 = torch.sqrt(dist).mean()
         dist, _ = EMD(output2, gt, 0.002, 10000)
         emd2 = torch.sqrt(dist).mean()
+        dist, _ = EMD(output3, gt, 0.002, 10000)
+        emd3 = torch.sqrt(dist).mean()
         idx = random.randint(0, 0)
         """
         vis.scatter(X = gt[idx].data.cpu(), win = 'GT',
@@ -124,8 +133,8 @@ with torch.no_grad():
                     opts = dict(title = model, markersize=2))
         """
         print(opt.env +
-              ' val [%d/%d]  emd1: %f emd2: %f expansion_penalty: %f' %
-              (i + 1, len(model_list), emd1.item(), emd2.item(),
+                ' val [%d/%d]  emd1: %f emd2: %f emd3: %f expansion_penalty: %f' %
+              (i + 1, len(model_list), emd1.item(), emd2.item(), emd3.item(),
                expansion_penalty.mean().item()))
         os.makedirs('pcds/regions', exist_ok=True)
         os.makedirs('pcds/regions/'+subfold, exist_ok=True)
