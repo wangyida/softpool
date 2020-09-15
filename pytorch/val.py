@@ -55,6 +55,16 @@ if opt.dataset == 'suncg':
     gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
 elif opt.dataset == 'shapenet':
     hash_tab = {
+        'all': {
+            'name': 'Test',
+            'emd1': 0.0,
+            'emd2': 0.0,
+            'emd3': 0.0,
+            'cd1': 0.0,
+            'cd2': 0.0,
+            'cd3': 0.0,
+            'cnt': 0
+        },
         '04530566': {
             'name': 'Watercraft',
             'emd1': 0.0,
@@ -136,10 +146,13 @@ elif opt.dataset == 'shapenet':
             'cnt': 0
         }
     }
-    with open(os.path.join('./data/valid_shapenet.list')) as file:
+    # with open(os.path.join('./data/valid_shapenet.list')) as file:
+    with open(os.path.join('./data/test_shapenet.list')) as file:
         model_list = [line.strip().replace('/', '/') for line in file]
-    partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
-    gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
+    # partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
+    partial_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
+    # gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
+    gt_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
@@ -221,19 +234,6 @@ with torch.no_grad():
         hash_tab[str(subfold)]['cd3'] += cd3
 
         idx = random.randint(0, 0)
-        """
-        vis.scatter(X = gt[idx].data.cpu(), win = 'GT',
-                    opts = dict(title = model, markersize = 2))
-        vis.scatter(X = partial[idx].data.cpu(), win = 'INPUT',
-                    opts = dict(title = model, markersize = 2))
-        vis.scatter(X = output1[idx].data.cpu(),
-                    Y = labels_generated_points[0:output1.size(1)],
-                    win = 'COARSE',
-                    opts = dict(title = model, markersize=2))
-        vis.scatter(X = output2[idx].data.cpu(),
-                    win = 'OUTPUT',
-                    opts = dict(title = model, markersize=2))
-        """
         print(
             opt.env +
             ' val [%d/%d]  emd1: %f emd2: %f emd3: %f cd2: %f expansion_penalty: %f, mean cd2: %f'
@@ -298,6 +298,7 @@ with torch.no_grad():
             os.path.join('./pcds/output2/', '%s.pcd' % model),
             pcd,
             compressed=True)
+
         os.makedirs('pcds/input', exist_ok=True)
         os.makedirs('pcds/input/' + subfold, exist_ok=True)
         pts_coord = partial[idx].data.cpu()[:, 0:3]
@@ -322,13 +323,14 @@ with torch.no_grad():
         pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
         o3d.write_point_cloud(
             os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
-        """
-        os.makedirs('pcds/spblocks', exist_ok=True)
-        os.makedirs('pcds/spblocks/'+subfold, exist_ok=True)
-        softpoolblock = softpool[idx].data.cpu()[:, 0:3, :]
-        softpoolblock = softpoolblock.reshape((64, 32, 3))
-        plt.imsave(
-            os.path.join('./pcds/spblocks/', '%s.png' % model), softpoolblock)
-        """
-    for i in ['04530566', '02933112', '04379243', '02691156', '02958343', '03001627', '04256520', '03636649']:
-        print('%s cd1: %f cd2: %f cd3: %f' % (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'], hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] / hash_tab[i]['cnt']))
+
+        # Submission
+        os.makedirs('benchmark', exist_ok=True)
+        os.makedirs('benchmark/' + subfold, exist_ok=True)
+        with h5py.File('benchmark/' + model + '.h5', "w") as f:
+            f.create_dataset("data", data=np.float32(pts_coord))
+    """
+    if opt.dataset == 'shapenet':
+        for i in ['04530566', '02933112', '04379243', '02691156', '02958343', '03001627', '04256520', '03636649']:
+            print('%s cd1: %f cd2: %f cd3: %f' % (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'], hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] / hash_tab[i]['cnt']))
+    """
