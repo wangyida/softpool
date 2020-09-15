@@ -43,7 +43,8 @@ class FullModel(nn.Module):
         self.EMD = emd.emdModule()
 
     def forward(self, inputs, gt, seg, eps, iters):
-        output1, output2, output3, expansion_penalty, out_seg, partial_regions = self.model(inputs)
+        output1, output2, output3, expansion_penalty, out_seg, partial_regions = self.model(
+            inputs)
         """
         for i in range(16):
             out_seg[i] = out_seg[i].transpose(1, 2).contiguous()
@@ -56,7 +57,6 @@ class FullModel(nn.Module):
 
         dist, _ = self.EMD(output3, gt, eps, iters)
         emd3 = torch.sqrt(dist).mean(1)
-
         """
         gt_seg = seg[:,:,0]
         size = list(gt_seg.size())
@@ -159,7 +159,8 @@ for epoch in range(opt.nepoch):
 
         output1, output2, emd1, emd2, emd3, expansion_penalty = network(
             input, gt.contiguous(), seg.contiguous(), 0.005, 50)
-        loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean() + emd3.mean()
+        loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
+        ) + emd3.mean()
         loss_net.backward()
         train_loss.update(emd2.mean().item())
         optimizer.step()
@@ -202,10 +203,12 @@ for epoch in range(opt.nepoch):
             torch.save(network.module.model.state_dict(),
                        '%s/network.pth' % (dir_name))
 
-        print(opt.env +
-                ' train [%d: %d/%d]  emd1: %f emd2: %f emd3: %f expansion_penalty: %f' %
-              (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
-               emd2.mean().item(), emd3.mean(), expansion_penalty.mean().item()))
+        print(
+            opt.env +
+            ' train [%d: %d/%d]  emd1: %f emd2: %f emd3: %f expansion_penalty: %f'
+            %
+            (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
+             emd2.mean().item(), emd3.mean(), expansion_penalty.mean().item()))
     train_curve.append(train_loss.avg)
 
     # VALIDATION
@@ -257,9 +260,9 @@ for epoch in range(opt.nepoch):
                 print(
                     opt.env +
                     ' val [%d: %d/%d]  emd1: %f emd2: %f emd3: %f expansion_penalty: %f'
-                    %
-                    (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
-                     emd2.mean().item(), emd3.mean().item(), expansion_penalty.mean().item()))
+                    % (epoch, i, len_dataset / opt.batchSize,
+                       emd1.mean().item(), emd2.mean().item(),
+                       emd3.mean().item(), expansion_penalty.mean().item()))
 
     val_curve.append(val_loss.avg)
     """

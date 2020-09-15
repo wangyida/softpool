@@ -8,11 +8,13 @@ import argparse
 import random
 import numpy as np
 import torch
-import h5py 
+import h5py
 import os
 import visdom
 sys.path.append("./emd/")
 import emd_module as emd
+from chamfer_pkg.dist_chamfer import chamferDist as cd
+cd = cd()
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -52,11 +54,92 @@ if opt.dataset == 'suncg':
     partial_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
     gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
 elif opt.dataset == 'shapenet':
+    hash_tab = {
+        '04530566': {
+            'name': 'Watercraft',
+            'emd1': 0.0,
+            'emd2': 0.0,
+            'emd3': 0.0,
+            'cd1': 0.0,
+            'cd2': 0.0,
+            'cd3': 0.0,
+            'cnt': 0
+        },
+        '02933112': {
+            'name': 'Cabinet',
+            'emd1': 0.0,
+            'emd2': 0.0,
+            'emd3': 0.0,
+            'cd1': 0.0,
+            'cd2': 0.0,
+            'cd3': 0.0,
+            'cnt': 0
+        },
+        '04379243': {
+            'name': 'Table',
+            'emd1': 0.0,
+            'emd2': 0.0,
+            'emd3': 0.0,
+            'cd1': 0.0,
+            'cd2': 0.0,
+            'cd3': 0.0,
+            'cnt': 0
+        },
+        '02691156': {
+            'name': 'Airplane',
+            'emd1': 0.0,
+            'emd2': 0.0,
+            'emd3': 0.0,
+            'cd1': 0.0,
+            'cd2': 0.0,
+            'cd3': 0.0,
+            'cnt': 0
+        },
+        '02958343': {
+            'name': 'Car',
+            'emd1': 0.0,
+            'emd2': 0.0,
+            'emd3': 0.0,
+            'cd1': 0.0,
+            'cd2': 0.0,
+            'cd3': 0.0,
+            'cnt': 0
+        },
+        '03001627': {
+            'name': 'Chair',
+            'emd1': 0.0,
+            'emd2': 0.0,
+            'emd3': 0.0,
+            'cd1': 0.0,
+            'cd2': 0.0,
+            'cd3': 0.0,
+            'cnt': 0
+        },
+        '04256520': {
+            'name': 'Couch',
+            'emd1': 0.0,
+            'emd2': 0.0,
+            'emd3': 0.0,
+            'cd1': 0.0,
+            'cd2': 0.0,
+            'cd3': 0.0,
+            'cnt': 0
+        },
+        '03636649': {
+            'name': 'Lamp',
+            'emd1': 0.0,
+            'emd2': 0.0,
+            'emd3': 0.0,
+            'cd1': 0.0,
+            'cd2': 0.0,
+            'cd3': 0.0,
+            'cnt': 0
+        }
+    }
     with open(os.path.join('./data/valid_shapenet.list')) as file:
         model_list = [line.strip().replace('/', '/') for line in file]
     partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
     gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
-
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
@@ -80,9 +163,8 @@ labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
 labels_inputs_points = torch.Tensor(
-    range(1, (opt.n_primitives + 1) * (2048 // opt.n_primitives) +
-          1)).view(2048 // opt.n_primitives,
-                   (opt.n_primitives + 1)).transpose(0, 1)
+    range(1, (opt.n_primitives + 1) * (2048 // opt.n_primitives) + 1)).view(
+        2048 // opt.n_primitives, (opt.n_primitives + 1)).transpose(0, 1)
 labels_inputs_points = (labels_inputs_points) % (opt.n_primitives + 1)
 labels_inputs_points = labels_inputs_points.contiguous().view(-1)
 
@@ -99,7 +181,8 @@ with torch.no_grad():
                     os.path.join(partial_dir, model + '.pcd'))
                 partial[j, :, :] = torch.from_numpy(
                     resample_pcd(np.array(pcd.points), 2048))
-                pcd = o3d.read_point_cloud(os.path.join(gt_dir, model + '.pcd'))
+                pcd = o3d.read_point_cloud(
+                    os.path.join(gt_dir, model + '.pcd'))
                 gt[j, :, :] = torch.from_numpy(
                     resample_pcd(np.array(pcd.points), opt.num_points))
             elif opt.dataset == 'shapenet':
@@ -114,10 +197,29 @@ with torch.no_grad():
             partial.transpose(2, 1).contiguous())
         dist, _ = EMD(output1, gt, 0.002, 10000)
         emd1 = torch.sqrt(dist).mean()
+        hash_tab[str(subfold)]['cnt'] += 1
+        hash_tab[str(subfold)]['emd1'] += emd1
+
         dist, _ = EMD(output2, gt, 0.002, 10000)
         emd2 = torch.sqrt(dist).mean()
+        hash_tab[str(subfold)]['emd2'] += emd2
+
         dist, _ = EMD(output3, gt, 0.002, 10000)
         emd3 = torch.sqrt(dist).mean()
+        hash_tab[str(subfold)]['emd3'] += emd3
+
+        dist, _ = cd.forward(input1=output1, input2=gt)
+        cd1 = dist.mean()
+        hash_tab[str(subfold)]['cd1'] += cd1
+
+        dist, _ = cd.forward(input1=output2, input2=gt)
+        cd2 = dist.mean()
+        hash_tab[str(subfold)]['cd2'] += cd2
+
+        dist, _ = cd.forward(input1=output3, input2=gt)
+        cd3 = dist.mean()
+        hash_tab[str(subfold)]['cd3'] += cd3
+
         idx = random.randint(0, 0)
         """
         vis.scatter(X = gt[idx].data.cpu(), win = 'GT',
@@ -132,12 +234,14 @@ with torch.no_grad():
                     win = 'OUTPUT',
                     opts = dict(title = model, markersize=2))
         """
-        print(opt.env +
-                ' val [%d/%d]  emd1: %f emd2: %f emd3: %f expansion_penalty: %f' %
-              (i + 1, len(model_list), emd1.item(), emd2.item(), emd3.item(),
-               expansion_penalty.mean().item()))
+        print(
+            opt.env +
+            ' val [%d/%d]  emd1: %f emd2: %f emd3: %f cd2: %f expansion_penalty: %f, mean cd2: %f'
+            % (i + 1, len(model_list), emd1.item(), emd2.item(), emd3.item(),
+               cd2.item(), expansion_penalty.mean().item(),
+               hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt']))
         os.makedirs('pcds/regions', exist_ok=True)
-        os.makedirs('pcds/regions/'+subfold, exist_ok=True)
+        os.makedirs('pcds/regions/' + subfold, exist_ok=True)
         pts_coord = partial_regions[idx].data.cpu()[:, 0:3]
         maxi = labels_inputs_points.max()
         # import ipdb; ipdb.set_trace()
@@ -152,7 +256,7 @@ with torch.no_grad():
             write_ascii=True,
             compressed=True)
         os.makedirs('pcds/output1', exist_ok=True)
-        os.makedirs('pcds/output1/'+subfold, exist_ok=True)
+        os.makedirs('pcds/output1/' + subfold, exist_ok=True)
         pts_coord = output1[idx].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         # import ipdb; ipdb.set_trace()
@@ -167,7 +271,7 @@ with torch.no_grad():
             write_ascii=True,
             compressed=True)
         os.makedirs('pcds/output3', exist_ok=True)
-        os.makedirs('pcds/output3/'+subfold, exist_ok=True)
+        os.makedirs('pcds/output3/' + subfold, exist_ok=True)
         pts_coord = output3[idx].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         # import ipdb; ipdb.set_trace()
@@ -182,7 +286,7 @@ with torch.no_grad():
             write_ascii=True,
             compressed=True)
         os.makedirs('pcds/output2', exist_ok=True)
-        os.makedirs('pcds/output2/'+subfold, exist_ok=True)
+        os.makedirs('pcds/output2/' + subfold, exist_ok=True)
         pts_coord = output2[idx].data.cpu()[:, 0:3]
         mini = output2[idx].min()
         pts_color = matplotlib.cm.cool(output2[idx].data.cpu()[:, 1] -
@@ -195,7 +299,7 @@ with torch.no_grad():
             pcd,
             compressed=True)
         os.makedirs('pcds/input', exist_ok=True)
-        os.makedirs('pcds/input/'+subfold, exist_ok=True)
+        os.makedirs('pcds/input/' + subfold, exist_ok=True)
         pts_coord = partial[idx].data.cpu()[:, 0:3]
         mini = partial[idx].min()
         pts_color = matplotlib.cm.cool(partial[idx].data.cpu()[:, 1] -
@@ -209,7 +313,7 @@ with torch.no_grad():
             write_ascii=True,
             compressed=True)
         os.makedirs('pcds/gt', exist_ok=True)
-        os.makedirs('pcds/gt/'+subfold, exist_ok=True)
+        os.makedirs('pcds/gt/' + subfold, exist_ok=True)
         pts_coord = gt[idx].data.cpu()[:, 0:3]
         mini = gt[idx].min()
         pts_color = matplotlib.cm.cool(gt[idx].data.cpu()[:, 1] - mini)[:, 0:3]
@@ -218,7 +322,6 @@ with torch.no_grad():
         pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
         o3d.write_point_cloud(
             os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
-
         """
         os.makedirs('pcds/spblocks', exist_ok=True)
         os.makedirs('pcds/spblocks/'+subfold, exist_ok=True)
@@ -227,3 +330,5 @@ with torch.no_grad():
         plt.imsave(
             os.path.join('./pcds/spblocks/', '%s.png' % model), softpoolblock)
         """
+    for i in ['04530566', '02933112', '04379243', '02691156', '02958343', '03001627', '04256520', '03636649']:
+        print('%s cd1: %f cd2: %f cd3: %f' % (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'], hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] / hash_tab[i]['cnt']))

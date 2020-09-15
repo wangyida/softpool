@@ -1,6 +1,6 @@
 import open3d as o3d
 import torch
-import h5py 
+import h5py
 import numpy as np
 import torch.utils.data as data
 import torchvision.transforms as transforms
@@ -98,7 +98,7 @@ class ShapeNet(data.Dataset):
                         '%s.h5' % model_id))
         partial_sampled, _ = resample_pcd(partial, 2048)
         complete_sampled, idx_sampled = resample_pcd(complete, self.npoints)
-        labels_sampled = np.round(colors[idx_sampled]*11)
+        labels_sampled = np.round(colors[idx_sampled] * 11)
         """
         complete_seg = []
         for i in range (1, 12):
