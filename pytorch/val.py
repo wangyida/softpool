@@ -298,6 +298,11 @@ with torch.no_grad():
             os.path.join('./pcds/output2/', '%s.pcd' % model),
             pcd,
             compressed=True)
+        # Submission
+        os.makedirs('benchmark', exist_ok=True)
+        os.makedirs('benchmark/' + subfold, exist_ok=True)
+        with h5py.File('benchmark/' + model + '.h5', "w") as f:
+            f.create_dataset("data", data=np.float32(pts_coord))
 
         os.makedirs('pcds/input', exist_ok=True)
         os.makedirs('pcds/input/' + subfold, exist_ok=True)
@@ -324,11 +329,6 @@ with torch.no_grad():
         o3d.write_point_cloud(
             os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
 
-        # Submission
-        os.makedirs('benchmark', exist_ok=True)
-        os.makedirs('benchmark/' + subfold, exist_ok=True)
-        with h5py.File('benchmark/' + model + '.h5', "w") as f:
-            f.create_dataset("data", data=np.float32(pts_coord))
     """
     if opt.dataset == 'shapenet':
         for i in ['04530566', '02933112', '04379243', '02691156', '02958343', '03001627', '04256520', '03636649']:
