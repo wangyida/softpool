@@ -229,7 +229,7 @@ class MSN(nn.Module):
         self.N_p = 32
         self.spcoder = nn.Sequential(
             SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
-        self.encoder = nn.Sequential(
+        """
             nn.Conv2d(
                 dim_pn + 3,
                 bottleneck_size,
@@ -244,6 +244,32 @@ class MSN(nn.Module):
                 stride=(1, 2),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
+        """
+        self.encoder = nn.Sequential(
+            nn.Conv2d(
+                dim_pn + 3,
+                16 * bottleneck_size,
+                kernel_size=(dim_pn, self.N_p),
+                stride=(1, 1),
+                padding=(0, 0)), nn.Tanh(),
+            nn.ConvTranspose2d(
+                16 * bottleneck_size,
+                8 * bottleneck_size,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)), nn.Tanh(),
+            nn.ConvTranspose2d(
+                8 * bottleneck_size,
+                4 * bottleneck_size,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)), nn.Tanh(),
+            nn.ConvTranspose2d(
+                4 * bottleneck_size,
+                2 * bottleneck_size,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)), nn.Tanh(),
             nn.ConvTranspose2d(
                 2 * bottleneck_size,
                 bottleneck_size,
@@ -283,22 +309,25 @@ class MSN(nn.Module):
         for i in range(0, self.n_primitives):
             partial_regions.append(
                 torch.gather(partial, dim=2, index=sp_idx[:, :, i, :].long()))
-            rand_grid = Variable(
-                torch.cuda.FloatTensor(
-                    feature.size(0), 2, self.num_points // self.n_primitives))
-            rand_grid.data.uniform_(0, 1)
-            # here self.num_points // self.n_primitives = 8*4
-            mesh_grid = torch.meshgrid(
-                [torch.linspace(0.0, 1.0, 8),
-                 torch.linspace(0.0, 1.0, 4)])
-            mesh_grid = torch.cat(
-                (torch.reshape(mesh_grid[0],
-                               (self.num_points // self.n_primitives, 1)),
-                 torch.reshape(mesh_grid[1],
-                               (self.num_points // self.n_primitives, 1))),
-                dim=1)
-            mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
-                feature.shape[0], 1, 1)
+            deform = ''
+            if deform == 'patch_msn':
+                rand_grid = Variable(
+                    torch.cuda.FloatTensor(
+                        feature.size(0), 2, self.num_points // self.n_primitives))
+                rand_grid.data.uniform_(0, 1)
+                # here self.num_points // self.n_primitives = 8*4
+            elif deform == 'patch_pcn':
+                mesh_grid = torch.meshgrid(
+                    [torch.linspace(0.0, 1.0, 8),
+                     torch.linspace(0.0, 1.0, 4)])
+                mesh_grid = torch.cat(
+                    (torch.reshape(mesh_grid[0],
+                                   (self.num_points // self.n_primitives, 1)),
+                     torch.reshape(mesh_grid[1],
+                                   (self.num_points // self.n_primitives, 1))),
+                    dim=1)
+                mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
+                    feature.shape[0], 1, 1)
             # y = feature.unsqueeze(2).expand(feature.size(0),feature.size(1), mesh_grid.size(2)).contiguous()
             # y = feature[:, :, i].unsqueeze(2).expand(feature.size(0), feature.size(1), rand_grid.size(2)).contiguous()
             # y = feature[:, :, i, :]

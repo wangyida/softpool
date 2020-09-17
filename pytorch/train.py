@@ -22,7 +22,7 @@ parser.add_argument(
 parser.add_argument(
     '--workers', type=int, help='number of data loading workers', default=12)
 parser.add_argument(
-    '--nepoch', type=int, default=75, help='number of epochs to train for')
+    '--nepoch', type=int, default=750, help='number of epochs to train for')
 parser.add_argument(
     '--model', type=str, default='', help='optional reload model path')
 parser.add_argument(
