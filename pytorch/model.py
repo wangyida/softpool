@@ -302,18 +302,18 @@ class MSN(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(partial.size(0), 256,
                                               32).contiguous()
         partial_regions = []
-        feature = self.encoder(sp_feat)
+        sp_feat_conv = self.encoder(sp_feat)
         out_sp_local = []
         out_seg = []
         out_sp_global = []
         for i in range(0, self.n_primitives):
             partial_regions.append(
                 torch.gather(partial, dim=2, index=sp_idx[:, :, i, :].long()))
-            deform = ''
+            deform = 'patch_pcn'
             if deform == 'patch_msn':
                 rand_grid = Variable(
                     torch.cuda.FloatTensor(
-                        feature.size(0), 2, self.num_points // self.n_primitives))
+                        partial.size(0), 2, self.num_points // self.n_primitives))
                 rand_grid.data.uniform_(0, 1)
                 # here self.num_points // self.n_primitives = 8*4
             elif deform == 'patch_pcn':
@@ -327,15 +327,17 @@ class MSN(nn.Module):
                                    (self.num_points // self.n_primitives, 1))),
                     dim=1)
                 mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
-                    feature.shape[0], 1, 1)
-            # y = feature.unsqueeze(2).expand(feature.size(0),feature.size(1), mesh_grid.size(2)).contiguous()
-            # y = feature[:, :, i].unsqueeze(2).expand(feature.size(0), feature.size(1), rand_grid.size(2)).contiguous()
-            # y = feature[:, :, i, :]
-            y = feature
+                    sp_feat_conv.shape[0], 1, 1)
+                mesh_grid = torch.cat((mesh_grid, torch.zeros(partial.size(0),1,32)), dim=1)
+            # y = sp_feat_conv.unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
+            # y = sp_feat_conv[:, :, i].unsqueeze(2).expand(partial.size(0), sp_feat_conv.size(1), rand_grid.size(2)).contiguous()
+            # y = sp_feat_conv[:, :, i, :]
+            y = sp_feat_conv
             out_seg.append(y)
             out_sp_local.append(self.decoder[i](y))
-            # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(feature.size(0),feature.size(1), mesh_grid.size(2)).contiguous()
-            y2 = torch.cat((self.decoder[i](y), pn_feat), 1).contiguous()
+            # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
+            # y2 = torch.cat((self.decoder[i](y), pn_feat), 1).contiguous()
+            y2 = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             out_sp_global.append(self.decoder2[i](y2))
         partial_regions = torch.cat(partial_regions, 2).contiguous()
         partial_regions = partial_regions.transpose(1, 2).contiguous()
