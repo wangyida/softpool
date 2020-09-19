@@ -63,9 +63,9 @@ class STN3d(nn.Module):
         return x
 
 
-class PointNetfeat(nn.Module):
-    def __init__(self, num_points=8192, global_feat=True, dim_pn=1024):
-        super(PointNetfeat, self).__init__()
+class PointNetFeat(nn.Module):
+    def __init__(self, num_points=8192, dim_pn=1024):
+        super(PointNetFeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.dim_pn = dim_pn
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -77,7 +77,6 @@ class PointNetfeat(nn.Module):
         self.bn3 = torch.nn.BatchNorm1d(dim_pn)
 
         self.num_points = num_points
-        self.global_feat = global_feat
 
     def forward(self, x):
         batchsize = x.size()[0]
@@ -89,9 +88,9 @@ class PointNetfeat(nn.Module):
         return x
 
 
-class SoftPoolfeat(nn.Module):
-    def __init__(self, num_points=8192, global_feat=True, dim_pn=64, N_p=16):
-        super(SoftPoolfeat, self).__init__()
+class SoftPoolFeat(nn.Module):
+    def __init__(self, num_points=8192, dim_pn=64, N_p=16):
+        super(SoftPoolFeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
@@ -102,7 +101,6 @@ class SoftPoolfeat(nn.Module):
         self.bn3 = torch.nn.BatchNorm1d(dim_pn)
 
         self.num_points = num_points
-        self.global_feat = global_feat
         self.N_p = N_p
 
     def forward(self, x):
@@ -172,7 +170,7 @@ class PointNetRes(nn.Module):
         pointfeat = x
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
-        x,_ = torch.max(x, 2)
+        x, _ = torch.max(x, 2)
         x = x.view(-1, 1024)
         x = x.view(-1, 1024, 1).repeat(1, 1, npoints)
         x = torch.cat([x, pointfeat], 1)
@@ -194,11 +192,10 @@ class MSN(nn.Module):
         self.bottleneck_size = bottleneck_size
         self.n_primitives = n_primitives
         self.pncoder = nn.Sequential(
-            PointNetfeat(num_points, global_feat=True), nn.Linear(1024, 256),
+            PointNetFeat(num_points), nn.Linear(1024, 256),
             nn.BatchNorm1d(256), nn.ReLU())
         self.N_p = 32
-        self.spcoder = nn.Sequential(
-            SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
+        self.spcoder = nn.Sequential(SoftPoolFeat(num_points, N_p=self.N_p))
         self.encoder = nn.Sequential(
             nn.Conv2d(
                 dim_pn + 3,
@@ -239,7 +236,7 @@ class MSN(nn.Module):
                 bottleneck_size,
                 kernel_size=(1, 2),
                 stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(), 
+                padding=(0, 0)), nn.Tanh(),
             nn.Conv2d(
                 bottleneck_size,
                 bottleneck_size,
@@ -279,7 +276,8 @@ class MSN(nn.Module):
             if deform == 'patch_msn':
                 rand_grid = Variable(
                     torch.cuda.FloatTensor(
-                        partial.size(0), 2, self.num_points // self.n_primitives))
+                        partial.size(0), 2,
+                        self.num_points // self.n_primitives))
                 rand_grid.data.uniform_(0, 1)
                 # here self.num_points // self.n_primitives = 8*4
             elif deform == 'patch_pcn':
@@ -292,9 +290,11 @@ class MSN(nn.Module):
                      torch.reshape(mesh_grid[1],
                                    (self.num_points // self.n_primitives, 1))),
                     dim=1)
-                mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
-                    sp_feat_conv.shape[0], 1, 1)
-                mesh_grid = torch.cat((mesh_grid, torch.zeros(partial.size(0),1,32)), dim=1)
+                mesh_grid = torch.transpose(mesh_grid, 0,
+                                            1).unsqueeze(0).repeat(
+                                                sp_feat_conv.shape[0], 1, 1)
+                mesh_grid = torch.cat(
+                    (mesh_grid, torch.zeros(partial.size(0), 1, 32)), dim=1)
             # y = sp_feat_conv.unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
             # y = sp_feat_conv[:, :, i].unsqueeze(2).expand(partial.size(0), sp_feat_conv.size(1), rand_grid.size(2)).contiguous()
             # y = sp_feat_conv[:, :, i, :]
@@ -302,9 +302,9 @@ class MSN(nn.Module):
             out_seg.append(y)
             out_sp_local.append(self.decoder[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-            y2 = torch.cat((self.decoder[i](y), pn_feat), 1).contiguous()
-            # y2 = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-            out_sp_global.append(self.decoder2[i](y2))
+            y = torch.cat((self.decoder[i](y), pn_feat), 1).contiguous()
+            # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+            out_sp_global.append(self.decoder2[i](y))
         partial_regions = torch.cat(partial_regions, 2).contiguous()
         partial_regions = partial_regions.transpose(1, 2).contiguous()
         out_sp_local = torch.cat(out_sp_local, 2).contiguous()

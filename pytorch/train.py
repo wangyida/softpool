@@ -167,37 +167,6 @@ for epoch in range(opt.nepoch):
 
         if i % 10 == 0:
             idx = random.randint(0, input.size()[0] - 1)
-            """
-            vis.scatter(X = gt.contiguous()[idx].data.cpu()[:, :3],
-                    win = 'TRAIN_GT',
-                    opts = dict(
-                        title = id[idx],
-                        markersize = 2,
-                        ),
-                    )
-            vis.scatter(X = input.transpose(2,1).contiguous()[idx].data.cpu(),
-                    win = 'TRAIN_INPUT',
-                    opts = dict(
-                        title = id[idx],
-                        markersize = 2,
-                        ),
-                    )
-            vis.scatter(X = output1[idx].data.cpu(),
-                    Y = labels_generated_points[0:output1.size(1)],
-                    win = 'TRAIN_COARSE',
-                    opts = dict(
-                        title= id[idx],
-                        markersize=2,
-                        ),
-                    )
-            vis.scatter(X = output2[idx].data.cpu(),
-                    win = 'TRAIN_OUTPUT',
-                    opts = dict(
-                        title= id[idx],
-                        markersize=2,
-                        ),
-                    )
-            """
         if i % 3000 == 0:
             print('saving net...')
             torch.save(network.module.model.state_dict(),
@@ -226,37 +195,6 @@ for epoch in range(opt.nepoch):
                     input, gt.contiguous(), seg.contiguous(), 0.004, 3000)
                 val_loss.update(emd2.mean().item())
                 idx = random.randint(0, input.size()[0] - 1)
-                """
-                vis.scatter(X = gt.contiguous()[idx].data.cpu()[:, :3],
-                        win = 'VAL_GT',
-                        opts = dict(
-                            title = id[idx],
-                            markersize = 2,
-                            ),
-                        )
-                vis.scatter(X = input.transpose(2,1).contiguous()[idx].data.cpu(),
-                        win = 'VAL_INPUT',
-                        opts = dict(
-                            title = id[idx],
-                            markersize = 2,
-                            ),
-                        )
-                vis.scatter(X = output1[idx].data.cpu(),
-                        Y = labels_generated_points[0:output1.size(1)],
-                        win = 'VAL_COARSE',
-                        opts = dict(
-                            title= id[idx],
-                            markersize=2,
-                            ),
-                        )
-                vis.scatter(X = output2[idx].data.cpu(),
-                        win = 'VAL_OUTPUT',
-                        opts = dict(
-                            title= id[idx],
-                            markersize=2,
-                            ),
-                        )
-                """
                 print(
                     opt.env +
                     ' val [%d: %d/%d]  emd1: %f emd2: %f emd3: %f expansion_penalty: %f'
@@ -265,16 +203,6 @@ for epoch in range(opt.nepoch):
                        emd3.mean().item(), expansion_penalty.mean().item()))
 
     val_curve.append(val_loss.avg)
-    """
-    vis.line(X=np.column_stack((np.arange(len(train_curve)),np.arange(len(val_curve)))),
-                 Y=np.column_stack((np.array(train_curve),np.array(val_curve))),
-                 win='loss',
-                 opts=dict(title="emd", legend=["train_curve" + opt.env, "val_curve" + opt.env], markersize=2, ), )
-    vis.line(X=np.column_stack((np.arange(len(train_curve)),np.arange(len(val_curve)))),
-                 Y=np.log(np.column_stack((np.array(train_curve),np.array(val_curve)))),
-                 win='log',
-                 opts=dict(title="log_emd", legend=["train_curve"+ opt.env, "val_curve"+ opt.env], markersize=2, ), )
-    """
 
     log_table = {
         "train_loss": train_loss.avg,

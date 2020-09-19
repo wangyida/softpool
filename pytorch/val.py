@@ -146,13 +146,17 @@ elif opt.dataset == 'shapenet':
             'cnt': 0
         }
     }
-    # with open(os.path.join('./data/valid_shapenet.list')) as file:
-    with open(os.path.join('./data/test_shapenet.list')) as file:
-        model_list = [line.strip().replace('/', '/') for line in file]
-    # partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
-    partial_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
-    # gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
-    gt_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
+    complete3d_benchmark = False
+    if complete3d_benchmark == True:
+        with open(os.path.join('./data/test_shapenet.list')) as file:
+            model_list = [line.strip().replace('/', '/') for line in file]
+        partial_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
+        gt_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
+    else:
+        with open(os.path.join('./data/valid_shapenet.list')) as file:
+            model_list = [line.strip().replace('/', '/') for line in file]
+        partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
+        gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
@@ -296,10 +300,11 @@ with torch.no_grad():
             pcd,
             compressed=True)
         # Submission
-        os.makedirs('benchmark', exist_ok=True)
-        os.makedirs('benchmark/' + subfold, exist_ok=True)
-        with h5py.File('benchmark/' + model + '.h5', "w") as f:
-            f.create_dataset("data", data=np.float32(pts_coord))
+        if complete3d_benchmark == True:
+            os.makedirs('benchmark', exist_ok=True)
+            os.makedirs('benchmark/' + subfold, exist_ok=True)
+            with h5py.File('benchmark/' + model + '.h5', "w") as f:
+                f.create_dataset("data", data=np.float32(pts_coord))
 
         os.makedirs('pcds/input', exist_ok=True)
         os.makedirs('pcds/input/' + subfold, exist_ok=True)
@@ -325,9 +330,6 @@ with torch.no_grad():
         pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
         o3d.write_point_cloud(
             os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
-
-    """
     if opt.dataset == 'shapenet':
         for i in ['04530566', '02933112', '04379243', '02691156', '02958343', '03001627', '04256520', '03636649']:
             print('%s cd1: %f cd2: %f cd3: %f' % (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'], hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] / hash_tab[i]['cnt']))
-    """
