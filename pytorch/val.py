@@ -146,13 +146,13 @@ elif opt.dataset == 'shapenet':
             'cnt': 0
         }
     }
-    with open(os.path.join('./data/valid_shapenet.list')) as file:
-    # with open(os.path.join('./data/test_shapenet.list')) as file:
+    # with open(os.path.join('./data/valid_shapenet.list')) as file:
+    with open(os.path.join('./data/test_shapenet.list')) as file:
         model_list = [line.strip().replace('/', '/') for line in file]
-    partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
-    # partial_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
-    gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
-    # gt_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
+    # partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
+    partial_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
+    # gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
+    gt_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
@@ -244,7 +244,6 @@ with torch.no_grad():
         os.makedirs('pcds/regions/' + subfold, exist_ok=True)
         pts_coord = partial_regions[idx].data.cpu()[:, 0:3]
         maxi = labels_inputs_points.max()
-        # import ipdb; ipdb.set_trace()
         pts_color = matplotlib.cm.rainbow(
             labels_inputs_points[0:partial_regions.size(1)] / maxi)[:, 0:3]
         pcd = o3d.PointCloud()
@@ -259,7 +258,6 @@ with torch.no_grad():
         os.makedirs('pcds/output1/' + subfold, exist_ok=True)
         pts_coord = output1[idx].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
-        # import ipdb; ipdb.set_trace()
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
         pcd = o3d.PointCloud()
@@ -274,7 +272,6 @@ with torch.no_grad():
         os.makedirs('pcds/output3/' + subfold, exist_ok=True)
         pts_coord = output3[idx].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
-        # import ipdb; ipdb.set_trace()
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
         pcd = o3d.PointCloud()
@@ -299,12 +296,10 @@ with torch.no_grad():
             pcd,
             compressed=True)
         # Submission
-        """
         os.makedirs('benchmark', exist_ok=True)
         os.makedirs('benchmark/' + subfold, exist_ok=True)
         with h5py.File('benchmark/' + model + '.h5', "w") as f:
             f.create_dataset("data", data=np.float32(pts_coord))
-        """
 
         os.makedirs('pcds/input', exist_ok=True)
         os.makedirs('pcds/input/' + subfold, exist_ok=True)
@@ -331,6 +326,8 @@ with torch.no_grad():
         o3d.write_point_cloud(
             os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
 
+    """
     if opt.dataset == 'shapenet':
         for i in ['04530566', '02933112', '04379243', '02691156', '02958343', '03001627', '04256520', '03636649']:
             print('%s cd1: %f cd2: %f cd3: %f' % (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'], hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] / hash_tab[i]['cnt']))
+    """
