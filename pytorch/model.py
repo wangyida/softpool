@@ -150,38 +150,20 @@ class PointNetRes(nn.Module):
         super(PointNetRes, self).__init__()
         self.conv1 = torch.nn.Conv1d(4, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        # self.conv3 = torch.nn.Conv1d(128, 1024, 1)
-        # self.conv4 = torch.nn.Conv1d(1088, 512, 1)
-        self.conv3 = torch.nn.Conv1d(128, 32, 1)
-        self.conv4 = torch.nn.Conv1d(64 + 32, 512, 1)
+        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
+        self.conv4 = torch.nn.Conv1d(1088, 512, 1)
         self.conv5 = torch.nn.Conv1d(512, 256, 1)
         self.conv6 = torch.nn.Conv1d(256, 128, 1)
         self.conv7 = torch.nn.Conv1d(128, 3, 1)
 
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
-        # self.bn3 = torch.nn.BatchNorm1d(1024)
-        self.bn3 = torch.nn.BatchNorm1d(32)
+        self.bn3 = torch.nn.BatchNorm1d(1024)
         self.bn4 = torch.nn.BatchNorm1d(512)
         self.bn5 = torch.nn.BatchNorm1d(256)
         self.bn6 = torch.nn.BatchNorm1d(128)
         self.bn7 = torch.nn.BatchNorm1d(3)
         self.th = nn.Tanh()
-
-        # softpool
-        self.N_p = 16
-        self.dim_pn = 32
-        self.bottleneck_size = 32
-        """
-        self.conv8 = torch.nn.Conv2d(
-            self.dim_pn,
-            self.bottleneck_size,
-            kernel_size=(self.dim_pn, 1),
-            stride=(1, 1))
-        """
-        self.conv9 = torch.nn.Conv2d(
-            self.bottleneck_size, 1, kernel_size=(1, self.N_p), stride=(1, 1))
-        self.flat = nn.Flatten()
 
     def forward(self, x):
         batchsize = x.size()[0]
@@ -190,21 +172,9 @@ class PointNetRes(nn.Module):
         pointfeat = x
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
-        # x,_ = torch.max(x, 2)
-        # softpoool
-        """
-        x = self.sp(x)
-        x = self.flatten(x)
-        """
-        # x = x.view(-1, 1024)
-        # x = x.view(-1, 1024, 1).repeat(1, 1, npoints)
-        x, _ = SoftPool(x)
-        x = x[:, :, :, :self.N_p]
-        # x = self.conv8(x)
-        x = self.conv9(x)
-        x = x.view(-1, 32)
-        x = x.view(-1, 32, 1).repeat(1, 1, npoints)
-        # end
+        x,_ = torch.max(x, 2)
+        x = x.view(-1, 1024)
+        x = x.view(-1, 1024, 1).repeat(1, 1, npoints)
         x = torch.cat([x, pointfeat], 1)
         x = F.relu(self.bn4(self.conv4(x)))
         x = F.relu(self.bn5(self.conv5(x)))
@@ -229,11 +199,18 @@ class MSN(nn.Module):
         self.N_p = 32
         self.spcoder = nn.Sequential(
             SoftPoolfeat(num_points, global_feat=True, N_p=self.N_p))
-        """
+        self.encoder = nn.Sequential(
             nn.Conv2d(
                 dim_pn + 3,
                 bottleneck_size,
                 kernel_size=(dim_pn, 3),
+                stride=(1, 1),
+                padding=(0, 1),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                bottleneck_size,
+                bottleneck_size,
+                kernel_size=(1, 3),
                 stride=(1, 2),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
@@ -241,47 +218,36 @@ class MSN(nn.Module):
                 bottleneck_size,
                 2 * bottleneck_size,
                 kernel_size=(1, 3),
+                stride=(1, 1),
+                padding=(0, 1),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                2 * bottleneck_size,
+                2 * bottleneck_size,
+                kernel_size=(1, 3),
                 stride=(1, 2),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
-        """
-        self.encoder = nn.Sequential(
+            nn.ConvTranspose2d(
+                2 * bottleneck_size,
+                bottleneck_size,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)), nn.Tanh(),
+            nn.ConvTranspose2d(
+                bottleneck_size,
+                bottleneck_size,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)), nn.Tanh(), 
             nn.Conv2d(
-                dim_pn + 3,
-                16 * bottleneck_size,
-                kernel_size=(dim_pn, self.N_p),
+                bottleneck_size,
+                bottleneck_size,
+                kernel_size=(1, 5),
                 stride=(1, 1),
-                padding=(0, 0)), nn.Tanh(),
-            nn.ConvTranspose2d(
-                16 * bottleneck_size,
-                8 * bottleneck_size,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(),
-            nn.ConvTranspose2d(
-                8 * bottleneck_size,
-                4 * bottleneck_size,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(),
-            nn.ConvTranspose2d(
-                4 * bottleneck_size,
-                2 * bottleneck_size,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(),
-            nn.ConvTranspose2d(
-                2 * bottleneck_size,
-                bottleneck_size,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(),
-            nn.ConvTranspose2d(
-                bottleneck_size,
-                bottleneck_size,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(), nn.Flatten(start_dim=2, end_dim=3))
+                padding=(0, 2),
+                padding_mode='same'), nn.Tanh(),
+            nn.Flatten(start_dim=2, end_dim=3))
         # nn.BatchNorm1d(bottleneck_size),
         self.decoder = nn.ModuleList([
             PointGenCon(bottleneck_size=self.bottleneck_size)
@@ -336,8 +302,8 @@ class MSN(nn.Module):
             out_seg.append(y)
             out_sp_local.append(self.decoder[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-            # y2 = torch.cat((self.decoder[i](y), pn_feat), 1).contiguous()
-            y2 = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+            y2 = torch.cat((self.decoder[i](y), pn_feat), 1).contiguous()
+            # y2 = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             out_sp_global.append(self.decoder2[i](y2))
         partial_regions = torch.cat(partial_regions, 2).contiguous()
         partial_regions = partial_regions.transpose(1, 2).contiguous()
