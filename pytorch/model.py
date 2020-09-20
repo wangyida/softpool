@@ -111,7 +111,8 @@ class SoftPoolFeat(nn.Module):
         x = self.bn3(self.conv3(x))
         x, sp_idx = SoftPool(x)
         # x = x[:, :, :, :self.N_p]
-        index_step = torch.floor(torch.linspace(0, 2047, steps=self.N_p))
+        index_step = torch.floor(
+            torch.linspace(0, x.shape[3]-1, steps=self.N_p))
         x = x[:, :, :, index_step.long()]
         sp_idx = sp_idx[:, :, :, :self.N_p]
         partial = torch.gather(partial, dim=3, index=sp_idx.long())

@@ -331,5 +331,12 @@ with torch.no_grad():
         o3d.write_point_cloud(
             os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
     if opt.dataset == 'shapenet':
-        for i in ['04530566', '02933112', '04379243', '02691156', '02958343', '03001627', '04256520', '03636649']:
-            print('%s cd1: %f cd2: %f cd3: %f' % (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'], hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] / hash_tab[i]['cnt']))
+        for i in [
+                '04530566', '02933112', '04379243', '02691156', '02958343',
+                '03001627', '04256520', '03636649'
+        ]:
+            print(
+                '%s cd1: %f cd2: %f cd3: %f' %
+                (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'],
+                 hash_tab[i]['cd2'] / hash_tab[i]['cnt'],
+                 hash_tab[i]['cd3'] / hash_tab[i]['cnt']))
