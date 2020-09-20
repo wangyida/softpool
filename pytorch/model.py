@@ -80,9 +80,14 @@ class PointNetFeat(nn.Module):
 
     def forward(self, x):
         batchsize = x.size()[0]
+        """
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
+        """
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = self.conv3(x)
         x, _ = torch.max(x, 2)
         x = x.view(-1, self.dim_pn)
         return x
@@ -106,9 +111,14 @@ class SoftPoolFeat(nn.Module):
     def forward(self, x):
         batchsize = x.size()[0]
         partial = x.unsqueeze(2).repeat(1, 1, 64, 1)
+        """
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
+        """
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = self.conv3(x)
         x, sp_idx = SoftPool(x)
         x = x[:, :, :, :self.N_p]
         sp_idx = sp_idx[:, :, :, :self.N_p]
@@ -136,9 +146,14 @@ class PointGenCon(nn.Module):
 
     def forward(self, x):
         batchsize = x.size()[0]
+        """
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
+        """
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
         x = self.th(self.conv4(x))
         return x
 
@@ -166,17 +181,23 @@ class PointNetRes(nn.Module):
     def forward(self, x):
         batchsize = x.size()[0]
         npoints = x.size()[2]
-        x = F.relu(self.bn1(self.conv1(x)))
+        # x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.conv1(x))
         pointfeat = x
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = self.bn3(self.conv3(x))
+        # x = F.relu(self.bn2(self.conv2(x)))
+        # x = self.bn3(self.conv3(x))
+        x = F.relu(self.conv2(x))
+        x = self.conv3(x)
         x, _ = torch.max(x, 2)
         x = x.view(-1, 1024)
         x = x.view(-1, 1024, 1).repeat(1, 1, npoints)
         x = torch.cat([x, pointfeat], 1)
-        x = F.relu(self.bn4(self.conv4(x)))
-        x = F.relu(self.bn5(self.conv5(x)))
-        x = F.relu(self.bn6(self.conv6(x)))
+        # x = F.relu(self.bn4(self.conv4(x)))
+        # x = F.relu(self.bn5(self.conv5(x)))
+        # x = F.relu(self.bn6(self.conv6(x)))
+        x = F.relu(self.conv4(x))
+        x = F.relu(self.conv5(x))
+        x = F.relu(self.conv6(x))
         x = self.th(self.conv7(x))
         return x
 
@@ -245,7 +266,6 @@ class MSN(nn.Module):
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh(),
             nn.Flatten(start_dim=2, end_dim=3))
-        # nn.BatchNorm1d(bottleneck_size),
         self.decoder = nn.ModuleList([
             PointGenCon(bottleneck_size=self.bottleneck_size)
             # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
