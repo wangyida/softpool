@@ -146,7 +146,7 @@ elif opt.dataset == 'shapenet':
             'cnt': 0
         }
     }
-    complete3d_benchmark = False
+    complete3d_benchmark = True
     if complete3d_benchmark == True:
         with open(os.path.join('./data/test_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
@@ -212,41 +212,42 @@ with torch.no_grad():
 
         output1, output2, output3, expansion_penalty, out_seg, partial_regions = network(
             partial.transpose(2, 1).contiguous())
-        dist, _ = EMD(output1, gt, 0.002, 10000)
-        emd1 = torch.sqrt(dist).mean()
-        hash_tab[str(subfold)]['cnt'] += 1
-        hash_tab[str(subfold)]['emd1'] += emd1
+        if complete3d_benchmark == False:
+            dist, _ = EMD(output1, gt, 0.002, 10000)
+            emd1 = torch.sqrt(dist).mean()
+            hash_tab[str(subfold)]['cnt'] += 1
+            hash_tab[str(subfold)]['emd1'] += emd1
 
-        dist, _ = EMD(output2, gt, 0.002, 10000)
-        emd2 = torch.sqrt(dist).mean()
-        hash_tab[str(subfold)]['emd2'] += emd2
+            dist, _ = EMD(output2, gt, 0.002, 10000)
+            emd2 = torch.sqrt(dist).mean()
+            hash_tab[str(subfold)]['emd2'] += emd2
 
-        dist, _ = EMD(output3, gt, 0.002, 10000)
-        emd3 = torch.sqrt(dist).mean()
-        hash_tab[str(subfold)]['emd3'] += emd3
+            dist, _ = EMD(output3, gt, 0.002, 10000)
+            emd3 = torch.sqrt(dist).mean()
+            hash_tab[str(subfold)]['emd3'] += emd3
 
-        dist, _ = cd.forward(input1=output1, input2=gt)
-        cd1 = dist.mean()
-        hash_tab[str(subfold)]['cd1'] += cd1
+            dist, _ = cd.forward(input1=output1, input2=gt)
+            cd1 = dist.mean()
+            hash_tab[str(subfold)]['cd1'] += cd1
 
-        dist, _ = cd.forward(input1=output2, input2=gt)
-        cd2 = dist.mean()
-        hash_tab[str(subfold)]['cd2'] += cd2
+            dist, _ = cd.forward(input1=output2, input2=gt)
+            cd2 = dist.mean()
+            hash_tab[str(subfold)]['cd2'] += cd2
 
-        dist, _ = cd.forward(input1=output3, input2=gt)
-        cd3 = dist.mean()
-        hash_tab[str(subfold)]['cd3'] += cd3
+            dist, _ = cd.forward(input1=output3, input2=gt)
+            cd3 = dist.mean()
+            hash_tab[str(subfold)]['cd3'] += cd3
 
-        idx = random.randint(0, 0)
-        print(
-            opt.env +
-            ' val [%d/%d]  emd1: %f emd2: %f emd3: %f cd2: %f expansion_penalty: %f, mean cd2: %f'
-            % (i + 1, len(model_list), emd1.item(), emd2.item(), emd3.item(),
-               cd2.item(), expansion_penalty.mean().item(),
-               hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt']))
+            idx = random.randint(0, 0)
+            print(
+                opt.env +
+                ' val [%d/%d]  emd1: %f emd2: %f emd3: %f cd2: %f expansion_penalty: %f, mean cd2: %f'
+                % (i + 1, len(model_list), emd1.item(), emd2.item(), emd3.item(),
+                   cd2.item(), expansion_penalty.mean().item(),
+                   hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt']))
         os.makedirs('pcds/regions', exist_ok=True)
         os.makedirs('pcds/regions/' + subfold, exist_ok=True)
-        pts_coord = partial_regions[idx].data.cpu()[:, 0:3]
+        pts_coord = partial_regions[0].data.cpu()[:, 0:3]
         maxi = labels_inputs_points.max()
         pts_color = matplotlib.cm.rainbow(
             labels_inputs_points[0:partial_regions.size(1)] / maxi)[:, 0:3]
@@ -260,7 +261,7 @@ with torch.no_grad():
             compressed=True)
         os.makedirs('pcds/output1', exist_ok=True)
         os.makedirs('pcds/output1/' + subfold, exist_ok=True)
-        pts_coord = output1[idx].data.cpu()[:, 0:3]
+        pts_coord = output1[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
@@ -274,7 +275,7 @@ with torch.no_grad():
             compressed=True)
         os.makedirs('pcds/output3', exist_ok=True)
         os.makedirs('pcds/output3/' + subfold, exist_ok=True)
-        pts_coord = output3[idx].data.cpu()[:, 0:3]
+        pts_coord = output3[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
@@ -288,9 +289,9 @@ with torch.no_grad():
             compressed=True)
         os.makedirs('pcds/output2', exist_ok=True)
         os.makedirs('pcds/output2/' + subfold, exist_ok=True)
-        pts_coord = output2[idx].data.cpu()[:, 0:3]
-        mini = output2[idx].min()
-        pts_color = matplotlib.cm.cool(output2[idx].data.cpu()[:, 1] -
+        pts_coord = output2[0].data.cpu()[:, 0:3]
+        mini = output2[0].min()
+        pts_color = matplotlib.cm.cool(output2[0].data.cpu()[:, 1] -
                                        mini)[:, 0:3]
         pcd = o3d.PointCloud()
         pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
@@ -308,9 +309,9 @@ with torch.no_grad():
 
         os.makedirs('pcds/input', exist_ok=True)
         os.makedirs('pcds/input/' + subfold, exist_ok=True)
-        pts_coord = partial[idx].data.cpu()[:, 0:3]
-        mini = partial[idx].min()
-        pts_color = matplotlib.cm.cool(partial[idx].data.cpu()[:, 1] -
+        pts_coord = partial[0].data.cpu()[:, 0:3]
+        mini = partial[0].min()
+        pts_color = matplotlib.cm.cool(partial[0].data.cpu()[:, 1] -
                                        mini)[:, 0:3]
         pcd = o3d.PointCloud()
         pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
@@ -322,15 +323,15 @@ with torch.no_grad():
             compressed=True)
         os.makedirs('pcds/gt', exist_ok=True)
         os.makedirs('pcds/gt/' + subfold, exist_ok=True)
-        pts_coord = gt[idx].data.cpu()[:, 0:3]
-        mini = gt[idx].min()
-        pts_color = matplotlib.cm.cool(gt[idx].data.cpu()[:, 1] - mini)[:, 0:3]
+        pts_coord = gt[0].data.cpu()[:, 0:3]
+        mini = gt[0].min()
+        pts_color = matplotlib.cm.cool(gt[0].data.cpu()[:, 1] - mini)[:, 0:3]
         pcd = o3d.PointCloud()
         pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
         pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
         o3d.write_point_cloud(
             os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
-    if opt.dataset == 'shapenet':
+    if opt.dataset == 'shapenet' and complete3d_benchmark == False:
         for i in [
                 '04530566', '02933112', '04379243', '02691156', '02958343',
                 '03001627', '04256520', '03636649'
