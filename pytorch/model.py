@@ -111,7 +111,7 @@ class SoftPoolFeat(nn.Module):
         x = self.bn3(self.conv3(x))
         x, sp_idx = SoftPool(x)
         index_step = torch.floor(
-            torch.linspace(0, x.shape[3]-1, steps=self.N_p))
+            torch.linspace(0, x.shape[3] - 1, steps=self.N_p))
         # x = x[:, :, :, :self.N_p]
         x = x[:, :, :, index_step.long()]
         # sp_idx = sp_idx[:, :, :, :self.N_p]
@@ -274,6 +274,11 @@ class MSN(nn.Module):
             # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
             for i in range(0, self.n_primitives)
         ])
+        self.decoder3 = nn.ModuleList([
+            PointGenCon(bottleneck_size=3 + 256)
+            # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
+            for i in range(0, self.n_primitives)
+        ])
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
 
@@ -287,6 +292,7 @@ class MSN(nn.Module):
         out_sp_local = []
         out_seg = []
         out_sp_global = []
+        out_pcn = []
         for i in range(0, self.n_primitives):
             partial_regions.append(
                 torch.gather(partial, dim=2, index=sp_idx[:, :, i, :].long()))
@@ -323,12 +329,17 @@ class MSN(nn.Module):
             y = torch.cat((self.decoder[i](y), pn_feat), 1).contiguous()
             # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             out_sp_global.append(self.decoder2[i](y))
+            y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+            out_pcn.append(self.decoder3[i](y))
+
         partial_regions = torch.cat(partial_regions, 2).contiguous()
         partial_regions = partial_regions.transpose(1, 2).contiguous()
         out_sp_local = torch.cat(out_sp_local, 2).contiguous()
         out1 = out_sp_local.transpose(1, 2).contiguous()
         out_sp_global = torch.cat(out_sp_global, 2).contiguous()
         out3 = out_sp_global.transpose(1, 2).contiguous()
+        out_pcn = torch.cat(out_pcn, 2).contiguous()
+        out4 = out_pcn.transpose(1, 2).contiguous()
         out_seg = torch.cat(out_seg, 2).contiguous()
         out_seg = out_seg.transpose(1, 2).contiguous()
         sm = nn.Softmax(dim=2)
@@ -339,6 +350,8 @@ class MSN(nn.Module):
         loss_mst = torch.mean(dist)
         dist, _, mean_mst_dis = self.expansion(
             out3, self.num_points // self.n_primitives, 1.5)
+        dist, _, mean_mst_dis = self.expansion(
+            out4, self.num_points // self.n_primitives, 1.5)
         loss_mst += torch.mean(dist)
 
         id0 = torch.zeros(out_sp_local.shape[0], 1,
@@ -350,7 +363,10 @@ class MSN(nn.Module):
         id2 = torch.zeros(out_sp_global.shape[0], 1,
                           out_sp_global.shape[2]).cuda().contiguous()
         out_sp_global = torch.cat((out_sp_global, id2), 1)
-        fusion = torch.cat((out_sp_global, partial), 2)
+        id3 = torch.zeros(out_pcn.shape[0], 1,
+                          out_pcn.shape[2]).cuda().contiguous()
+        out_pcn = torch.cat((out_pcn, id3), 1)
+        fusion = torch.cat((out_sp_global, out_pcn, partial), 2)
 
         resampled_idx = MDS_module.minimum_density_sample(
             fusion[:, 0:3, :].transpose(1, 2).contiguous(), out1.shape[1],
@@ -359,4 +375,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out2 = (fusion + delta).transpose(2, 1).contiguous()
-        return out1, out2, out3, loss_mst, out_seg, partial_regions
+        return out1, out2, out3, out4, loss_mst, out_seg, partial_regions

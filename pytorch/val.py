@@ -16,6 +16,29 @@ import emd_module as emd
 from chamfer_pkg.dist_chamfer import chamferDist as cd
 cd = cd()
 
+
+def resample_pcd(pcd, n):
+    """Drop or duplicate points so that pcd has exactly n points"""
+    idx = np.random.permutation(pcd.shape[0])
+    if idx.shape[0] < n:
+        idx = np.concatenate(
+            [idx, np.random.randint(pcd.shape[0], size=n - pcd.shape[0])])
+    return pcd[idx[:n]]
+
+
+def points_save(points, colors, root='pcds/regions', child='all', pfile=''):
+    os.makedirs(root, exist_ok=True)
+    os.makedirs(root + '/' + child, exist_ok=True)
+    pcd = o3d.PointCloud()
+    pcd.points = o3d.Vector3dVector(np.float32(points))
+    pcd.colors = o3d.Vector3dVector(np.float32(colors))
+    o3d.write_point_cloud(
+        os.path.join(root, '%s.pcd' % pfile),
+        pcd,
+        write_ascii=True,
+        compressed=True)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--model',
@@ -160,16 +183,6 @@ elif opt.dataset == 'shapenet':
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
-
-def resample_pcd(pcd, n):
-    """Drop or duplicate points so that pcd has exactly n points"""
-    idx = np.random.permutation(pcd.shape[0])
-    if idx.shape[0] < n:
-        idx = np.concatenate(
-            [idx, np.random.randint(pcd.shape[0], size=n - pcd.shape[0])])
-    return pcd[idx[:n]]
-
-
 EMD = emd.emdModule()
 
 labels_generated_points = torch.Tensor(
@@ -210,7 +223,7 @@ with torch.no_grad():
                 gt[j, :, :] = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), opt.num_points))
 
-        output1, output2, output3, expansion_penalty, out_seg, partial_regions = network(
+        output1, output2, output3, output4, expansion_penalty, out_seg, partial_regions = network(
             partial.transpose(2, 1).contiguous())
         if complete3d_benchmark == False:
             dist, _ = EMD(output1, gt, 0.002, 10000)
@@ -242,64 +255,70 @@ with torch.no_grad():
             print(
                 opt.env +
                 ' val [%d/%d]  emd1: %f emd2: %f emd3: %f cd2: %f expansion_penalty: %f, mean cd2: %f'
-                % (i + 1, len(model_list), emd1.item(), emd2.item(), emd3.item(),
-                   cd2.item(), expansion_penalty.mean().item(),
-                   hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt']))
-        os.makedirs('pcds/regions', exist_ok=True)
-        os.makedirs('pcds/regions/' + subfold, exist_ok=True)
+                %
+                (i + 1, len(model_list), emd1.item(), emd2.item(), emd3.item(),
+                 cd2.item(), expansion_penalty.mean().item(),
+                 hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt'])
+            )
+
+        # save input
+        pts_coord = partial[0].data.cpu()[:, 0:3]
+        mini = partial[0].min()
+        pts_color = matplotlib.cm.cool(partial[0].data.cpu()[:, 1] -
+                                       mini)[:, 0:3]
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/input',
+            child=subfold,
+            pfile=model)
+
+        # save gt
+        pts_coord = gt[0].data.cpu()[:, 0:3]
+        mini = gt[0].min()
+        pts_color = matplotlib.cm.cool(gt[0].data.cpu()[:, 1] - mini)[:, 0:3]
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/gt',
+            child=subfold,
+            pfile=model)
+
+        # save selected points
         pts_coord = partial_regions[0].data.cpu()[:, 0:3]
         maxi = labels_inputs_points.max()
         pts_color = matplotlib.cm.rainbow(
             labels_inputs_points[0:partial_regions.size(1)] / maxi)[:, 0:3]
-        pcd = o3d.PointCloud()
-        pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
-        pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
-        o3d.write_point_cloud(
-            os.path.join('./pcds/regions/', '%s.pcd' % model),
-            pcd,
-            write_ascii=True,
-            compressed=True)
-        os.makedirs('pcds/output1', exist_ok=True)
-        os.makedirs('pcds/output1/' + subfold, exist_ok=True)
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/regions',
+            child=subfold,
+            pfile=model)
+
+        # save output1
         pts_coord = output1[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
-        pcd = o3d.PointCloud()
-        pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
-        pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
-        o3d.write_point_cloud(
-            os.path.join('./pcds/output1/', '%s.pcd' % model),
-            pcd,
-            write_ascii=True,
-            compressed=True)
-        os.makedirs('pcds/output3', exist_ok=True)
-        os.makedirs('pcds/output3/' + subfold, exist_ok=True)
-        pts_coord = output3[0].data.cpu()[:, 0:3]
-        maxi = labels_generated_points.max()
-        pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
-        pcd = o3d.PointCloud()
-        pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
-        pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
-        o3d.write_point_cloud(
-            os.path.join('./pcds/output3/', '%s.pcd' % model),
-            pcd,
-            write_ascii=True,
-            compressed=True)
-        os.makedirs('pcds/output2', exist_ok=True)
-        os.makedirs('pcds/output2/' + subfold, exist_ok=True)
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/output1',
+            child=subfold,
+            pfile=model)
+
+        # save output2
         pts_coord = output2[0].data.cpu()[:, 0:3]
         mini = output2[0].min()
         pts_color = matplotlib.cm.cool(output2[0].data.cpu()[:, 1] -
                                        mini)[:, 0:3]
-        pcd = o3d.PointCloud()
-        pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
-        pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
-        o3d.write_point_cloud(
-            os.path.join('./pcds/output2/', '%s.pcd' % model),
-            pcd,
-            compressed=True)
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/output2',
+            child=subfold,
+            pfile=model)
         # Submission
         if complete3d_benchmark == True:
             os.makedirs('benchmark', exist_ok=True)
@@ -307,30 +326,30 @@ with torch.no_grad():
             with h5py.File('benchmark/' + model + '.h5', "w") as f:
                 f.create_dataset("data", data=np.float32(pts_coord))
 
-        os.makedirs('pcds/input', exist_ok=True)
-        os.makedirs('pcds/input/' + subfold, exist_ok=True)
-        pts_coord = partial[0].data.cpu()[:, 0:3]
-        mini = partial[0].min()
-        pts_color = matplotlib.cm.cool(partial[0].data.cpu()[:, 1] -
-                                       mini)[:, 0:3]
-        pcd = o3d.PointCloud()
-        pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
-        pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
-        o3d.write_point_cloud(
-            os.path.join('./pcds/input/', '%s.pcd' % model),
-            pcd,
-            write_ascii=True,
-            compressed=True)
-        os.makedirs('pcds/gt', exist_ok=True)
-        os.makedirs('pcds/gt/' + subfold, exist_ok=True)
-        pts_coord = gt[0].data.cpu()[:, 0:3]
-        mini = gt[0].min()
-        pts_color = matplotlib.cm.cool(gt[0].data.cpu()[:, 1] - mini)[:, 0:3]
-        pcd = o3d.PointCloud()
-        pcd.points = o3d.Vector3dVector(np.float32(pts_coord))
-        pcd.colors = o3d.Vector3dVector(np.float32(pts_color))
-        o3d.write_point_cloud(
-            os.path.join('./pcds/gt/', '%s.pcd' % model), pcd, compressed=True)
+        # save output3
+        pts_coord = output3[0].data.cpu()[:, 0:3]
+        maxi = labels_generated_points.max()
+        pts_color = matplotlib.cm.rainbow(
+            labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/output3',
+            child=subfold,
+            pfile=model)
+
+        # save output4
+        pts_coord = output4[0].data.cpu()[:, 0:3]
+        maxi = labels_generated_points.max()
+        pts_color = matplotlib.cm.rainbow(
+            labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/output4',
+            child=subfold,
+            pfile=model)
+
     if opt.dataset == 'shapenet' and complete3d_benchmark == False:
         for i in [
                 '04530566', '02933112', '04379243', '02691156', '02958343',
