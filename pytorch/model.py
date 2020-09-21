@@ -186,14 +186,10 @@ class PointNetRes(nn.Module):
 
 
 class MSN(nn.Module):
-    def __init__(self,
-                 num_points=8192,
-                 bottleneck_size=64,
-                 n_primitives=64,
-                 dim_pn=64):
+    def __init__(self, num_points=8192, n_primitives=64, dim_pn=64):
         super(MSN, self).__init__()
         self.num_points = num_points
-        self.bottleneck_size = bottleneck_size
+        self.dim_pn = dim_pn
         self.n_primitives = n_primitives
         self.pncoder = nn.Sequential(
             PointNetFeat(num_points), nn.Linear(1024, 256),
@@ -205,78 +201,78 @@ class MSN(nn.Module):
         self.encoder = nn.Sequential(
             nn.Conv2d(
                 dim_pn + 3,
-                bottleneck_size,
+                dim_pn,
                 kernel_size=(1, 3),
                 stride=(1, 1),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
-                bottleneck_size,
-                bottleneck_size,
+                dim_pn,
+                dim_pn,
                 kernel_size=(1, 3),
                 stride=(1, 2),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
-                bottleneck_size,
-                2 * bottleneck_size,
+                dim_pn,
+                2 * dim_pn,
                 kernel_size=(1, 3),
                 stride=(1, 1),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
-                2 * bottleneck_size,
-                4 * bottleneck_size,
+                2 * dim_pn,
+                4 * dim_pn,
                 kernel_size=(1, 3),
                 stride=(1, 2),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
-                4 * bottleneck_size,
-                8 * bottleneck_size,
+                4 * dim_pn,
+                8 * dim_pn,
                 kernel_size=(dim_pn, 8),
                 stride=(1, 1),
                 padding=(0, 0),
                 padding_mode='same'), nn.Tanh(),
             nn.ConvTranspose2d(
-                8 * bottleneck_size,
-                4 * bottleneck_size,
+                8 * dim_pn,
+                4 * dim_pn,
                 kernel_size=(1, 8),
                 stride=(1, 1),
                 padding=(0, 0)), nn.Tanh(),
             nn.ConvTranspose2d(
-                4 * bottleneck_size,
-                2 * bottleneck_size,
+                4 * dim_pn,
+                2 * dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh(),
             nn.ConvTranspose2d(
-                2 * bottleneck_size,
-                bottleneck_size,
+                2 * dim_pn,
+                dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh(),
             nn.Conv2d(
-                bottleneck_size,
-                bottleneck_size,
+                dim_pn,
+                dim_pn,
                 kernel_size=(1, 5),
                 stride=(1, 1),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh(),
             nn.Flatten(start_dim=2, end_dim=3))
-        self.decoder = nn.ModuleList([
-            PointGenCon(bottleneck_size=self.bottleneck_size)
-            # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
+        self.decoder1 = nn.ModuleList([
+            PointGenCon(bottleneck_size=self.dim_pn + 256)
+            # PointGenCon(dim_pn=2 + self.dim_pn)
             for i in range(0, self.n_primitives)
         ])
         self.decoder2 = nn.ModuleList([
             PointGenCon(bottleneck_size=3 + 256)
-            # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
+            # PointGenCon(bottleneck_size=2 + self.dim_pn)
             for i in range(0, self.n_primitives)
         ])
         self.decoder3 = nn.ModuleList([
             PointGenCon(bottleneck_size=3 + 256)
-            # PointGenCon(bottleneck_size=2 + self.bottleneck_size)
+            # PointGenCon(bottleneck_size=2 + self.dim_pn)
             for i in range(0, self.n_primitives)
         ])
         self.res = PointNetRes()
@@ -324,9 +320,10 @@ class MSN(nn.Module):
             # y = sp_feat_conv[:, :, i, :]
             y = sp_feat_conv
             out_seg.append(y)
-            out_sp_local.append(self.decoder[i](y))
+            y = torch.cat((y, pn_feat), 1).contiguous()
+            out_sp_local.append(self.decoder1[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-            y = torch.cat((self.decoder[i](y), pn_feat), 1).contiguous()
+            y = torch.cat((self.decoder1[i](y), pn_feat), 1).contiguous()
             # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             out_sp_global.append(self.decoder2[i](y))
             y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
