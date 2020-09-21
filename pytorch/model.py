@@ -200,11 +200,13 @@ class MSN(nn.Module):
             nn.BatchNorm1d(256), nn.ReLU())
         self.N_p = 32
         self.spcoder = nn.Sequential(SoftPoolFeat(num_points, N_p=self.N_p))
+        # Firstly we do not merge information among regions
+        # We merge regional informations in latent space
         self.encoder = nn.Sequential(
             nn.Conv2d(
                 dim_pn + 3,
                 bottleneck_size,
-                kernel_size=(dim_pn, 3),
+                kernel_size=(1, 3),
                 stride=(1, 1),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
@@ -224,19 +226,32 @@ class MSN(nn.Module):
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
                 2 * bottleneck_size,
-                2 * bottleneck_size,
+                4 * bottleneck_size,
                 kernel_size=(1, 3),
                 stride=(1, 2),
                 padding=(0, 1),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                4 * bottleneck_size,
+                8 * bottleneck_size,
+                kernel_size=(dim_pn, 8),
+                stride=(1, 1),
+                padding=(0, 0),
                 padding_mode='same'), nn.Tanh(),
             nn.ConvTranspose2d(
+                8 * bottleneck_size,
+                4 * bottleneck_size,
+                kernel_size=(1, 8),
+                stride=(1, 1),
+                padding=(0, 0)), nn.Tanh(),
+            nn.ConvTranspose2d(
+                4 * bottleneck_size,
                 2 * bottleneck_size,
-                bottleneck_size,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh(),
             nn.ConvTranspose2d(
-                bottleneck_size,
+                2 * bottleneck_size,
                 bottleneck_size,
                 kernel_size=(1, 2),
                 stride=(1, 2),
