@@ -111,16 +111,12 @@ class SoftPoolFeat(nn.Module):
         x = self.bn3(self.conv3(x))
         x, sp_idx = SoftPool(x)
         # 2048 / 63 = 32
-        """
         idx_step = torch.floor(
             torch.linspace(0, (x.shape[3] - 1), steps=self.N_p))
-        """
-        x = x[:, :, :, :self.N_p]
-        """
+        # x = x[:, :, :, :self.N_p]
         x = x[:, :, :, idx_step.long()]
-        """
-        sp_idx = sp_idx[:, :, :, :self.N_p]
-        # sp_idx = sp_idx[:, :, :, idx_step.long()]
+        # sp_idx = sp_idx[:, :, :, :self.N_p]
+        sp_idx = sp_idx[:, :, :, idx_step.long()]
         partial = torch.gather(partial, dim=3, index=sp_idx.long())
         x = torch.cat((x, partial), 1).contiguous()
         return x, sp_idx
