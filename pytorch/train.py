@@ -75,6 +75,9 @@ class FullModel(nn.Module):
         dist, _ = self.EMD(output2, gt, eps, iters)
         emd2 = torch.sqrt(dist).mean(1)
 
+        dist, _ = self.EMD(partial_regions, inputs.transpose(1, 2).contiguous(), eps, iters)
+        emd2 += torch.sqrt(dist).mean(1)
+
         return output1, output2, emd1, emd2, emd3, emd4, expansion_penalty
 
 
