@@ -231,7 +231,7 @@ class MSN(nn.Module):
             nn.Conv2d(
                 4 * dim_pn,
                 8 * dim_pn,
-                kernel_size=(dim_pn, 8),
+                kernel_size=(1, 8),
                 stride=(1, 1),
                 padding=(0, 0),
                 padding_mode='same'), nn.Tanh(),
@@ -259,8 +259,8 @@ class MSN(nn.Module):
                 kernel_size=(1, 5),
                 stride=(1, 1),
                 padding=(0, 2),
-                padding_mode='same'), nn.Tanh(),
-            nn.Flatten(start_dim=2, end_dim=3))
+                padding_mode='same'), nn.Tanh())
+            # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
             PointGenCon(bottleneck_size=self.dim_pn + 256)
             # PointGenCon(dim_pn=2 + self.dim_pn)
@@ -318,8 +318,8 @@ class MSN(nn.Module):
                     (mesh_grid, torch.zeros(partial.size(0), 1, 32)), dim=1)
             # y = sp_feat_conv.unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
             # y = sp_feat_conv[:, :, i].unsqueeze(2).expand(partial.size(0), sp_feat_conv.size(1), rand_grid.size(2)).contiguous()
-            # y = sp_feat_conv[:, :, i, :]
-            y = sp_feat_conv
+            y = sp_feat_conv[:, :, i, :]
+            # y = sp_feat_conv
             out_seg.append(y)
             y = torch.cat((y, pn_feat), 1).contiguous()
             out_sp_local.append(self.decoder1[i](y))
