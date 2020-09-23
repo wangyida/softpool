@@ -148,17 +148,35 @@ class PointGenCon(nn.Module):
         x = self.conv4(x)
         return x
 
+
 class PointGenCon2D(nn.Module):
     def __init__(self, bottleneck_size=8192):
         self.bottleneck_size = bottleneck_size
         super(PointGenCon2D, self).__init__()
-        self.conv1 = torch.nn.Conv2d(self.bottleneck_size,
-                                     self.bottleneck_size, kernel_size=(1, 3), stride=(1,1), padding=(0, 1))
-        self.conv2 = torch.nn.Conv2d(self.bottleneck_size,
-                                     self.bottleneck_size // 2, kernel_size=(1, 3), stride=(1,1), padding=(0, 1))
-        self.conv3 = torch.nn.Conv2d(self.bottleneck_size // 2,
-                                     self.bottleneck_size // 4, kernel_size=(1, 3), stride=(1,1), padding=(0, 1))
-        self.conv4 = torch.nn.Conv2d(self.bottleneck_size // 4, 3, kernel_size=(1, 3), stride=(1,1), padding=(0, 1))
+        self.conv1 = torch.nn.Conv2d(
+            self.bottleneck_size,
+            self.bottleneck_size,
+            kernel_size=(1, 3),
+            stride=(1, 1),
+            padding=(0, 1))
+        self.conv2 = torch.nn.Conv2d(
+            self.bottleneck_size,
+            self.bottleneck_size // 2,
+            kernel_size=(1, 3),
+            stride=(1, 1),
+            padding=(0, 1))
+        self.conv3 = torch.nn.Conv2d(
+            self.bottleneck_size // 2,
+            self.bottleneck_size // 4,
+            kernel_size=(1, 3),
+            stride=(1, 1),
+            padding=(0, 1))
+        self.conv4 = torch.nn.Conv2d(
+            self.bottleneck_size // 4,
+            3,
+            kernel_size=(1, 3),
+            stride=(1, 1),
+            padding=(0, 1))
 
         self.th = nn.Tanh()
         self.bn1 = torch.nn.BatchNorm2d(self.bottleneck_size)
@@ -287,7 +305,7 @@ class MSN(nn.Module):
                 stride=(1, 1),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh())
-            # nn.Flatten(start_dim=2, end_dim=3))
+        # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
             PointGenCon(bottleneck_size=self.dim_pn + 256)
             # PointGenCon(dim_pn=2 + self.dim_pn)
