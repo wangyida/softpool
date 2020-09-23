@@ -391,7 +391,8 @@ class MSN(nn.Module):
         id3 = torch.zeros(out_pcn.shape[0], 1,
                           out_pcn.shape[2]).cuda().contiguous()
         out_pcn = torch.cat((out_pcn, id3), 1)
-        fusion = torch.cat((out_sp_global, out_pcn, partial), 2)
+        fusion = torch.cat((out_sp_local, partial), 2)
+        # fusion = torch.cat((out_sp_global, out_pcn, partial), 2)
 
         resampled_idx = MDS_module.minimum_density_sample(
             fusion[:, 0:3, :].transpose(1, 2).contiguous(), out1.shape[1],
