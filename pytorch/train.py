@@ -162,11 +162,8 @@ for epoch in range(opt.nepoch):
 
         output1, output2, emd1, emd2, emd3, emd4, expansion_penalty = network(
             input, gt.contiguous(), seg.contiguous(), 0.005, 50)
-        """
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
-        """
-        loss_net = expansion_penalty.mean() * 0.1 + emd2.mean() + emd3.mean() + emd4.mean()
 
         loss_net.backward()
         train_loss.update(emd2.mean().item())
