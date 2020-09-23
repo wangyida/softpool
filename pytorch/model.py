@@ -289,17 +289,17 @@ class MSN(nn.Module):
                 padding_mode='same'), nn.Tanh())
             # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
-            PointGenCon2D(bottleneck_size=self.dim_pn + 256)
+            PointGenCon(bottleneck_size=self.dim_pn + 256)
             # PointGenCon(dim_pn=2 + self.dim_pn)
             for i in range(0, self.n_primitives)
         ])
         self.decoder2 = nn.ModuleList([
-            PointGenCon2D(bottleneck_size=3 + 256)
+            PointGenCon(bottleneck_size=3 + 256)
             # PointGenCon(bottleneck_size=2 + self.dim_pn)
             for i in range(0, self.n_primitives)
         ])
         self.decoder3 = nn.ModuleList([
-            PointGenCon2D(bottleneck_size=3 + 256)
+            PointGenCon(bottleneck_size=3 + 256)
             # PointGenCon(bottleneck_size=2 + self.dim_pn)
             for i in range(0, self.n_primitives)
         ])
@@ -349,13 +349,13 @@ class MSN(nn.Module):
             # y = sp_feat_conv
             out_seg.append(y)
             y = torch.cat((y, pn_feat), 1).contiguous()
-            out_sp_local.append(self.decoder1[i](y.unsqueeze(2)).squeeze(2))
+            out_sp_local.append(self.decoder1[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-            y = torch.cat((self.decoder1[i](y.unsqueeze(2)).squeeze(2), pn_feat), 1).contiguous()
+            y = torch.cat((self.decoder1[i](y), pn_feat), 1).contiguous()
             # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-            out_sp_global.append(self.decoder2[i](y.unsqueeze(2)).squeeze(2))
+            out_sp_global.append(self.decoder2[i](y))
             y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-            out_pcn.append(self.decoder3[i](y.unsqueeze(2)).squeeze(2))
+            out_pcn.append(self.decoder3[i](y))
 
         partial_regions = torch.cat(partial_regions, 2).contiguous()
         partial_regions = partial_regions.transpose(1, 2).contiguous()
