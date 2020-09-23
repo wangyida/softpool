@@ -363,17 +363,17 @@ class MSN(nn.Module):
                     (mesh_grid, torch.zeros(partial.size(0), 1, 32)), dim=1)
             # y = sp_feat_conv.unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
             # y = sp_feat_conv[:, :, i].unsqueeze(2).expand(partial.size(0), sp_feat_conv.size(1), rand_grid.size(2)).contiguous()
-            y = sp_feat_conv[:, :, i, :]
+            y = sp_feat_conv[:, :, i//8, :]
             # y = sp_feat_conv
             out_seg.append(y)
             y = torch.cat((y, pn_feat), 1).contiguous()
-            out_sp_local.append(self.decoder1[i](y))
+            out_sp_local.append(self.decoder1[i//8](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-            y = torch.cat((self.decoder1[i](y), pn_feat), 1).contiguous()
+            y = torch.cat((self.decoder1[i//8](y), pn_feat), 1).contiguous()
             # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-            out_sp_global.append(self.decoder2[i](y))
+            out_sp_global.append(self.decoder2[i//8](y))
             y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-            out_pcn.append(self.decoder3[i](y))
+            out_pcn.append(self.decoder3[i//8](y))
 
         partial_regions = torch.cat(partial_regions, 2).contiguous()
         partial_regions = partial_regions.transpose(1, 2).contiguous()
