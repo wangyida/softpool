@@ -43,7 +43,7 @@ class FullModel(nn.Module):
         self.EMD = emd.emdModule()
 
     def forward(self, inputs, gt, seg, eps, iters):
-        output1, output2, output3, output4, expansion_penalty, out_seg, partial_regions = self.model(
+        output1, output2, output3, output4, expansion_penalty, out_seg, part_regions = self.model(
             inputs)
         """
         for i in range(16):
@@ -75,7 +75,7 @@ class FullModel(nn.Module):
         dist, _ = self.EMD(output2, gt, eps, iters)
         emd2 = torch.sqrt(dist).mean(1)
 
-        return output1, output2, emd1, emd2, emd3, emd4, expansion_penalty
+        return output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -160,8 +160,14 @@ for epoch in range(opt.nepoch):
         seg = seg.float().cuda()
         input = input.transpose(2, 1).contiguous()
 
-        output1, output2, emd1, emd2, emd3, emd4, expansion_penalty = network(
+        _, _, _, _, full_regions, _, _, _, _, _ = network(
+            gt.transpose(2, 1), gt.contiguous(), seg.contiguous(), 0.005, 50)
+        """
+        output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
             input, gt.contiguous(), seg.contiguous(), 0.005, 50)
+        """
+        output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
+            input, full_regions, seg.contiguous(), 0.005, 50)
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
 
@@ -195,7 +201,7 @@ for epoch in range(opt.nepoch):
                 gt = gt.float().cuda()
                 seg = seg.float().cuda()
                 input = input.transpose(2, 1).contiguous()
-                output1, output2, emd1, emd2, emd3, emd4, expansion_penalty = network(
+                output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
                     input, gt.contiguous(), seg.contiguous(), 0.004, 3000)
                 val_loss.update(emd2.mean().item())
                 idx = random.randint(0, input.size()[0] - 1)

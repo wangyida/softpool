@@ -105,7 +105,7 @@ class SoftPoolFeat(nn.Module):
 
     def forward(self, x):
         batchsize = x.size()[0]
-        partial = x.unsqueeze(2).repeat(1, 1, 64, 1)
+        part = x.unsqueeze(2).repeat(1, 1, 64, 1)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
@@ -113,12 +113,12 @@ class SoftPoolFeat(nn.Module):
         # 2048 / 63 = 32
         idx_step = torch.floor(
             torch.linspace(0, (x.shape[3] - 1), steps=self.N_p))
-        # x = x[:, :, :, :self.N_p]
-        x = x[:, :, :, idx_step.long()]
-        # sp_idx = sp_idx[:, :, :, :self.N_p]
-        sp_idx = sp_idx[:, :, :, idx_step.long()]
-        partial = torch.gather(partial, dim=3, index=sp_idx.long())
-        x = torch.cat((x, partial), 1).contiguous()
+        x = x[:, :, :, :self.N_p]
+        # x = x[:, :, :, idx_step.long()]
+        sp_idx = sp_idx[:, :, :, :self.N_p]
+        # sp_idx = sp_idx[:, :, :, idx_step.long()]
+        part = torch.gather(part, dim=3, index=sp_idx.long())
+        x = torch.cat((x, part), 1).contiguous()
         return x, sp_idx
 
 
@@ -324,25 +324,25 @@ class MSN(nn.Module):
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
 
-    def forward(self, partial):
-        sp_feat, sp_idx = self.spcoder(partial)
-        pn_feat = self.pncoder(partial)
-        pn_feat = pn_feat.unsqueeze(2).expand(partial.size(0), 256,
+    def forward(self, part):
+        sp_feat, sp_idx = self.spcoder(part)
+        pn_feat = self.pncoder(part)
+        pn_feat = pn_feat.unsqueeze(2).expand(part.size(0), 256,
                                               32).contiguous()
-        partial_regions = []
+        part_regions = []
         sp_feat_conv = self.encoder(sp_feat)
         out_sp_local = []
         out_seg = []
         out_sp_global = []
         out_pcn = []
         for i in range(0, self.n_primitives):
-            partial_regions.append(
-                torch.gather(partial, dim=2, index=sp_idx[:, :, i, :].long()))
+            part_regions.append(
+                torch.gather(part, dim=2, index=sp_idx[:, :, i, :].long()))
             deform = 'patch_pcn'
             if deform == 'patch_msn':
                 rand_grid = Variable(
                     torch.cuda.FloatTensor(
-                        partial.size(0), 2,
+                        part.size(0), 2,
                         self.num_points // self.n_primitives))
                 rand_grid.data.uniform_(0, 1)
                 # here self.num_points // self.n_primitives = 8*4
@@ -360,23 +360,23 @@ class MSN(nn.Module):
                                             1).unsqueeze(0).repeat(
                                                 sp_feat_conv.shape[0], 1, 1)
                 mesh_grid = torch.cat(
-                    (mesh_grid, torch.zeros(partial.size(0), 1, 32)), dim=1)
-            # y = sp_feat_conv.unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-            # y = sp_feat_conv[:, :, i].unsqueeze(2).expand(partial.size(0), sp_feat_conv.size(1), rand_grid.size(2)).contiguous()
+                    (mesh_grid, torch.zeros(part.size(0), 1, 32)), dim=1)
+            # y = sp_feat_conv.unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
+            # y = sp_feat_conv[:, :, i].unsqueeze(2).expand(part.size(0), sp_feat_conv.size(1), rand_grid.size(2)).contiguous()
             y = sp_feat_conv[:, :, i, :]
             # y = sp_feat_conv
             out_seg.append(y)
             y = torch.cat((y, pn_feat), 1).contiguous()
             out_sp_local.append(self.decoder1[i](y))
-            # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(partial.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
+            # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
             y = torch.cat((self.decoder1[i](y), pn_feat), 1).contiguous()
             # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             out_sp_global.append(self.decoder2[i](y))
             y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             out_pcn.append(self.decoder3[i](y))
 
-        partial_regions = torch.cat(partial_regions, 2).contiguous()
-        partial_regions = partial_regions.transpose(1, 2).contiguous()
+        part_regions = torch.cat(part_regions, 2).contiguous()
+        part_regions = part_regions.transpose(1, 2).contiguous()
         out_sp_local = torch.cat(out_sp_local, 2).contiguous()
         out1 = out_sp_local.transpose(1, 2).contiguous()
         out_sp_global = torch.cat(out_sp_global, 2).contiguous()
@@ -400,17 +400,17 @@ class MSN(nn.Module):
         id0 = torch.zeros(out_sp_local.shape[0], 1,
                           out_sp_local.shape[2]).cuda().contiguous()
         out_sp_local = torch.cat((out_sp_local, id0), 1)
-        id1 = torch.ones(partial.shape[0], 1,
-                         partial.shape[2]).cuda().contiguous()
-        partial = torch.cat((partial, id1), 1)
+        id1 = torch.ones(part.shape[0], 1,
+                         part.shape[2]).cuda().contiguous()
+        part = torch.cat((part, id1), 1)
         id2 = torch.zeros(out_sp_global.shape[0], 1,
                           out_sp_global.shape[2]).cuda().contiguous()
         out_sp_global = torch.cat((out_sp_global, id2), 1)
         id3 = torch.zeros(out_pcn.shape[0], 1,
                           out_pcn.shape[2]).cuda().contiguous()
         out_pcn = torch.cat((out_pcn, id3), 1)
-        fusion = torch.cat((out_sp_local, partial), 2)
-        # fusion = torch.cat((out_sp_global, out_pcn, partial), 2)
+        fusion = torch.cat((out_sp_local, part), 2)
+        # fusion = torch.cat((out_sp_global, out_pcn, part), 2)
 
         resampled_idx = MDS_module.minimum_density_sample(
             fusion[:, 0:3, :].transpose(1, 2).contiguous(), out1.shape[1],
@@ -419,4 +419,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out2 = (fusion + delta).transpose(2, 1).contiguous()
-        return out1, out2, out3, out4, loss_mst, out_seg, partial_regions
+        return out1, out2, out3, out4, loss_mst, out_seg, part_regions
