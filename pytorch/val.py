@@ -225,7 +225,6 @@ with torch.no_grad():
 
         output1, output2, output3, output4, expansion_penalty, out_seg, partial_regions = network(
             partial.transpose(2, 1).contiguous())
-        _, _, _, _, _, _, gt = network(gt.transpose(2, 1))
         if complete3d_benchmark == False:
             dist, _ = EMD(output1, gt, 0.002, 10000)
             emd1 = torch.sqrt(dist).mean()
