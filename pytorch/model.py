@@ -113,10 +113,10 @@ class SoftPoolFeat(nn.Module):
         # 2048 / 63 = 32
         idx_step = torch.floor(
             torch.linspace(0, (x.shape[3] - 1), steps=self.N_p))
-        x = x[:, :, :, :self.N_p]
-        # x = x[:, :, :, idx_step.long()]
-        sp_idx = sp_idx[:, :, :, :self.N_p]
-        # sp_idx = sp_idx[:, :, :, idx_step.long()]
+        # x = x[:, :, :, :self.N_p]
+        x = x[:, :, :, idx_step.long()]
+        # sp_idx = sp_idx[:, :, :, :self.N_p]
+        sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
         x = torch.cat((x, part), 1).contiguous()
         return x, sp_idx
@@ -251,7 +251,8 @@ class MSN(nn.Module):
                 kernel_size=(1, 3),
                 stride=(1, 1),
                 padding=(0, 1),
-                padding_mode='same'), nn.Tanh(),
+                padding_mode='same'), nn.Tanh())
+        """
             nn.Conv2d(
                 dim_pn,
                 dim_pn,
@@ -305,6 +306,7 @@ class MSN(nn.Module):
                 stride=(1, 1),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh())
+        """
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
             PointGenCon(bottleneck_size=self.dim_pn + 256)
