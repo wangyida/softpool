@@ -69,9 +69,15 @@ class ShapeNet(data.Dataset):
                         "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete_fur/",
                         '%s.pcd' % model_id))
             elif self.dataset == 'shapenet':
+                """
                 partial, _ = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/train/partial/",
+                        '%s.h5' % model_id))
+                """
+                partial, _ = read_pcd(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/shapenet/train/gt/",
                         '%s.h5' % model_id))
                 complete, colors = read_pcd(
                     os.path.join(
@@ -88,9 +94,15 @@ class ShapeNet(data.Dataset):
                         "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/",
                         '%s.pcd' % model_id))
             elif self.dataset == 'shapenet':
+                """
                 partial, _ = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/partial/",
+                        '%s.h5' % model_id))
+                """
+                partial, _ = read_pcd(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
                 complete, colors = read_pcd(
                     os.path.join(
