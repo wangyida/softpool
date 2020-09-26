@@ -20,7 +20,7 @@ def SoftPool(x):
     sp_cube = torch.zeros(bth_size, featdim, featdim, points).cuda()
     sp_idx = torch.zeros(bth_size, 3, featdim, points).cuda()
     for idx in range(featdim):
-        x_val, x_idx = torch.sort(x[:, idx, :], dim=1)
+        x_val, x_idx = torch.sort(x[:, idx, :], dim=1, descending=True)
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         x_order = torch.gather(x, dim=2, index=index)
         # here is differential soft-pool feature
@@ -115,10 +115,10 @@ class SoftPoolFeat(nn.Module):
         # 2048 / 63 = 32
         idx_step = torch.floor(
             torch.linspace(0, (x.shape[3] - 1), steps=self.N_p))
-        # x = x[:, :, :, :self.N_p]
-        x = x[:, :, :, idx_step.long()]
-        # sp_idx = sp_idx[:, :, :, :self.N_p]
-        sp_idx = sp_idx[:, :, :, idx_step.long()]
+        x = x[:, :, :, :self.N_p]
+        # x = x[:, :, :, idx_step.long()]
+        sp_idx = sp_idx[:, :, :, :self.N_p]
+        # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
         x = torch.cat((x, part), 1).contiguous()
         return x, sp_idx
