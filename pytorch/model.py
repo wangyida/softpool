@@ -268,20 +268,6 @@ class MSN(nn.Module):
                 stride=(1, 1),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(),
-            nn.Conv2d(
-                dim_pn,
-                dim_pn,
-                kernel_size=(1, 5),
-                stride=(1, 1),
-                padding=(0, 2),
-                padding_mode='same'), nn.Tanh())
-        """
             nn.Conv2d(
                 2 * dim_pn,
                 4 * dim_pn,
@@ -308,7 +294,19 @@ class MSN(nn.Module):
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh(),
-        """
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                dim_pn,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)), nn.Tanh(),
+            nn.Conv2d(
+                dim_pn,
+                dim_pn,
+                kernel_size=(1, 5),
+                stride=(1, 1),
+                padding=(0, 2),
+                padding_mode='same'), nn.Tanh())
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
             PointGenCon(bottleneck_size=self.dim_pn + 256)
