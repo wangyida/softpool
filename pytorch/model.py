@@ -372,9 +372,9 @@ class MSN(nn.Module):
             out_sp_local.append(self.decoder1[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
             y = torch.cat((self.decoder1[i](y), pn_feat), 1).contiguous()
-            # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             out_sp_global.append(self.decoder2[i](y))
-            y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+            # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+            y = torch.cat((sp_feat[:,-3:,i,:], pn_feat), 1).contiguous()
             out_pcn.append(self.decoder3[i](y))
 
         part_regions = torch.cat(part_regions, 2).contiguous()
