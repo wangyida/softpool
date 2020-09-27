@@ -170,7 +170,7 @@ for epoch in range(opt.nepoch):
         output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
             input, full_regions, seg.contiguous(), 0.005, 50)
         """
-        loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
+        loss_net = emd1.mean() + expansion_penalty.mean() * 0.0 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
 
         loss_net.backward()
