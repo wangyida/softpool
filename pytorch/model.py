@@ -115,9 +115,9 @@ class SoftPoolFeat(nn.Module):
         # 2048 / 63 = 32
         idx_step = torch.floor(
             torch.linspace(0, (x.shape[3] - 1), steps=self.N_p))
-        x = x[:, :, :, :self.N_p]
+        # x = x[:, :, :, :self.N_p]
+        # sp_idx = sp_idx[:, :, :, :self.N_p]
         # x = x[:, :, :, idx_step.long()]
-        sp_idx = sp_idx[:, :, :, :self.N_p]
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
         x = torch.cat((x, part), 1).contiguous()
@@ -257,6 +257,48 @@ class MSN(nn.Module):
             nn.Conv2d(
                 dim_pn,
                 dim_pn,
+                kernel_size=(1, 7),
+                stride=(1, 4),
+                padding=(0, 3),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                dim_pn,
+                dim_pn,
+                kernel_size=(1, 7),
+                stride=(1, 1),
+                padding=(0, 3),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                dim_pn,
+                dim_pn,
+                kernel_size=(1, 7),
+                stride=(1, 4),
+                padding=(0, 3),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                dim_pn,
+                dim_pn,
+                kernel_size=(1, 7),
+                stride=(1, 1),
+                padding=(0, 3),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                dim_pn,
+                dim_pn,
+                kernel_size=(1, 7),
+                stride=(1, 4),
+                padding=(0, 3),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                dim_pn,
+                dim_pn,
+                kernel_size=(1, 7),
+                stride=(1, 1),
+                padding=(0, 3),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                dim_pn,
+                dim_pn,
                 kernel_size=(1, 3),
                 stride=(1, 2),
                 padding=(0, 1),
@@ -275,19 +317,6 @@ class MSN(nn.Module):
                 stride=(1, 2),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
-            nn.Conv2d(
-                4 * dim_pn,
-                8 * dim_pn,
-                kernel_size=(1, 8),
-                stride=(1, 1),
-                padding=(0, 0),
-                padding_mode='same'), nn.Tanh(),
-            nn.ConvTranspose2d(
-                8 * dim_pn,
-                4 * dim_pn,
-                kernel_size=(1, 8),
-                stride=(1, 1),
-                padding=(0, 0)), nn.Tanh(),
             nn.ConvTranspose2d(
                 4 * dim_pn,
                 2 * dim_pn,
@@ -369,12 +398,12 @@ class MSN(nn.Module):
             # y = sp_feat_conv
             out_seg.append(y)
             y = torch.cat((y, pn_feat), 1).contiguous()
-            out_sp_local.append(self.decoder1[self.n_primitives-1 - i](y))
+            out_sp_local.append(self.decoder1[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-            y = torch.cat((self.decoder1[self.n_primitives-1 - i](y), pn_feat), 1).contiguous()
+            y = torch.cat((self.decoder1[i](y), pn_feat), 1).contiguous()
             out_sp_global.append(self.decoder2[i](y))
             # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-            y = torch.cat((sp_feat[:,-3:,i,:], pn_feat), 1).contiguous()
+            y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             out_pcn.append(self.decoder3[i](y))
 
         part_regions = torch.cat(part_regions, 2).contiguous()
