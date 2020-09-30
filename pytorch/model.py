@@ -406,8 +406,9 @@ class MSN(nn.Module):
             y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             out_pcn.append(self.decoder3[i](y))
 
-        part_regions = torch.cat(part_regions, 2).contiguous()
-        part_regions = part_regions.transpose(1, 2).contiguous()
+        # part_regions = torch.cat(part_regions, 2).contiguous()
+        for i in range(np.size(part_regions)):
+            part_regions[i] = part_regions[i].transpose(1, 2).contiguous()
         out_sp_local = torch.cat(out_sp_local, 2).contiguous()
         out1 = out_sp_local.transpose(1, 2).contiguous()
         out_sp_global = torch.cat(out_sp_global, 2).contiguous()

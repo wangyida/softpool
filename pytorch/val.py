@@ -203,14 +203,14 @@ with torch.no_grad():
     for i, model in enumerate(model_list):
         print(model)
         subfold = model[:model.rfind('/')]
-        partial = torch.zeros((1, 2048, 3), device='cuda')
-        partial_regions = torch.zeros((1, 2048, 3), device='cuda')
+        part = torch.zeros((1, 2048, 3), device='cuda')
+        part_regions = torch.zeros((1, 2048, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
             if opt.dataset == 'suncg':
                 pcd = o3d.read_point_cloud(
                     os.path.join(partial_dir, model + '.pcd'))
-                partial[j, :, :] = torch.from_numpy(
+                part[j, :, :] = torch.from_numpy(
                     resample_pcd(np.array(pcd.points), 2048))
                 pcd = o3d.read_point_cloud(
                     os.path.join(gt_dir, model + '.pcd'))
@@ -218,14 +218,14 @@ with torch.no_grad():
                     resample_pcd(np.array(pcd.points), opt.num_points))
             elif opt.dataset == 'shapenet':
                 fh5 = h5py.File(os.path.join(partial_dir, model + '.h5'), 'r')
-                partial[j, :, :] = torch.from_numpy(
+                part[j, :, :] = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), 2048))
                 fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
                 gt[j, :, :] = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), opt.num_points))
 
-        output1, output2, output3, output4, expansion_penalty, out_seg, partial_regions = network(
-            partial.transpose(2, 1).contiguous())
+        output1, output2, output3, output4, expansion_penalty, out_seg, part_regions = network(
+            part.transpose(2, 1).contiguous())
         if complete3d_benchmark == False:
             dist, _ = EMD(output1, gt, 0.002, 10000)
             emd1 = torch.sqrt(dist).mean()
@@ -263,9 +263,9 @@ with torch.no_grad():
             )
 
         # save input
-        pts_coord = partial[0].data.cpu()[:, 0:3]
-        mini = partial[0].min()
-        pts_color = matplotlib.cm.cool(partial[0].data.cpu()[:, 1] -
+        pts_coord = part[0].data.cpu()[:, 0:3]
+        mini = part[0].min()
+        pts_color = matplotlib.cm.cool(part[0].data.cpu()[:, 1] -
                                        mini)[:, 0:3]
         points_save(
             points=pts_coord,
@@ -286,16 +286,19 @@ with torch.no_grad():
             pfile=model)
 
         # save selected points
-        pts_coord = partial_regions[0].data.cpu()[:, 0:3]
-        maxi = labels_inputs_points.max()
-        pts_color = matplotlib.cm.rainbow(
-            labels_inputs_points[0:partial_regions.size(1)] / maxi)[:, 0:3]
-        points_save(
-            points=pts_coord,
-            colors=pts_color,
-            root='pcds/regions',
-            child=subfold,
-            pfile=model)
+        pts_coord = []
+        for i in range(np.size(part_regions)):
+            pts_coord.append(part_regions[i][0].data.cpu()[:, 0:3])
+            maxi = labels_inputs_points.max()
+            pts_color = matplotlib.cm.cool(
+                labels_inputs_points[0:part_regions[i].size(1)] / maxi)[:, 0:3]
+        for i in range(np.size(part_regions)):
+            points_save(
+                points=pts_coord[i],
+                colors=pts_color,
+                root='pcds/regions',
+                child=subfold,
+                pfile=model+str(i))
 
         # save output1
         pts_coord = output1[0].data.cpu()[:, 0:3]
