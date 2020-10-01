@@ -291,13 +291,12 @@ with torch.no_grad():
             maxi = labels_inputs_points.max()
             pts_color = matplotlib.cm.plasma(
                 labels_inputs_points[0:part_regions[i].size(1)] / maxi)[:, 0:3]
-        for i in range(np.size(part_regions)):
             points_save(
                 points=pts_coord[i],
                 colors=pts_color,
                 root='pcds/regions',
                 child=subfold,
-                pfile=model+str(i))
+                pfile=model+'-'+str(i))
 
         # save output1
         pts_coord = output1[0].data.cpu()[:, 0:3]
