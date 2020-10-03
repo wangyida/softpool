@@ -24,7 +24,8 @@ def SoftPool(x):
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         x_order = torch.gather(x, dim=2, index=index)
         # here is differential soft-pool feature
-        sp_cube[:, :, idx, :] = x_order # - torch.roll(x_order, shifts=-1, dims=2)
+        sp_cube[:, :,
+                idx, :] = x_order  # - torch.roll(x_order, shifts=-1, dims=2)
         sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 3, 1)
     return sp_cube, sp_idx
 
@@ -91,32 +92,33 @@ class PointNetFeat(nn.Module):
 
 
 class SoftPoolFeat(nn.Module):
-    def __init__(self, num_points=8192, dim_pn=64, N_p=16):
+    def __init__(self, num_points=8192, regions=64, sp_points=2048):
         super(SoftPoolFeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(128, dim_pn, 1)
+        self.conv3 = torch.nn.Conv1d(128, regions, 1)
 
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
-        self.bn3 = torch.nn.BatchNorm1d(dim_pn)
+        self.bn3 = torch.nn.BatchNorm1d(regions)
 
         self.num_points = num_points
-        self.N_p = N_p
+        self.regions = regions
+        self.sp_points = sp_points
 
     def forward(self, x):
         batchsize = x.size()[0]
-        part = x.unsqueeze(2).repeat(1, 1, 64, 1)
+        part = x.unsqueeze(2).repeat(1, 1, self.regions, 1)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
         x, sp_idx = SoftPool(x)
         # 2048 / 63 = 32
         idx_step = torch.floor(
-            torch.linspace(0, (x.shape[3] - 1), steps=self.N_p))
-        x = x[:, :, :, :self.N_p * 32]
-        sp_idx = sp_idx[:, :, :, :self.N_p * 32]
+            torch.linspace(0, (x.shape[3] - 1), steps=self.sp_points))
+        x = x[:, :, :, :self.sp_points]
+        sp_idx = sp_idx[:, :, :, :self.sp_points]
         # x = x[:, :, :, idx_step.long()]
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
@@ -234,122 +236,105 @@ class PointNetRes(nn.Module):
 
 
 class MSN(nn.Module):
-    def __init__(self, num_points=8192, n_primitives=64, dim_pn=64):
+    def __init__(self,
+                 num_points=8192,
+                 n_primitives=8,
+                 dim_pn=256,
+                 sp_points=2048):
         super(MSN, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
         self.n_primitives = n_primitives
+        self.sp_points = sp_points
         self.pncoder = nn.Sequential(
-            PointNetFeat(num_points), nn.Linear(1024, 256),
-            nn.BatchNorm1d(256), nn.ReLU())
-        self.N_p = 32
-        self.spcoder = nn.Sequential(SoftPoolFeat(num_points, N_p=self.N_p))
+            PointNetFeat(num_points), nn.Linear(1024, dim_pn),
+            nn.BatchNorm1d(dim_pn), nn.ReLU())
+        self.spcoder = SoftPoolFeat(
+            num_points, regions=self.n_primitives, sp_points=self.sp_points)
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
         self.encoder = nn.Sequential(
             nn.Conv2d(
-                dim_pn + 3,
-                dim_pn,
+                n_primitives + 3,
+                n_primitives,
                 kernel_size=(1, 3),
                 stride=(1, 1),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
-                dim_pn,
-                dim_pn,
+                n_primitives,
+                2 * n_primitives,
                 kernel_size=(1, 7),
-                stride=(1, 4),
+                stride=(1, 2),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
-                dim_pn,
-                dim_pn,
-                kernel_size=(1, 7),
-                stride=(1, 1),
-                padding=(0, 3),
-                padding_mode='same'), nn.Tanh(),
-            nn.Conv2d(
-                dim_pn,
-                dim_pn,
-                kernel_size=(1, 7),
-                stride=(1, 4),
-                padding=(0, 3),
-                padding_mode='same'), nn.Tanh(),
-            nn.Conv2d(
-                dim_pn,
-                dim_pn,
+                2 * n_primitives,
+                2 * n_primitives,
                 kernel_size=(1, 7),
                 stride=(1, 1),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
-                dim_pn,
-                dim_pn,
+                2 * n_primitives,
+                4 * n_primitives,
                 kernel_size=(1, 5),
                 stride=(1, 2),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
-                dim_pn,
-                dim_pn,
+                4 * n_primitives,
+                4 * n_primitives,
                 kernel_size=(1, 5),
                 stride=(1, 1),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
-                dim_pn,
-                dim_pn,
-                kernel_size=(1, 3),
-                stride=(1, 2),
-                padding=(0, 1),
-                padding_mode='same'), nn.Tanh(),
-            nn.Conv2d(
-                dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 3),
-                stride=(1, 1),
-                padding=(0, 1),
-                padding_mode='same'), nn.Tanh(),
-            nn.Conv2d(
-                2 * dim_pn,
-                4 * dim_pn,
+                4 * n_primitives,
+                4 * n_primitives,
                 kernel_size=(1, 3),
                 stride=(1, 2),
                 padding=(0, 1),
                 padding_mode='same'), nn.Tanh(),
             nn.ConvTranspose2d(
-                4 * dim_pn,
-                2 * dim_pn,
+                4 * n_primitives,
+                2 * n_primitives,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh(),
             nn.ConvTranspose2d(
-                2 * dim_pn,
-                dim_pn,
+                2 * n_primitives,
+                n_primitives,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)), nn.Tanh(),
+            nn.ConvTranspose2d(
+                n_primitives,
+                n_primitives,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh(),
             nn.Conv2d(
-                dim_pn,
-                dim_pn,
+                n_primitives,
+                n_primitives,
                 kernel_size=(1, 5),
                 stride=(1, 1),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh())
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
-            PointGenCon(bottleneck_size=self.dim_pn + 256)
-            # PointGenCon(dim_pn=2 + self.dim_pn)
+            PointGenCon(bottleneck_size=self.n_primitives + self.dim_pn)
+            # PointGenCon(n_primitives=2 + self.n_primitives)
             for i in range(0, self.n_primitives)
         ])
         self.decoder2 = nn.ModuleList([
-            PointGenCon(bottleneck_size=3 + 256)
-            # PointGenCon(bottleneck_size=2 + self.dim_pn)
+            PointGenCon(bottleneck_size=3 + self.dim_pn)
+            # PointGenCon(bottleneck_size=2 + self.n_primitives)
             for i in range(0, self.n_primitives)
         ])
         self.decoder3 = nn.ModuleList([
-            PointGenCon(bottleneck_size=3 + 256)
-            # PointGenCon(bottleneck_size=2 + self.dim_pn)
+            PointGenCon(bottleneck_size=3 + self.dim_pn)
+            # PointGenCon(bottleneck_size=2 + self.n_primitives)
             for i in range(0, self.n_primitives)
         ])
         self.res = PointNetRes()
@@ -358,8 +343,8 @@ class MSN(nn.Module):
     def forward(self, part):
         sp_feat, sp_idx = self.spcoder(part)
         pn_feat = self.pncoder(part)
-        pn_feat = pn_feat.unsqueeze(2).expand(part.size(0), 256,
-                                              32).contiguous()
+        pn_feat = pn_feat.unsqueeze(2).expand(
+            part.size(0), self.dim_pn, self.sp_points).contiguous()
         part_regions = []
         sp_feat_conv = self.encoder(sp_feat)
         out_sp_local = []
@@ -373,25 +358,28 @@ class MSN(nn.Module):
             if deform == 'patch_msn':
                 rand_grid = Variable(
                     torch.cuda.FloatTensor(
-                        part.size(0), 2,
-                        self.num_points // self.n_primitives))
+                        part.size(0), 2, self.num_points // self.n_primitives))
                 rand_grid.data.uniform_(0, 1)
                 # here self.num_points // self.n_primitives = 8*4
             elif deform == 'patch_pcn':
-                mesh_grid = torch.meshgrid(
-                    [torch.linspace(0.0, 1.0, 8),
-                     torch.linspace(0.0, 1.0, 4)])
+                mesh_grid = torch.meshgrid([
+                    torch.linspace(0.0, 1.0, 64),
+                    torch.linspace(0.0, 1.0, 32)
+                ])
                 mesh_grid = torch.cat(
                     (torch.reshape(mesh_grid[0],
-                                   (self.num_points // self.n_primitives, 1)),
+                                   (self.num_points // self.n_primitives *
+                                    self.n_primitives, 1)),
                      torch.reshape(mesh_grid[1],
-                                   (self.num_points // self.n_primitives, 1))),
+                                   (self.num_points // self.n_primitives *
+                                    self.n_primitives, 1))),
                     dim=1)
                 mesh_grid = torch.transpose(mesh_grid, 0,
                                             1).unsqueeze(0).repeat(
                                                 sp_feat_conv.shape[0], 1, 1)
                 mesh_grid = torch.cat(
-                    (mesh_grid, torch.zeros(part.size(0), 1, 32)), dim=1)
+                    (mesh_grid, torch.zeros(part.size(0), 1, self.sp_points)),
+                    dim=1)
             # y = sp_feat_conv.unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
             # y = sp_feat_conv[:, :, i].unsqueeze(2).expand(part.size(0), sp_feat_conv.size(1), rand_grid.size(2)).contiguous()
             y = sp_feat_conv[:, :, i, :]
@@ -407,45 +395,48 @@ class MSN(nn.Module):
             out_pcn.append(self.decoder3[i](y))
 
         # part_regions = torch.cat(part_regions, 2).contiguous()
+        out1 = []
+        out3 = []
+        out4 = []
         for i in range(np.size(part_regions)):
             part_regions[i] = part_regions[i].transpose(1, 2).contiguous()
-        out_sp_local = torch.cat(out_sp_local, 2).contiguous()
-        out1 = out_sp_local.transpose(1, 2).contiguous()
-        out_sp_global = torch.cat(out_sp_global, 2).contiguous()
-        out3 = out_sp_global.transpose(1, 2).contiguous()
-        out_pcn = torch.cat(out_pcn, 2).contiguous()
-        out4 = out_pcn.transpose(1, 2).contiguous()
-        out_seg = torch.cat(out_seg, 2).contiguous()
-        out_seg = out_seg.transpose(1, 2).contiguous()
-        sm = nn.Softmax(dim=2)
-        out_seg = sm(out_seg)
+            out1.append(out_sp_local[i].transpose(1, 2).contiguous())
+            out3.append(out_sp_global[i].transpose(1, 2).contiguous())
+            out4.append(out_pcn[i].transpose(1, 2).contiguous())
+
+            out_seg[i] = out_seg[i].transpose(1, 2).contiguous()
+            sm = nn.Softmax(dim=2)
+            out_seg[i] = sm(out_seg[i])
+        # out_sp_local = torch.cat(out_sp_local, 2).contiguous()
+        # out_sp_global = torch.cat(out_sp_global, 2).contiguous()
+        # out_pcn = torch.cat(out_pcn, 2).contiguous()
+        # out_seg = torch.cat(out_seg, 2).contiguous()
 
         dist, _, mean_mst_dis = self.expansion(
-            out1, self.num_points // self.n_primitives, 1.5)
+            out1[0], self.num_points // self.n_primitives, 1.5)
         loss_mst = torch.mean(dist)
         dist, _, mean_mst_dis = self.expansion(
-            out3, self.num_points // self.n_primitives, 1.5)
+            out3[0], self.num_points // self.n_primitives, 1.5)
         dist, _, mean_mst_dis = self.expansion(
-            out4, self.num_points // self.n_primitives, 1.5)
+            out4[0], self.num_points // self.n_primitives, 1.5)
         loss_mst += torch.mean(dist)
 
-        id0 = torch.zeros(out_sp_local.shape[0], 1,
-                          out_sp_local.shape[2]).cuda().contiguous()
-        out_sp_local = torch.cat((out_sp_local, id0), 1)
-        id1 = torch.ones(part.shape[0], 1,
-                         part.shape[2]).cuda().contiguous()
+        id0 = torch.zeros(out_sp_local[0].shape[0], 1,
+                          out_sp_local[0].shape[2]).cuda().contiguous()
+        out_sp_local[0] = torch.cat((out_sp_local[0], id0), 1)
+        id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
         part = torch.cat((part, id1), 1)
-        id2 = torch.zeros(out_sp_global.shape[0], 1,
-                          out_sp_global.shape[2]).cuda().contiguous()
-        out_sp_global = torch.cat((out_sp_global, id2), 1)
-        id3 = torch.zeros(out_pcn.shape[0], 1,
-                          out_pcn.shape[2]).cuda().contiguous()
-        out_pcn = torch.cat((out_pcn, id3), 1)
-        fusion = torch.cat((out_sp_local, part), 2)
+        id2 = torch.zeros(out_sp_global[0].shape[0], 1,
+                          out_sp_global[0].shape[2]).cuda().contiguous()
+        out_sp_global[0] = torch.cat((out_sp_global[0], id2), 1)
+        id3 = torch.zeros(out_pcn[0].shape[0], 1,
+                          out_pcn[0].shape[2]).cuda().contiguous()
+        out_pcn[0] = torch.cat((out_pcn[0], id3), 1)
+        fusion = torch.cat((out_sp_local[0], part), 2)
         # fusion = torch.cat((out_sp_global, out_pcn, part), 2)
 
         resampled_idx = MDS_module.minimum_density_sample(
-            fusion[:, 0:3, :].transpose(1, 2).contiguous(), out1.shape[1],
+            fusion[:, 0:3, :].transpose(1, 2).contiguous(), out1[0].shape[1],
             mean_mst_dis)
         fusion = MDS_module.gather_operation(fusion, resampled_idx)
         delta = self.res(fusion)

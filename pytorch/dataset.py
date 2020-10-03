@@ -26,7 +26,7 @@ class ShapeNet(data.Dataset):
             if self.dataset == 'suncg':
                 self.list_path = './data/train_suncg_fur.list'
             elif self.dataset == 'shapenet':
-                self.list_path = './data/train_shapenet.list'
+                self.list_path = './data/train_shapenet_temp.list'
         else:
             if self.dataset == 'suncg':
                 self.list_path = './data/valid_suncg_fur.list'
@@ -69,19 +69,23 @@ class ShapeNet(data.Dataset):
                         "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete_fur/",
                         '%s.pcd' % model_id))
             elif self.dataset == 'shapenet':
+                """
                 partial, _ = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/train/partial/",
                         '%s.h5' % model_id))
-                """
-                partial, _ = read_pcd(
+                complete, colors = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/train/gt/",
                         '%s.h5' % model_id))
                 """
+                partial, _ = read_pcd(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/shapenet/val/gt/",
+                        '%s.h5' % model_id))
                 complete, colors = read_pcd(
                     os.path.join(
-                        "/media/wangyida/HDD/database/shapenet/train/gt/",
+                        "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
         else:
             if self.dataset == 'suncg':

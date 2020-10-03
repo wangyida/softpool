@@ -52,14 +52,21 @@ class FullModel(nn.Module):
         """
         gt = gt[:, :, :3]
 
-        dist, indexes = self.EMD(output1, gt, eps, iters)
-        emd1 = torch.sqrt(dist).mean(1)
+        emd1 = 0
+        emd3 = 0
+        emd4 = 0
+        for i in range(opt.n_primitives):
+            dist, indexes = self.EMD(output1[i], gt, eps, iters)
+            emd1 += torch.sqrt(dist).mean(1)
 
-        dist, _ = self.EMD(output3, gt, eps, iters)
-        emd3 = torch.sqrt(dist).mean(1)
+            dist, _ = self.EMD(output3[i], gt, eps, iters)
+            emd3 += torch.sqrt(dist).mean(1)
 
-        dist, _ = self.EMD(output4, gt, eps, iters)
-        emd4 = torch.sqrt(dist).mean(1)
+            dist, _ = self.EMD(output4[i], gt, eps, iters)
+            emd4 += torch.sqrt(dist).mean(1)
+        emd1 /= opt.n_primitives
+        emd3 /= opt.n_primitives
+        emd4 /= opt.n_primitives
         """
         gt_seg = seg[:,:,0]
         size = list(gt_seg.size())
@@ -159,7 +166,6 @@ for epoch in range(opt.nepoch):
         gt = gt.float().cuda()
         seg = seg.float().cuda()
         input = input.transpose(2, 1).contiguous()
-
         """
         _, _, _, _, full_regions, _, _, _, _, _ = network(
             gt.transpose(2, 1), gt.contiguous(), seg.contiguous(), 0.005, 50)
@@ -170,8 +176,11 @@ for epoch in range(opt.nepoch):
         output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
             input, full_regions, seg.contiguous(), 0.005, 50)
         """
+        """
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
+        """
+        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean()
 
         loss_net.backward()
         train_loss.update(emd2.mean().item())
@@ -193,7 +202,7 @@ for epoch in range(opt.nepoch):
     train_curve.append(train_loss.avg)
 
     # VALIDATION
-    if epoch % 20 == 0:
+    if epoch % 200 == 199:
         val_loss.reset()
         network.module.model.eval()
         with torch.no_grad():

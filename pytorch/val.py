@@ -193,8 +193,8 @@ labels_generated_points = torch.Tensor(
 labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
-labels_inputs_points = torch.Tensor(
-    range(0, 1024)).view(1 , 1024).transpose(0, 1)
+labels_inputs_points = torch.Tensor(range(0, 1024)).view(1, 1024).transpose(
+    0, 1)
 labels_inputs_points = (labels_inputs_points) % (1024 + 1)
 labels_inputs_points = labels_inputs_points.contiguous().view(-1)
 
@@ -226,7 +226,7 @@ with torch.no_grad():
         output1, output2, output3, output4, expansion_penalty, out_seg, part_regions = network(
             part.transpose(2, 1).contiguous())
         if complete3d_benchmark == False:
-            dist, _ = EMD(output1, gt, 0.002, 10000)
+            dist, _ = EMD(output1[0], gt, 0.002, 10000)
             emd1 = torch.sqrt(dist).mean()
             hash_tab[str(subfold)]['cnt'] += 1
             hash_tab[str(subfold)]['emd1'] += emd1
@@ -235,11 +235,11 @@ with torch.no_grad():
             emd2 = torch.sqrt(dist).mean()
             hash_tab[str(subfold)]['emd2'] += emd2
 
-            dist, _ = EMD(output3, gt, 0.002, 10000)
+            dist, _ = EMD(output3[0], gt, 0.002, 10000)
             emd3 = torch.sqrt(dist).mean()
             hash_tab[str(subfold)]['emd3'] += emd3
 
-            dist, _ = cd.forward(input1=output1, input2=gt)
+            dist, _ = cd.forward(input1=output1[0], input2=gt)
             cd1 = dist.mean()
             hash_tab[str(subfold)]['cd1'] += cd1
 
@@ -247,7 +247,7 @@ with torch.no_grad():
             cd2 = dist.mean()
             hash_tab[str(subfold)]['cd2'] += cd2
 
-            dist, _ = cd.forward(input1=output3, input2=gt)
+            dist, _ = cd.forward(input1=output3[0], input2=gt)
             cd3 = dist.mean()
             hash_tab[str(subfold)]['cd3'] += cd3
 
@@ -264,8 +264,7 @@ with torch.no_grad():
         # save input
         pts_coord = part[0].data.cpu()[:, 0:3]
         mini = part[0].min()
-        pts_color = matplotlib.cm.cool(part[0].data.cpu()[:, 1] -
-                                       mini)[:, 0:3]
+        pts_color = matplotlib.cm.cool(part[0].data.cpu()[:, 1] - mini)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -296,19 +295,21 @@ with torch.no_grad():
                 colors=pts_color,
                 root='pcds/regions',
                 child=subfold,
-                pfile=model+'-'+str(i))
+                pfile=model + '-' + str(i))
 
-        # save output1
-        pts_coord = output1[0].data.cpu()[:, 0:3]
-        maxi = labels_generated_points.max()
-        pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
-        points_save(
-            points=pts_coord,
-            colors=pts_color,
-            root='pcds/output1',
-            child=subfold,
-            pfile=model)
+        pts_coord = []
+        for i in range(np.size(part_regions)):
+            # save output1
+            pts_coord.append(output1[i][0].data.cpu()[:, 0:3])
+            maxi = labels_generated_points.max()
+            pts_color = matplotlib.cm.rainbow(
+                labels_generated_points[0:output1[i].size(1)] / maxi)[:, 0:3]
+            points_save(
+                points=pts_coord[i],
+                colors=pts_color,
+                root='pcds/output1',
+                child=subfold,
+                pfile=model + '-' + str(i))
 
         # save output2
         pts_coord = output2[0].data.cpu()[:, 0:3]
@@ -329,28 +330,32 @@ with torch.no_grad():
                 f.create_dataset("data", data=np.float32(pts_coord))
 
         # save output3
-        pts_coord = output3[0].data.cpu()[:, 0:3]
-        maxi = labels_generated_points.max()
-        pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
-        points_save(
-            points=pts_coord,
-            colors=pts_color,
-            root='pcds/output3',
-            child=subfold,
-            pfile=model)
+        pts_coord = []
+        for i in range(np.size(part_regions)):
+            pts_coord.append(output3[i][0].data.cpu()[:, 0:3])
+            maxi = labels_generated_points.max()
+            pts_color = matplotlib.cm.rainbow(
+                labels_generated_points[0:output3[i].size(1)] / maxi)[:, 0:3]
+            points_save(
+                points=pts_coord[i],
+                colors=pts_color,
+                root='pcds/output3',
+                child=subfold,
+                pfile=model + '-' + str(i))
 
         # save output4
-        pts_coord = output4[0].data.cpu()[:, 0:3]
-        maxi = labels_generated_points.max()
-        pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
-        points_save(
-            points=pts_coord,
-            colors=pts_color,
-            root='pcds/output4',
-            child=subfold,
-            pfile=model)
+        pts_coord = []
+        for i in range(np.size(part_regions)):
+            pts_coord.append(output4[i][0].data.cpu()[:, 0:3])
+            maxi = labels_generated_points.max()
+            pts_color = matplotlib.cm.rainbow(
+                labels_generated_points[0:output4[i].size(1)] / maxi)[:, 0:3]
+            points_save(
+                points=pts_coord[i],
+                colors=pts_color,
+                root='pcds/output4',
+                child=subfold,
+                pfile=model + '-' + str(i))
 
     if opt.dataset == 'shapenet' and complete3d_benchmark == False:
         for i in [
