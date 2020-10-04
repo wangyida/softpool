@@ -122,8 +122,9 @@ class SoftPoolFeat(nn.Module):
         # x = x[:, :, :, idx_step.long()]
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
-        x = torch.cat((x, part), 1).contiguous()
-        return x, sp_idx
+        out = torch.cat((x, part), 1).contiguous()
+        # return out, sp_idx
+        return part, sp_idx
 
 
 class PointGenCon(nn.Module):
@@ -255,13 +256,15 @@ class MSN(nn.Module):
         # We merge regional informations in latent space
         self.encoder = nn.Sequential(
             nn.Conv2d(
-                n_primitives + 3,
+                3,
                 n_primitives,
                 kernel_size=(1, 1),
                 stride=(1, 1),
                 padding=(0, 0),
                 padding_mode='same'), nn.Tanh(),
-            nn.Linear(self.sp_points, 2048)
+            nn.BatchNorm2d(n_primitives),    
+            nn.Linear(self.sp_points, 2048),
+            nn.BatchNorm2d(n_primitives)
                 )
         """
             nn.Conv2d(
