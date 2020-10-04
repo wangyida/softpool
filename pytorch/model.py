@@ -257,6 +257,16 @@ class MSN(nn.Module):
             nn.Conv2d(
                 n_primitives + 3,
                 n_primitives,
+                kernel_size=(1, 1),
+                stride=(1, 1),
+                padding=(0, 0),
+                padding_mode='same'), nn.Tanh(),
+            nn.Linear(self.sp_points, 2048)
+                )
+        """
+            nn.Conv2d(
+                n_primitives + 3,
+                n_primitives,
                 kernel_size=(1, 3),
                 stride=(1, 1),
                 padding=(0, 1),
@@ -278,14 +288,8 @@ class MSN(nn.Module):
             nn.ConvTranspose2d(
                 2 * n_primitives,
                 n_primitives,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)),
-            nn.ConvTranspose2d(
-                n_primitives,
-                n_primitives,
-                kernel_size=(1, 2),
-                stride=(1, 2),
+                kernel_size=(1, 4),
+                stride=(1, 4),
                 padding=(0, 0)),
             nn.Conv2d(
                 n_primitives,
@@ -294,7 +298,6 @@ class MSN(nn.Module):
                 stride=(1, 1),
                 padding=(0, 2),
                 padding_mode='same'))
-        """
             nn.Conv2d(
                 2 * n_primitives,
                 4 * n_primitives,
