@@ -92,7 +92,7 @@ class PointNetFeat(nn.Module):
 
 
 class SoftPoolFeat(nn.Module):
-    def __init__(self, num_points=8192, regions=64, sp_points=2048):
+    def __init__(self, num_points=8192, regions=64, sp_points=1024):
         super(SoftPoolFeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -240,7 +240,7 @@ class MSN(nn.Module):
                  num_points=8192,
                  n_primitives=8,
                  dim_pn=256,
-                 sp_points=2048):
+                 sp_points=1024):
         super(MSN, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
@@ -314,6 +314,12 @@ class MSN(nn.Module):
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh(),
+            nn.ConvTranspose2d(
+                n_primitives,
+                n_primitives,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)), nn.Tanh(),
             nn.Conv2d(
                 n_primitives,
                 n_primitives,
@@ -344,7 +350,7 @@ class MSN(nn.Module):
         sp_feat, sp_idx = self.spcoder(part)
         pn_feat = self.pncoder(part)
         pn_feat = pn_feat.unsqueeze(2).expand(
-            part.size(0), self.dim_pn, self.sp_points).contiguous()
+            part.size(0), self.dim_pn, self.num_points).contiguous()
         part_regions = []
         sp_feat_conv = self.encoder(sp_feat)
         out_sp_local = []
@@ -378,7 +384,8 @@ class MSN(nn.Module):
                                             1).unsqueeze(0).repeat(
                                                 sp_feat_conv.shape[0], 1, 1)
                 mesh_grid = torch.cat(
-                    (mesh_grid, torch.zeros(part.size(0), 1, self.sp_points)),
+                    (mesh_grid, torch.zeros(
+                        part.size(0), 1, mesh_grid.shape[2])),
                     dim=1)
             # y = sp_feat_conv.unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
             # y = sp_feat_conv[:, :, i].unsqueeze(2).expand(part.size(0), sp_feat_conv.size(1), rand_grid.size(2)).contiguous()
