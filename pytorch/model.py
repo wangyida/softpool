@@ -275,6 +275,26 @@ class MSN(nn.Module):
                 stride=(1, 1),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh(),
+            nn.ConvTranspose2d(
+                2 * n_primitives,
+                n_primitives,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                n_primitives,
+                n_primitives,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)),
+            nn.Conv2d(
+                n_primitives,
+                n_primitives,
+                kernel_size=(1, 5),
+                stride=(1, 1),
+                padding=(0, 2),
+                padding_mode='same'))
+        """
             nn.Conv2d(
                 2 * n_primitives,
                 4 * n_primitives,
@@ -308,25 +328,7 @@ class MSN(nn.Module):
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh(),
-            nn.ConvTranspose2d(
-                n_primitives,
-                n_primitives,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(),
-            nn.ConvTranspose2d(
-                n_primitives,
-                n_primitives,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(),
-            nn.Conv2d(
-                n_primitives,
-                n_primitives,
-                kernel_size=(1, 5),
-                stride=(1, 1),
-                padding=(0, 2),
-                padding_mode='same'), nn.Tanh())
+        """
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
             PointGenCon(bottleneck_size=self.n_primitives)
