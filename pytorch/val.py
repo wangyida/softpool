@@ -202,8 +202,8 @@ with torch.no_grad():
     for i, model in enumerate(model_list):
         print(model)
         subfold = model[:model.rfind('/')]
-        part = torch.zeros((1, 2048, 3), device='cuda')
-        part_regions = torch.zeros((1, 2048, 3), device='cuda')
+        part = torch.zeros((1, 1024, 3), device='cuda')
+        part_regions = torch.zeros((1, 1024, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
             if opt.dataset == 'suncg':
@@ -218,7 +218,7 @@ with torch.no_grad():
             elif opt.dataset == 'shapenet':
                 fh5 = h5py.File(os.path.join(partial_dir, model + '.h5'), 'r')
                 part[j, :, :] = torch.from_numpy(
-                    resample_pcd(np.array(fh5['data']), 2048))
+                    resample_pcd(np.array(fh5['data']), 1024))
                 fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
                 gt[j, :, :] = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), opt.num_points))
