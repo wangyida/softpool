@@ -24,8 +24,7 @@ def SoftPool(x):
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         x_order = torch.gather(x, dim=2, index=index)
         # here is differential soft-pool feature
-        sp_cube[:, :,
-                idx, :] = x_order  # - torch.roll(x_order, shifts=-1, dims=2)
+        sp_cube[:, :, idx, :] = x_order
         sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 3, 1)
     return sp_cube, sp_idx
 
