@@ -43,6 +43,7 @@ class FullModel(nn.Module):
         self.EMD = emd.emdModule()
 
     def forward(self, inputs, gt, seg, eps, iters):
+        _, _, _, _, _, _, part_gt = self.model(gt.transpose(2, 1))
         output1, output2, output3, output4, expansion_penalty, out_seg, part_regions = self.model(
             inputs)
         """
@@ -67,6 +68,11 @@ class FullModel(nn.Module):
         emd1 /= opt.n_primitives
         emd3 /= opt.n_primitives
         emd4 /= opt.n_primitives
+
+        emd4 = torch.tensor(100.0).cuda()
+        for i in range(opt.n_primitives):
+            dist, _ = self.EMD(part_gt[i], inputs.transpose(2, 1), eps, iters)
+            emd4 = torch.min(emd4, torch.sqrt(dist).mean(1))
         """
         gt_seg = seg[:,:,0]
         size = list(gt_seg.size())
@@ -165,8 +171,6 @@ for epoch in range(opt.nepoch):
         input = input.float().cuda()
         gt = gt.float().cuda()
         seg = seg.float().cuda()
-        _, _, _, _, gt_regions, _, _, _, _, _ = network(
-            gt.transpose(2, 1), gt, seg, 0.005, 50)
         output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
             input.transpose(2, 1), gt, seg, 0.005, 50)
         """
