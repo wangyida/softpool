@@ -30,27 +30,34 @@ def SoftPool(x):
 
 
 class STN3d(nn.Module):
-    def __init__(self, num_points=2500, dim_pn=64):
+    def __init__(self, num_points=8192, dim_pn=1024):
         super(STN3d, self).__init__()
         self.num_points = num_points
+        self.dim_pn = dim_pn
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(128, dim_pn, 1)
-        self.fc1 = nn.Linear(dim_pn, 512)
+        self.conv3 = torch.nn.Conv1d(128, self.dim_pn, 1)
+        self.fc1 = nn.Linear(self.dim_pn, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, 9)
         self.relu = nn.ReLU()
 
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.bn3 = nn.BatchNorm1d(1024)
+        self.bn4 = nn.BatchNorm1d(512)
+        self.bn5 = nn.BatchNorm1d(256)
+
     def forward(self, x):
         batchsize = x.size()[0]
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
         x, _ = torch.max(x, 2)
-        x = x.view(-1, dim_pn)
+        x = x.view(-1, self.dim_pn)
 
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = F.relu(self.bn4(self.fc1(x)))
+        x = F.relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
 
         iden = Variable(
@@ -108,6 +115,10 @@ class SoftPoolFeat(nn.Module):
 
     def forward(self, x):
         batchsize = x.size()[0]
+        trans = self.stn(x)
+        x = x.transpose(2, 1)
+        x = torch.bmm(x, trans)
+        x = x.transpose(2, 1)
         part = x.unsqueeze(2).repeat(1, 1, self.regions, 1)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
@@ -364,8 +375,12 @@ class MSN(nn.Module):
         out_sp_global = []
         out_pcn = []
         for i in range(0, self.n_primitives):
+            """
             part_regions.append(
                 torch.gather(part, dim=2, index=sp_idx[:, :, i, :].long()))
+            """
+            part_regions.append(
+                    sp_feat[:,-3:,i,:])
             deform = 'patch_pcn'
             if deform == 'patch_msn':
                 rand_grid = Variable(
