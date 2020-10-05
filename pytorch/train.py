@@ -165,13 +165,10 @@ for epoch in range(opt.nepoch):
         input = input.float().cuda()
         gt = gt.float().cuda()
         seg = seg.float().cuda()
-        input = input.transpose(2, 1).contiguous()
-        """
-        _, _, _, _, full_regions, _, _, _, _, _ = network(
-            gt.transpose(2, 1), gt.contiguous(), seg.contiguous(), 0.005, 50)
-        """
+        _, _, _, _, gt_regions, _, _, _, _, _ = network(
+            gt.transpose(2, 1), gt, seg, 0.005, 50)
         output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
-            input, gt.contiguous(), seg.contiguous(), 0.005, 50)
+            input.transpose(2, 1), gt, seg, 0.005, 50)
         """
         output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
             input, full_regions, seg.contiguous(), 0.005, 50)
@@ -211,9 +208,8 @@ for epoch in range(opt.nepoch):
                 input = input.float().cuda()
                 gt = gt.float().cuda()
                 seg = seg.float().cuda()
-                input = input.transpose(2, 1).contiguous()
                 output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
-                    input, gt.contiguous(), seg.contiguous(), 0.004, 3000)
+                    input.transpose(2, 1), gt, seg, 0.004, 3000)
                 val_loss.update(emd2.mean().item())
                 idx = random.randint(0, input.size()[0] - 1)
                 print(

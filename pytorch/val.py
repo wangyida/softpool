@@ -205,6 +205,7 @@ with torch.no_grad():
         part = torch.zeros((1, 1024, 3), device='cuda')
         part_regions = torch.zeros((1, 1024, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
+        gt_regions = torch.zeros((1, 1024, 3), device='cuda')
         for j in range(1):
             if opt.dataset == 'suncg':
                 pcd = o3d.read_point_cloud(
@@ -225,6 +226,8 @@ with torch.no_grad():
 
         output1, output2, output3, output4, expansion_penalty, out_seg, part_regions = network(
             part.transpose(2, 1).contiguous())
+        _, _, _, _, _, _, gt_regions = network(
+            gt.transpose(2, 1).contiguous())
         if complete3d_benchmark == False:
             dist, _ = EMD(output1[0], gt, 0.002, 10000)
             emd1 = torch.sqrt(dist).mean()
@@ -283,7 +286,7 @@ with torch.no_grad():
             child=subfold,
             pfile=model)
 
-        # save selected points
+        # save selected points on input
         pts_coord = []
         for i in range(np.size(part_regions)):
             pts_coord.append(part_regions[i][0].data.cpu()[:, 0:3])
@@ -293,12 +296,26 @@ with torch.no_grad():
             points_save(
                 points=pts_coord[i],
                 colors=pts_color,
-                root='pcds/regions',
+                root='pcds/regions_part',
+                child=subfold,
+                pfile=model + '-' + str(i))
+
+        # save selected points on groung truth
+        pts_coord = []
+        for i in range(np.size(gt_regions)):
+            pts_coord.append(gt_regions[i][0].data.cpu()[:, 0:3])
+            maxi = labels_inputs_points.max()
+            pts_color = matplotlib.cm.plasma(
+                labels_inputs_points[0:gt_regions[i].size(1)] / maxi)[:, 0:3]
+            points_save(
+                points=pts_coord[i],
+                colors=pts_color,
+                root='pcds/regions_gt',
                 child=subfold,
                 pfile=model + '-' + str(i))
 
         pts_coord = []
-        for i in range(np.size(part_regions)):
+        for i in range(np.size(output1)):
             # save output1
             pts_coord.append(output1[i][0].data.cpu()[:, 0:3])
             maxi = labels_generated_points.max()
@@ -331,7 +348,7 @@ with torch.no_grad():
 
         # save output3
         pts_coord = []
-        for i in range(np.size(part_regions)):
+        for i in range(np.size(output3)):
             pts_coord.append(output3[i][0].data.cpu()[:, 0:3])
             maxi = labels_generated_points.max()
             pts_color = matplotlib.cm.rainbow(
@@ -345,7 +362,7 @@ with torch.no_grad():
 
         # save output4
         pts_coord = []
-        for i in range(np.size(part_regions)):
+        for i in range(np.size(output4)):
             pts_coord.append(output4[i][0].data.cpu()[:, 0:3])
             maxi = labels_generated_points.max()
             pts_color = matplotlib.cm.rainbow(
