@@ -123,8 +123,7 @@ class SoftPoolFeat(nn.Module):
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
         out = torch.cat((x, part), 1).contiguous()
-        # return out, sp_idx
-        return part, sp_idx
+        return out, sp_idx
 
 
 class PointGenCon(nn.Module):
@@ -256,7 +255,7 @@ class MSN(nn.Module):
         # We merge regional informations in latent space
         self.encoder = nn.Sequential(
             nn.Conv2d(
-                3,
+                n_primitives + 3,
                 n_primitives,
                 kernel_size=(1, 1),
                 stride=(1, 1),
@@ -337,7 +336,7 @@ class MSN(nn.Module):
         """
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
-            PointGenCon(bottleneck_size=self.n_primitives)
+            PointGenCon(bottleneck_size=self.n_primitives + self.dim_pn)
             # PointGenCon(n_primitives=2 + self.n_primitives)
             for i in range(0, self.n_primitives)
         ])
@@ -400,7 +399,7 @@ class MSN(nn.Module):
             y = sp_feat_conv[:, :, i, :]
             # y = sp_feat_conv
             out_seg.append(y)
-            # y = torch.cat((y, pn_feat), 1).contiguous()
+            y = torch.cat((y, pn_feat), 1).contiguous()
             out_sp_local.append(self.decoder1[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
             y = torch.cat((self.decoder1[i](y), pn_feat), 1).contiguous()
