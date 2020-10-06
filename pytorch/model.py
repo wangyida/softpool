@@ -140,7 +140,8 @@ class SoftPoolFeat(nn.Module):
         # x = x[:, :, :, idx_step.long()]
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
-        out = torch.cat((x, part), 1).contiguous()
+        # out = torch.cat((x, part), 1).contiguous()
+        out = x
         return out, sp_idx, trans
 
 
@@ -272,20 +273,12 @@ class MSN(nn.Module):
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
         self.encoder = nn.Sequential(
-            nn.Conv2d(
-                n_primitives + 3,
-                n_primitives,
-                kernel_size=(1, 1),
-                stride=(1, 1),
-                padding=(0, 0),
-                padding_mode='same'), nn.Tanh(),
-            nn.BatchNorm2d(n_primitives),    
             nn.Linear(self.sp_points, 2048),
             nn.BatchNorm2d(n_primitives)
                 )
         """
             nn.Conv2d(
-                n_primitives + 3,
+                n_primitives,
                 n_primitives,
                 kernel_size=(1, 3),
                 stride=(1, 1),
