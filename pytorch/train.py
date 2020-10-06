@@ -69,8 +69,8 @@ class FullModel(nn.Module):
         emd3 /= opt.n_primitives
         emd4 /= opt.n_primitives
 
-        dist, _ = self.EMD(part_gt[0], inputs.transpose(2, 1), eps, iters)
-        emd4 = torch.sqrt(dist).mean(1)
+        # dist, _ = self.EMD(part_gt[0], inputs.transpose(2, 1), eps, iters)
+        # emd4 = torch.sqrt(dist).mean(1)
         """
         gt_seg = seg[:,:,0]
         size = list(gt_seg.size())
