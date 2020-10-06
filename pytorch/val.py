@@ -224,9 +224,9 @@ with torch.no_grad():
                 gt[j, :, :] = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), opt.num_points))
 
-        output1, output2, output3, output4, expansion_penalty, out_seg, part_regions = network(
+        output1, output2, output3, output4, expansion_penalty, out_seg, part_regions, _ = network(
             part.transpose(2, 1).contiguous())
-        _, _, _, _, _, _, gt_regions = network(
+        _, _, _, _, _, _, gt_regions, _ = network(
             gt.transpose(2, 1).contiguous())
         if complete3d_benchmark == False:
             dist, _ = EMD(output1[0], gt, 0.002, 10000)

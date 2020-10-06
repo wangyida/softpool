@@ -67,10 +67,18 @@ class STN3d(nn.Module):
                               batchsize, 1)
         if x.is_cuda:
             iden = iden.cuda()
-        # x = x + iden
+        x = x + iden
         x = x.view(-1, 3, 3)
         return x
 
+def feature_transform_regularizer(trans):
+    d = trans.size()[1]
+    batchsize = trans.size()[0]
+    I = torch.eye(d)[None, :, :]
+    if trans.is_cuda:
+        I = I.cuda()
+    loss = torch.mean(torch.norm(torch.bmm(trans, trans.transpose(2,1)) - I, dim=(1,2)))
+    return loss
 
 class PointNetFeat(nn.Module):
     def __init__(self, num_points=8192, dim_pn=1024):
@@ -133,7 +141,7 @@ class SoftPoolFeat(nn.Module):
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
         out = torch.cat((x, part), 1).contiguous()
-        return out, sp_idx
+        return out, sp_idx, trans
 
 
 class PointGenCon(nn.Module):
@@ -364,7 +372,8 @@ class MSN(nn.Module):
         self.expansion = expansion.expansionPenaltyModule()
 
     def forward(self, part):
-        sp_feat, sp_idx = self.spcoder(part)
+        sp_feat, sp_idx, trans = self.spcoder(part)
+        loss_trans = feature_transform_regularizer(trans)
         pn_feat = self.pncoder(part)
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
@@ -471,4 +480,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out2 = (fusion + delta).transpose(2, 1).contiguous()
-        return out1, out2, out3, out4, loss_mst, out_seg, part_regions
+        return out1, out2, out3, out4, loss_mst, out_seg, part_regions, loss_trans
