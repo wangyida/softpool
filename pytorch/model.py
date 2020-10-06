@@ -411,8 +411,8 @@ class MSN(nn.Module):
                     (mesh_grid, torch.zeros(
                         part.size(0), 1, mesh_grid.shape[2])),
                     dim=1)
-            # y = sp_feat_conv[:, :, i, :]
-            y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
+            y = sp_feat_conv[:, :, i, :]
+            # y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
             # y = sp_feat_conv
             out_seg.append(y)
             y = torch.cat((y, pn_feat), 1).contiguous()
