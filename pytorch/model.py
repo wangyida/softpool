@@ -384,13 +384,13 @@ class MSN(nn.Module):
         out_sp_global = []
         out_pcn = []
         for i in range(0, self.n_primitives):
-            """
             part_regions.append(
                 torch.gather(part, dim=2, index=sp_idx[:, :, i, :].long()))
             """
             # stn3d
             part_regions.append(
                     sp_feat[:,-3:,i,:])
+            """
             deform = 'patch_pcn'
             if deform == 'patch_msn':
                 rand_grid = Variable(
