@@ -67,7 +67,7 @@ class STN3d(nn.Module):
                               batchsize, 1)
         if x.is_cuda:
             iden = iden.cuda()
-        x = x + iden
+        # x = x + iden
         x = x.view(-1, 3, 3)
         return x
 
