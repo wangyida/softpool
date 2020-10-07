@@ -106,7 +106,7 @@ class PointNetFeat(nn.Module):
 
 
 class SoftPoolFeat(nn.Module):
-    def __init__(self, num_points=8192, regions=64, sp_points=2048):
+    def __init__(self, num_points=8192, regions=64, sp_points=1024):
         super(SoftPoolFeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -259,15 +259,15 @@ class MSN(nn.Module):
                  num_points=8192,
                  n_primitives=8,
                  dim_pn=256,
-                 sp_points=2048):
+                 sp_points=1024):
         super(MSN, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
         self.n_primitives = n_primitives
         self.sp_points = sp_points
         self.pncoder = nn.Sequential(
-            PointNetFeat(num_points, dim_pn=2048), 
-            nn.Linear(2048, dim_pn),
+            PointNetFeat(num_points, dim_pn=1024), 
+            nn.Linear(1024, dim_pn),
             nn.BatchNorm1d(dim_pn), 
             nn.ReLU())
         self.spcoder = SoftPoolFeat(
@@ -275,11 +275,11 @@ class MSN(nn.Module):
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
         self.encoder = nn.Sequential(
-            nn.Linear(self.sp_points, self.num_points),
-            # nn.ReLU(),
             nn.Linear(self.sp_points, self.sp_points // 2),
-            # nn.ReLU(),
-            nn.Linear(self.sp_points // 2, self.num_points))
+            nn.ReLU(),
+            nn.Linear(self.sp_points // 2, self.sp_points // 2),
+            nn.ReLU(),
+            nn.Linear(self.sp_points // 2, self.sp_points))
         """
             nn.Conv2d(
                 n_primitives,
@@ -419,10 +419,10 @@ class MSN(nn.Module):
             # y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
             # y = sp_feat_conv
             out_seg.append(y)
-            y = torch.cat((y, pn_feat), 1).contiguous()
-            out_sp_local.append(self.decoder1[i](y))
+            y = torch.cat((y, pn_feat[:,:,:1024]), 1).contiguous()
+            out_sp_local.append(torch.cat((self.decoder1[i](y), part), 2))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-            y = torch.cat((self.decoder1[i](y), pn_feat), 1).contiguous()
+            y = torch.cat((torch.cat((self.decoder1[i](y), part), 2), pn_feat), 1).contiguous()
             out_sp_global.append(self.decoder2[i](y))
             # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
             y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()

@@ -193,17 +193,17 @@ labels_generated_points = torch.Tensor(
 labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
-labels_inputs_points = torch.Tensor(range(0, 2048)).view(1, 2048).transpose(
+labels_inputs_points = torch.Tensor(range(0, 1024)).view(1, 1024).transpose(
     0, 1)
-labels_inputs_points = (labels_inputs_points) % (2048 + 1)
+labels_inputs_points = (labels_inputs_points) % (1024 + 1)
 labels_inputs_points = labels_inputs_points.contiguous().view(-1)
 
 with torch.no_grad():
     for i, model in enumerate(model_list):
         print(model)
         subfold = model[:model.rfind('/')]
-        part = torch.zeros((1, 2048, 3), device='cuda')
-        part_regions = torch.zeros((1, 2048, 3), device='cuda')
+        part = torch.zeros((1, 1024, 3), device='cuda')
+        part_regions = torch.zeros((1, 1024, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         gt_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
@@ -219,15 +219,17 @@ with torch.no_grad():
             elif opt.dataset == 'shapenet':
                 fh5 = h5py.File(os.path.join(partial_dir, model + '.h5'), 'r')
                 part[j, :, :] = torch.from_numpy(
-                    resample_pcd(np.array(fh5['data']), 2048))
+                    resample_pcd(np.array(fh5['data']), 1024))
                 fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
                 gt[j, :, :] = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), opt.num_points))
 
         output1, output2, output3, output4, expansion_penalty, out_seg, part_regions, _ = network(
             part.transpose(2, 1).contiguous())
+        """
         _, _, _, _, _, _, gt_regions, _ = network(
             gt.transpose(2, 1).contiguous())
+        """
         if complete3d_benchmark == False:
             dist, _ = EMD(output1[0], gt, 0.002, 10000)
             emd1 = torch.sqrt(dist).mean()
@@ -301,6 +303,7 @@ with torch.no_grad():
                 pfile=model + '-' + str(i))
 
         # save selected points on groung truth
+        """
         pts_coord = []
         for i in range(np.size(gt_regions)):
             pts_coord.append(gt_regions[i][0].data.cpu()[:, 0:3])
@@ -313,6 +316,7 @@ with torch.no_grad():
                 root='pcds/regions_gt',
                 child=subfold,
                 pfile=model + '-' + str(i))
+        """
 
         pts_coord = []
         for i in range(np.size(output1)):

@@ -43,7 +43,9 @@ class FullModel(nn.Module):
         self.EMD = emd.emdModule()
 
     def forward(self, inputs, gt, seg, eps, iters):
+        """
         _, _, _, _, _, _, gt_regions, _ = self.model(gt.transpose(2, 1))
+        """
         output1, output2, output3, output4, expansion_penalty, out_seg, part_regions, loss_trans = self.model(
             inputs)
         """
@@ -57,12 +59,14 @@ class FullModel(nn.Module):
         emd3 = 0
         emd4 = 0
         for i in range(opt.n_primitives):
-            dist, indexes = self.EMD(output1[i], gt, eps, iters)
-
+            dist, indexes = self.EMD(output1[i], gt, eps, iters) 
             emd1 += torch.sqrt(dist).mean(1)
-            sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
-            # dist, indexes = self.EMD(output1[i][:,:1024,:], gt_regions[i], eps, iters)
-            emd1 += sqrt_mean# torch.sqrt(dist).mean(1)
+
+            # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
+            """
+            dist, indexes = self.EMD(output1[i][:,:1024,:], gt_regions[i], eps, iters)
+            emd1 += torch.sqrt(dist).mean(1)
+            """
 
 
             dist, _ = self.EMD(output3[i], gt, eps, iters)
