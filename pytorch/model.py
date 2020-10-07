@@ -106,7 +106,7 @@ class PointNetFeat(nn.Module):
 
 
 class SoftPoolFeat(nn.Module):
-    def __init__(self, num_points=8192, regions=64, sp_points=1024):
+    def __init__(self, num_points=8192, regions=64, sp_points=2048):
         super(SoftPoolFeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -259,23 +259,25 @@ class MSN(nn.Module):
                  num_points=8192,
                  n_primitives=8,
                  dim_pn=256,
-                 sp_points=1024):
+                 sp_points=2048):
         super(MSN, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
         self.n_primitives = n_primitives
         self.sp_points = sp_points
         self.pncoder = nn.Sequential(
-            PointNetFeat(num_points), nn.Linear(1024, dim_pn),
-            nn.BatchNorm1d(dim_pn), nn.ReLU())
+            PointNetFeat(num_points, dim_pn=2048), 
+            nn.Linear(2048, dim_pn),
+            nn.BatchNorm1d(dim_pn), 
+            nn.ReLU())
         self.spcoder = SoftPoolFeat(
             num_points, regions=self.n_primitives, sp_points=self.sp_points)
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
         self.encoder = nn.Sequential(
-            nn.Linear(self.sp_points, 2048),
-            nn.BatchNorm2d(n_primitives)
-                )
+            nn.Linear(self.sp_points, self.num_points),
+            nn.Linear(self.sp_points, self.sp_points // 2),
+            nn.Linear(self.sp_points // 2, self.num_points))
         """
             nn.Conv2d(
                 n_primitives,
@@ -394,7 +396,7 @@ class MSN(nn.Module):
             elif deform == 'patch_pcn':
                 mesh_grid = torch.meshgrid([
                     torch.linspace(0.0, 1.0, 64),
-                    torch.linspace(0.0, 1.0, 32)
+                    torch.linspace(0.0, 1.0, self.num_points // 64)
                 ])
                 mesh_grid = torch.cat(
                     (torch.reshape(mesh_grid[0],

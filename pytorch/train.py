@@ -60,7 +60,7 @@ class FullModel(nn.Module):
             dist, indexes = self.EMD(output1[i], gt, eps, iters)
 
             emd1 += torch.sqrt(dist).mean(1)
-            sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i][:,:1024,:]-gt_regions[i])**2, 2)))
+            sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
             # dist, indexes = self.EMD(output1[i][:,:1024,:], gt_regions[i], eps, iters)
             emd1 += sqrt_mean# torch.sqrt(dist).mean(1)
 
