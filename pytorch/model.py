@@ -276,7 +276,9 @@ class MSN(nn.Module):
         # We merge regional informations in latent space
         self.encoder = nn.Sequential(
             nn.Linear(self.sp_points, self.num_points),
+            # nn.ReLU(),
             nn.Linear(self.sp_points, self.sp_points // 2),
+            # nn.ReLU(),
             nn.Linear(self.sp_points // 2, self.num_points))
         """
             nn.Conv2d(
