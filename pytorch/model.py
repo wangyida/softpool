@@ -274,9 +274,10 @@ class MSN(nn.Module):
             num_points, regions=self.n_primitives, sp_points=self.sp_points)
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
-        self.encoder = nn.Sequential(
-            nn.Linear(self.sp_points, self.sp_points // 2),
+        self.ptmapper = nn.Sequential(
+            nn.Linear(self.sp_points, self.sp_points),
             nn.ReLU(),
+            nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Linear(self.sp_points // 2, self.sp_points // 2),
             nn.ReLU(),
             nn.Linear(self.sp_points // 2, self.sp_points))
@@ -351,8 +352,8 @@ class MSN(nn.Module):
         """
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
-            PointGenCon(bottleneck_size=self.n_primitives + self.dim_pn)
-            # PointGenCon(n_primitives=2 + self.n_primitives)
+            # PointGenCon(bottleneck_size=self.n_primitives + self.dim_pn)
+            PointGenCon(bottleneck_size=self.n_primitives)
             for i in range(0, self.n_primitives)
         ])
         self.decoder2 = nn.ModuleList([
@@ -375,7 +376,7 @@ class MSN(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
         part_regions = []
-        sp_feat_conv = self.encoder(sp_feat)
+        sp_feat_conv = self.ptmapper(sp_feat)
         out_sp_local = []
         out_seg = []
         out_sp_global = []
@@ -419,7 +420,7 @@ class MSN(nn.Module):
             y = SoftPool(-sp_feat_conv[:, :, i, :])[0][:,:,i,:]
             # y = sp_feat_conv
             out_seg.append(y)
-            y = torch.cat((y, pn_feat[:,:,:1024]), 1).contiguous()
+            # y = torch.cat((y, pn_feat[:,:,:1024]), 1).contiguous()
             out_sp_local.append(torch.cat((self.decoder1[i](y), part), 2))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
             y = torch.cat((torch.cat((self.decoder1[i](y), part), 2), pn_feat), 1).contiguous()
