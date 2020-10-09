@@ -136,7 +136,7 @@ class SoftPoolFeat(nn.Module):
         idx_step = torch.floor(
             torch.linspace(0, (x.shape[3] - 1), steps=self.sp_points))
         x = x[:, :, :, :self.sp_points]
-        sp_idx = sp_idx[:, :, :, :self.sp_points]
+        # sp_idx = sp_idx[:, :, :, :self.sp_points]
         # x = x[:, :, :, idx_step.long()]
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
@@ -375,7 +375,7 @@ class MSN(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
         part_regions = []
-        sp_feat_conv = self.encoder(sp_feat)
+        sp_feat_conv = self.encoder(-sp_feat)
         out_sp_local = []
         out_seg = []
         out_sp_global = []
