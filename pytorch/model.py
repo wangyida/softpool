@@ -275,12 +275,41 @@ class MSN(nn.Module):
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
         self.ptmapper = nn.Sequential(
+            nn.Conv2d(
+                n_primitives,
+                n_primitives,
+                kernel_size=(1, 3),
+                stride=(1, 1),
+                padding=(0, 1),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                n_primitives,
+                2 * n_primitives,
+                kernel_size=(1, 7),
+                stride=(1, 2),
+                padding=(0, 3),
+                padding_mode='same'), nn.Tanh(),
+            nn.Conv2d(
+                2 * n_primitives,
+                2 * n_primitives,
+                kernel_size=(1, 7),
+                stride=(1, 1),
+                padding=(0, 3),
+                padding_mode='same'), nn.Tanh(),
+            nn.ConvTranspose2d(
+                2 * n_primitives,
+                n_primitives,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)))
+        """
             nn.Linear(self.sp_points, self.sp_points),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Linear(self.sp_points // 2, self.sp_points // 2),
             nn.ReLU(),
-            nn.Linear(self.sp_points // 2, self.sp_points))
+            nn.Linear(self.sp_points // 2, self.sp_points),
+        """
         """
             nn.Conv2d(
                 n_primitives,
@@ -306,49 +335,9 @@ class MSN(nn.Module):
             nn.ConvTranspose2d(
                 2 * n_primitives,
                 n_primitives,
-                kernel_size=(1, 4),
-                stride=(1, 4),
+                kernel_size=(1, 2),
+                stride=(1, 2),
                 padding=(0, 0)),
-            nn.Conv2d(
-                n_primitives,
-                n_primitives,
-                kernel_size=(1, 5),
-                stride=(1, 1),
-                padding=(0, 2),
-                padding_mode='same'))
-            nn.Conv2d(
-                2 * n_primitives,
-                4 * n_primitives,
-                kernel_size=(1, 5),
-                stride=(1, 2),
-                padding=(0, 2),
-                padding_mode='same'), nn.Tanh(),
-            nn.Conv2d(
-                4 * n_primitives,
-                4 * n_primitives,
-                kernel_size=(1, 5),
-                stride=(1, 1),
-                padding=(0, 2),
-                padding_mode='same'), nn.Tanh(),
-            nn.Conv2d(
-                4 * n_primitives,
-                4 * n_primitives,
-                kernel_size=(1, 3),
-                stride=(1, 2),
-                padding=(0, 1),
-                padding_mode='same'), nn.Tanh(),
-            nn.ConvTranspose2d(
-                4 * n_primitives,
-                2 * n_primitives,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(),
-            nn.ConvTranspose2d(
-                2 * n_primitives,
-                n_primitives,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh(),
         """
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
