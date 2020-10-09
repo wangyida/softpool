@@ -185,7 +185,7 @@ for epoch in range(opt.nepoch):
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
         """
-        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean() + l_trans
+        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean() + l_trans.mean()
 
         loss_net.backward()
         train_loss.update(emd2.mean().item())
