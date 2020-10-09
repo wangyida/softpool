@@ -371,13 +371,13 @@ class MSN(nn.Module):
         out_sp_global = []
         out_pcn = []
         for i in range(0, self.n_primitives):
+            """
             part_regions.append(
                 torch.gather(part, dim=2, index=sp_idx[:, :, i, :].long()))
             """
             # stn3d
             part_regions.append(
                     sp_feat[:,-3:,i,:])
-            """
             deform = 'patch_pcn'
             if deform == 'patch_msn':
                 rand_grid = Variable(
@@ -405,7 +405,7 @@ class MSN(nn.Module):
                     (mesh_grid, torch.zeros(
                         part.size(0), 1, mesh_grid.shape[2])),
                     dim=1)
-            y = -sp_feat_conv[:, :, i, :]
+            y = sp_feat_conv[:, :, i, :]
             y = SoftPool(-sp_feat_conv[:, :, i, :])[0][:,:,i,:]
             # y = sp_feat_conv
             out_seg.append(y)
