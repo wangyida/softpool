@@ -270,8 +270,8 @@ class MSN(nn.Module):
             nn.Linear(1024, dim_pn),
             nn.BatchNorm1d(dim_pn), 
             nn.ReLU())
-        self.spcoder = SoftPoolFeat(
-            num_points, regions=self.n_primitives, sp_points=self.sp_points)
+        # self.spcoder = SoftPoolFeat(num_points, regions=self.n_primitives, sp_points=self.sp_points)
+        self.spcoder = SoftPoolFeat(num_points, regions=self.n_primitives, sp_points=32)
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
         self.ptmapper = nn.Sequential(
@@ -301,6 +301,12 @@ class MSN(nn.Module):
                 n_primitives,
                 kernel_size=(1, 2),
                 stride=(1, 2),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                n_primitives,
+                n_primitives,
+                kernel_size=(1, 64),
+                stride=(1, 64),
                 padding=(0, 0)))
         """
             nn.Linear(self.sp_points, self.sp_points),
@@ -345,16 +351,8 @@ class MSN(nn.Module):
             PointGenCon(bottleneck_size=self.n_primitives)
             for i in range(0, self.n_primitives)
         ])
-        self.decoder2 = nn.ModuleList([
-            PointGenCon(bottleneck_size=3 + self.dim_pn)
-            # PointGenCon(bottleneck_size=2 + self.n_primitives)
-            for i in range(0, self.n_primitives)
-        ])
-        self.decoder3 = nn.ModuleList([
-            PointGenCon(bottleneck_size=3 + self.dim_pn)
-            # PointGenCon(bottleneck_size=2 + self.n_primitives)
-            for i in range(0, self.n_primitives)
-        ])
+        self.decoder2 = PointGenCon(bottleneck_size=3 + self.dim_pn)
+        self.decoder3 = PointGenCon(bottleneck_size=3 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
 
@@ -371,13 +369,13 @@ class MSN(nn.Module):
         out_sp_global = []
         out_pcn = []
         for i in range(0, self.n_primitives):
-            """
             part_regions.append(
                 torch.gather(part, dim=2, index=sp_idx[:, :, i, :].long()))
             """
             # stn3d
             part_regions.append(
                     sp_feat[:,-3:,i,:])
+            """
             deform = 'patch_pcn'
             if deform == 'patch_msn':
                 rand_grid = Variable(
@@ -409,28 +407,26 @@ class MSN(nn.Module):
             y = SoftPool(-sp_feat_conv[:, :, i, :])[0][:,:,i,:]
             # y = sp_feat_conv
             out_seg.append(y)
-            # y = torch.cat((y, pn_feat[:,:,:1024]), 1).contiguous()
-            out_sp_local.append(torch.cat((self.decoder1[i](y), part), 2))
+            # y = torch.cat((y, pn_feat), 1).contiguous()
+            out_sp_local.append(self.decoder1[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-            y = torch.cat((torch.cat((self.decoder1[i](y), part), 2), pn_feat), 1).contiguous()
-            out_sp_global.append(self.decoder2[i](y))
-            # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-            y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-            out_pcn.append(self.decoder3[i](y))
+        y = torch.cat((self.decoder1[0](y), pn_feat), 1).contiguous()
+        out_sp_global = self.decoder2(y)
+        # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+        y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+        out_pcn = self.decoder3(y)
 
         # part_regions = torch.cat(part_regions, 2).contiguous()
         out1 = []
-        out3 = []
-        out4 = []
         for i in range(np.size(part_regions)):
             part_regions[i] = part_regions[i].transpose(1, 2).contiguous()
             out1.append(out_sp_local[i].transpose(1, 2).contiguous())
-            out3.append(out_sp_global[i].transpose(1, 2).contiguous())
-            out4.append(out_pcn[i].transpose(1, 2).contiguous())
-
             out_seg[i] = out_seg[i].transpose(1, 2).contiguous()
             sm = nn.Softmax(dim=2)
             out_seg[i] = sm(out_seg[i])
+
+        out3 = out_sp_global.transpose(1, 2).contiguous()
+        out4 = out_pcn.transpose(1, 2).contiguous()
         # out_sp_local = torch.cat(out_sp_local, 2).contiguous()
         # out_sp_global = torch.cat(out_sp_global, 2).contiguous()
         # out_pcn = torch.cat(out_pcn, 2).contiguous()
@@ -439,23 +435,20 @@ class MSN(nn.Module):
         dist, _, mean_mst_dis = self.expansion(
             out1[0], self.num_points // self.n_primitives, 1.5)
         loss_mst = torch.mean(dist)
-        dist, _, mean_mst_dis = self.expansion(
-            out3[0], self.num_points // self.n_primitives, 1.5)
-        dist, _, mean_mst_dis = self.expansion(
-            out4[0], self.num_points // self.n_primitives, 1.5)
-        loss_mst += torch.mean(dist)
 
         id0 = torch.zeros(out_sp_local[0].shape[0], 1,
                           out_sp_local[0].shape[2]).cuda().contiguous()
         out_sp_local[0] = torch.cat((out_sp_local[0], id0), 1)
         id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
         part = torch.cat((part, id1), 1)
-        id2 = torch.zeros(out_sp_global[0].shape[0], 1,
-                          out_sp_global[0].shape[2]).cuda().contiguous()
-        out_sp_global[0] = torch.cat((out_sp_global[0], id2), 1)
-        id3 = torch.zeros(out_pcn[0].shape[0], 1,
-                          out_pcn[0].shape[2]).cuda().contiguous()
-        out_pcn[0] = torch.cat((out_pcn[0], id3), 1)
+        """
+        id2 = torch.zeros(out_sp_global.shape[0], 1,
+                          out_sp_global.shape[2]).cuda().contiguous()
+        out_sp_global = torch.cat((out_sp_global, id2), 1)
+        id3 = torch.zeros(out_pcn.shape[0], 1,
+                          out_pcn.shape[2]).cuda().contiguous()
+        out_pcn = torch.cat((out_pcn, id3), 1)
+        """
         fusion = torch.cat((out_sp_local[0], part), 2)
         # fusion = torch.cat((out_sp_global, out_pcn, part), 2)
 

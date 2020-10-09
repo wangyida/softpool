@@ -61,23 +61,19 @@ class FullModel(nn.Module):
         for i in range(opt.n_primitives):
             dist, indexes = self.EMD(output1[i], gt, eps, iters) 
             emd1 += torch.sqrt(dist).mean(1)
-
             # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
             """
             dist, indexes = self.EMD(output1[i][:,:1024,:], gt_regions[i], eps, iters)
             emd1 += torch.sqrt(dist).mean(1)
             """
-
-
-            dist, _ = self.EMD(output3[i], gt, eps, iters)
-            emd3 += torch.sqrt(dist).mean(1)
-
-            dist, _ = self.EMD(output4[i], gt, eps, iters)
-            emd4 += torch.sqrt(dist).mean(1)
         emd1 /= opt.n_primitives
-        emd1 += loss_trans
-        emd3 /= opt.n_primitives
-        emd4 /= opt.n_primitives
+
+
+        dist, _ = self.EMD(output3, gt, eps, iters)
+        emd3 += torch.sqrt(dist).mean(1)
+
+        dist, _ = self.EMD(output4, gt, eps, iters)
+        emd4 += torch.sqrt(dist).mean(1)
 
         # dist, _ = self.EMD(gt_regions[0], inputs.transpose(2, 1), eps, iters)
         # emd4 = torch.sqrt(dist).mean(1)
@@ -96,7 +92,7 @@ class FullModel(nn.Module):
         dist, _ = self.EMD(output2, gt, eps, iters)
         emd2 = torch.sqrt(dist).mean(1)
 
-        return output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty
+        return output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty, loss_trans
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -179,7 +175,7 @@ for epoch in range(opt.nepoch):
         input = input.float().cuda()
         gt = gt.float().cuda()
         seg = seg.float().cuda()
-        output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
+        output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty, l_trans = network(
             input.transpose(2, 1), gt, seg, 0.005, 50)
         """
         output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
@@ -189,7 +185,7 @@ for epoch in range(opt.nepoch):
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
         """
-        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean()
+        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean() + l_trans
 
         loss_net.backward()
         train_loss.update(emd2.mean().item())
@@ -220,7 +216,7 @@ for epoch in range(opt.nepoch):
                 input = input.float().cuda()
                 gt = gt.float().cuda()
                 seg = seg.float().cuda()
-                output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
+                output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty, l_trans = network(
                     input.transpose(2, 1), gt, seg, 0.004, 3000)
                 val_loss.update(emd2.mean().item())
                 idx = random.randint(0, input.size()[0] - 1)
