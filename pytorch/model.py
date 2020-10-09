@@ -375,7 +375,7 @@ class MSN(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
         part_regions = []
-        sp_feat_conv = self.encoder(-sp_feat)
+        sp_feat_conv = self.encoder(sp_feat)
         out_sp_local = []
         out_seg = []
         out_sp_global = []
@@ -415,8 +415,8 @@ class MSN(nn.Module):
                     (mesh_grid, torch.zeros(
                         part.size(0), 1, mesh_grid.shape[2])),
                     dim=1)
-            y = sp_feat_conv[:, :, i, :]
-            y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
+            y = -sp_feat_conv[:, :, i, :]
+            y = SoftPool(-sp_feat_conv[:, :, i, :])[0][:,:,i,:]
             # y = sp_feat_conv
             out_seg.append(y)
             y = torch.cat((y, pn_feat[:,:,:1024]), 1).contiguous()
