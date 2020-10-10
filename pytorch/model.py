@@ -111,11 +111,11 @@ class SoftPoolFeat(nn.Module):
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(128, 256, 1)
+        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
 
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
-        self.bn3 = torch.nn.BatchNorm1d(256)
+        self.bn3 = torch.nn.BatchNorm1d(1024)
 
         self.num_points = num_points
         self.regions = regions
@@ -258,7 +258,7 @@ class MSN(nn.Module):
     def __init__(self,
                  num_points=8192,
                  n_primitives=8,
-                 dim_pn=256,
+                 dim_pn=1024,
                  sp_points=1024):
         super(MSN, self).__init__()
         self.num_points = num_points
@@ -271,22 +271,24 @@ class MSN(nn.Module):
             nn.BatchNorm1d(dim_pn), 
             nn.ReLU())
         # self.spcoder = SoftPoolFeat(num_points, regions=self.n_primitives, sp_points=self.sp_points)
-        self.spcoder = SoftPoolFeat(num_points, regions=self.n_primitives, sp_points=32)
+        self.spcoder = SoftPoolFeat(num_points, regions=self.n_primitives, sp_points=2048)
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
         self.ptmapper = nn.Sequential(
+            nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Conv2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 3),
+                kernel_size=(1, 7),
                 stride=(1, 1),
-                padding=(0, 1),
+                padding=(0, 3),
                 padding_mode='same'), nn.Tanh(),
+            nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Conv2d(
                 dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 7),
-                stride=(1, 2),
+                stride=(1, 1),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
@@ -305,8 +307,8 @@ class MSN(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 64),
-                stride=(1, 64),
+                kernel_size=(1, 4),
+                stride=(1, 4),
                 padding=(0, 0)))
         """
             nn.Linear(self.sp_points, self.sp_points),
@@ -314,7 +316,7 @@ class MSN(nn.Module):
             nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Linear(self.sp_points // 2, self.sp_points // 2),
             nn.ReLU(),
-            nn.Linear(self.sp_points // 2, self.sp_points),
+            nn.Linear(self.sp_points // 2, self.sp_points))
         """
         """
             nn.Conv2d(
@@ -348,7 +350,7 @@ class MSN(nn.Module):
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
             # PointGenCon(bottleneck_size=self.n_primitives + self.dim_pn)
-            PointGenCon(bottleneck_size=256)
+            PointGenCon(bottleneck_size=1024)
             for i in range(0, self.n_primitives)
         ])
         self.decoder2 = PointGenCon(bottleneck_size=3 + self.dim_pn)
