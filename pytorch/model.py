@@ -140,8 +140,8 @@ class SoftPoolFeat(nn.Module):
         # x = x[:, :, :, idx_step.long()]
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
-        # out = torch.cat((x, part), 1).contiguous()
-        out = x
+        out = torch.cat((x, part), 1).contiguous()
+        # out = x
         return out, sp_idx, trans
 
 
@@ -277,7 +277,7 @@ class MSN(nn.Module):
         self.ptmapper = nn.Sequential(
             nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Conv2d(
-                dim_pn,
+                dim_pn + 3,
                 dim_pn,
                 kernel_size=(1, 7),
                 stride=(1, 1),
