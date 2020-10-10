@@ -106,16 +106,16 @@ class PointNetFeat(nn.Module):
 
 
 class SoftPoolFeat(nn.Module):
-    def __init__(self, num_points=8192, regions=64, sp_points=1024):
+    def __init__(self, num_points=8192, regions=64, sp_points=256):
         super(SoftPoolFeat, self).__init__()
         self.stn = STN3d(num_points=num_points)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
+        self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
-        self.bn3 = torch.nn.BatchNorm1d(1024)
+        self.bn3 = torch.nn.BatchNorm1d(256)
 
         self.num_points = num_points
         self.regions = regions
@@ -258,7 +258,7 @@ class MSN(nn.Module):
     def __init__(self,
                  num_points=8192,
                  n_primitives=8,
-                 dim_pn=1024,
+                 dim_pn=256,
                  sp_points=1024):
         super(MSN, self).__init__()
         self.num_points = num_points
@@ -283,20 +283,19 @@ class MSN(nn.Module):
                 stride=(1, 1),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh(),
-            nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Conv2d(
                 dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 7),
-                stride=(1, 1),
+                stride=(1, 2),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh(),
             nn.Conv2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 7),
+                kernel_size=(1, 5),
                 stride=(1, 1),
-                padding=(0, 3),
+                padding=(0, 2),
                 padding_mode='same'), nn.Tanh(),
             nn.ConvTranspose2d(
                 2 * dim_pn,
@@ -350,7 +349,7 @@ class MSN(nn.Module):
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
             # PointGenCon(bottleneck_size=self.n_primitives + self.dim_pn)
-            PointGenCon(bottleneck_size=1024)
+            PointGenCon(bottleneck_size=256)
             for i in range(0, self.n_primitives)
         ])
         self.decoder2 = PointGenCon(bottleneck_size=3 + self.dim_pn)

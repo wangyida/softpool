@@ -67,6 +67,7 @@ class FullModel(nn.Module):
             emd1 += torch.sqrt(dist).mean(1)
             """
         emd1 /= opt.n_primitives
+        emd1 += loss_trans
 
 
         dist, _ = self.EMD(output3, gt, eps, iters)
@@ -185,7 +186,7 @@ for epoch in range(opt.nepoch):
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
         """
-        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean() + l_trans.mean()
+        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean()
 
         loss_net.backward()
         train_loss.update(emd2.mean().item())
