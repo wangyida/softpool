@@ -150,12 +150,12 @@ class PointGenCon(nn.Module):
         self.bottleneck_size = bottleneck_size
         super(PointGenCon, self).__init__()
         self.conv1 = torch.nn.Conv1d(self.bottleneck_size,
-                                     self.bottleneck_size, 1)
+                                     self.bottleneck_size, kernel_size=5, padding=2, padding_mode='replicate')
         self.conv2 = torch.nn.Conv1d(self.bottleneck_size,
-                                     self.bottleneck_size // 2, 1)
+                                     self.bottleneck_size // 2, kernel_size=5, padding=2, padding_mode='replicate')
         self.conv3 = torch.nn.Conv1d(self.bottleneck_size // 2,
-                                     self.bottleneck_size // 4, 1)
-        self.conv4 = torch.nn.Conv1d(self.bottleneck_size // 4, 3, 1)
+                                     self.bottleneck_size // 4, kernel_size=5, padding=2, padding_mode='replicate')
+        self.conv4 = torch.nn.Conv1d(self.bottleneck_size // 4, 3, kernel_size=5, padding=2, padding_mode='replicate')
 
         self.th = nn.Tanh()
         self.bn1 = torch.nn.BatchNorm1d(self.bottleneck_size)
@@ -219,13 +219,13 @@ class PointGenCon2D(nn.Module):
 class PointNetRes(nn.Module):
     def __init__(self):
         super(PointNetRes, self).__init__()
-        self.conv1 = torch.nn.Conv1d(4, 64, 1)
-        self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
-        self.conv4 = torch.nn.Conv1d(1088, 512, 1)
-        self.conv5 = torch.nn.Conv1d(512, 256, 1)
-        self.conv6 = torch.nn.Conv1d(256, 128, 1)
-        self.conv7 = torch.nn.Conv1d(128, 3, 1)
+        self.conv1 = torch.nn.Conv1d(4, 64, kernel_size=5, padding=2, padding_mode='replicate')
+        self.conv2 = torch.nn.Conv1d(64, 128, kernel_size=5, padding=2, padding_mode='replicate')
+        self.conv3 = torch.nn.Conv1d(128, 1024, kernel_size=5, padding=2, padding_mode='replicate')
+        self.conv4 = torch.nn.Conv1d(1088, 512, kernel_size=5, padding=2, padding_mode='replicate')
+        self.conv5 = torch.nn.Conv1d(512, 256, kernel_size=5, padding=2, padding_mode='replicate')
+        self.conv6 = torch.nn.Conv1d(256, 128, kernel_size=5, padding=2, padding_mode='replicate')
+        self.conv7 = torch.nn.Conv1d(128, 3, kernel_size=5, padding=2, padding_mode='replicate')
 
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
