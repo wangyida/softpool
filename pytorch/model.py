@@ -179,27 +179,31 @@ class PointGenCon2D(nn.Module):
         self.conv1 = torch.nn.Conv2d(
             self.bottleneck_size,
             self.bottleneck_size,
-            kernel_size=(1, 3),
+            kernel_size=(8, 7),
             stride=(1, 1),
-            padding=(0, 1))
+            padding=(0, 3),
+            padding_mode='same')
         self.conv2 = torch.nn.Conv2d(
             self.bottleneck_size,
             self.bottleneck_size // 2,
             kernel_size=(1, 3),
             stride=(1, 1),
-            padding=(0, 1))
+            padding=(0, 1),
+            padding_mode='same')
         self.conv3 = torch.nn.Conv2d(
             self.bottleneck_size // 2,
             self.bottleneck_size // 4,
             kernel_size=(1, 3),
             stride=(1, 1),
-            padding=(0, 1))
+            padding=(0, 1),
+            padding_mode='same')
         self.conv4 = torch.nn.Conv2d(
             self.bottleneck_size // 4,
             3,
             kernel_size=(1, 3),
             stride=(1, 1),
-            padding=(0, 1))
+            padding=(0, 1),
+            padding_mode='same')
 
         self.th = nn.Tanh()
         self.bn1 = torch.nn.BatchNorm2d(self.bottleneck_size)
@@ -352,7 +356,7 @@ class MSN(nn.Module):
             PointGenCon(bottleneck_size=256)
             for i in range(0, self.n_primitives)
         ])
-        self.decoder2 = PointGenCon(bottleneck_size=3 + self.dim_pn)
+        self.decoder2 = PointGenCon2D(bottleneck_size=3 + self.dim_pn)
         self.decoder3 = PointGenCon(bottleneck_size=3 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
@@ -404,15 +408,14 @@ class MSN(nn.Module):
                     (mesh_grid, torch.zeros(
                         part.size(0), 1, mesh_grid.shape[2])),
                     dim=1)
-            y = sp_feat_conv[:, :, i, :]
-            y = SoftPool(-sp_feat_conv[:, :, i, :])[0][:,:,i,:]
+            y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
             # y = sp_feat_conv
             out_seg.append(y)
             # y = torch.cat((y, pn_feat), 1).contiguous()
             out_sp_local.append(self.decoder1[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-        y = torch.cat((self.decoder1[0](y), pn_feat), 1).contiguous()
-        out_sp_global = self.decoder2(y)
+        y = torch.cat((torch.stack(out_sp_local, dim=2), torch.cat(8*[pn_feat.unsqueeze(2)], 2)), 1).contiguous()
+        out_sp_global = torch.squeeze(self.decoder2(y), dim=2)
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
         y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
         out_pcn = self.decoder3(y)
