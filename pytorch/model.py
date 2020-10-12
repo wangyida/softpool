@@ -150,12 +150,12 @@ class PointGenCon(nn.Module):
         self.bottleneck_size = bottleneck_size
         super(PointGenCon, self).__init__()
         self.conv1 = torch.nn.Conv1d(self.bottleneck_size,
-                                     self.bottleneck_size, kernel_size=5, padding=2, padding_mode='replicate')
+                                     self.bottleneck_size, 1)
         self.conv2 = torch.nn.Conv1d(self.bottleneck_size,
-                                     self.bottleneck_size // 2, kernel_size=5, padding=2, padding_mode='replicate')
+                                     self.bottleneck_size // 2, 1)
         self.conv3 = torch.nn.Conv1d(self.bottleneck_size // 2,
-                                     self.bottleneck_size // 4, kernel_size=5, padding=2, padding_mode='replicate')
-        self.conv4 = torch.nn.Conv1d(self.bottleneck_size // 4, 3, kernel_size=5, padding=2, padding_mode='replicate')
+                                     self.bottleneck_size // 4, 1)
+        self.conv4 = torch.nn.Conv1d(self.bottleneck_size // 4, 3, 1)
 
         self.th = nn.Tanh()
         self.bn1 = torch.nn.BatchNorm1d(self.bottleneck_size)
@@ -179,30 +179,30 @@ class PointGenCon2D(nn.Module):
         self.conv1 = torch.nn.Conv2d(
             self.bottleneck_size,
             self.bottleneck_size,
-            kernel_size=(8, 7),
+            kernel_size=(1, 1),
             stride=(1, 1),
-            padding=(0, 3),
+            padding=(0, 0),
             padding_mode='same')
         self.conv2 = torch.nn.Conv2d(
             self.bottleneck_size,
             self.bottleneck_size // 2,
-            kernel_size=(1, 3),
+            kernel_size=(1, 1),
             stride=(1, 1),
-            padding=(0, 1),
+            padding=(0, 0),
             padding_mode='same')
         self.conv3 = torch.nn.Conv2d(
             self.bottleneck_size // 2,
             self.bottleneck_size // 4,
-            kernel_size=(1, 3),
+            kernel_size=(1, 1),
             stride=(1, 1),
-            padding=(0, 1),
+            padding=(0, 0),
             padding_mode='same')
         self.conv4 = torch.nn.Conv2d(
             self.bottleneck_size // 4,
             3,
-            kernel_size=(1, 3),
+            kernel_size=(8, 1),
             stride=(1, 1),
-            padding=(0, 1),
+            padding=(0, 0),
             padding_mode='same')
 
         self.th = nn.Tanh()
@@ -279,7 +279,6 @@ class MSN(nn.Module):
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
         self.ptmapper = nn.Sequential(
-            nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Conv2d(
                 dim_pn + 3,
                 dim_pn,
@@ -287,6 +286,7 @@ class MSN(nn.Module):
                 stride=(1, 1),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh(),
+            nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Conv2d(
                 dim_pn,
                 2 * dim_pn,
@@ -310,8 +310,14 @@ class MSN(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 4),
-                stride=(1, 4),
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                dim_pn,
+                dim_pn,
+                kernel_size=(1, 2),
+                stride=(1, 2),
                 padding=(0, 0)))
         """
             nn.Linear(self.sp_points, self.sp_points),
