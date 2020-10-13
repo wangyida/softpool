@@ -293,7 +293,7 @@ with torch.no_grad():
         for i in range(np.size(part_regions)):
             pts_coord.append(part_regions[i][0].data.cpu()[:, 0:3])
             maxi = labels_inputs_points.max()
-            pts_color = matplotlib.cm.plasma(
+            pts_color = matplotlib.cm.rainbow(
                 labels_inputs_points[0:part_regions[i].size(1)] / maxi)[:, 0:3]
             points_save(
                 points=pts_coord[i],
