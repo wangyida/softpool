@@ -17,16 +17,22 @@ def SoftPool(x, regions=8):
     bth_size = list(x.shape)[0]
     featdim = list(x.shape)[1]
     points = list(x.shape)[2]
+    cabins = 8
+    points_cabin = points//cabins
     sp_cube = torch.zeros(bth_size, featdim, regions, points).cuda()
+    sp_cabin = torch.zeros(bth_size, featdim, regions, cabins).cuda()
     sp_idx = torch.zeros(bth_size, 3, regions, points).cuda()
     for idx in range(regions):
         x_val, x_idx = torch.sort(x[:, idx, :], dim=1, descending=True)
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         x_order = torch.gather(x, dim=2, index=index)
-        # here is differential soft-pool feature
         sp_cube[:, :, idx, :] = x_order
         sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 3, 1)
-    return sp_cube, sp_idx
+    for idx in range(cabins):
+        sp_cabin[:,:,:,idx] = torch.max(sp_cube[:,:,:,idx*points_cabin:(idx+1)*points_cabin], dim=3, keepdim=False)[0]
+    # we need to use succession manner to repeat cabin to fit with cube    
+    sp_cabin = torch.repeat_interleave(sp_cabin, repeats=points_cabin, dim=3)
+    return sp_cube, sp_idx, sp_cabin
 
 
 class STN3d(nn.Module):
@@ -131,16 +137,16 @@ class SoftPoolFeat(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
-        x, sp_idx = SoftPool(x, self.regions)
+        sp_cube, sp_idx, sp_cabin = SoftPool(x, self.regions)
         # 2048 / 63 = 32
         idx_step = torch.floor(
-            torch.linspace(0, (x.shape[3] - 1), steps=self.sp_points))
-        x = x[:, :, :, :self.sp_points]
+            torch.linspace(0, (sp_cube.shape[3] - 1), steps=self.sp_points))
+        sp_cube = sp_cube[:, :, :, :self.sp_points]
         # sp_idx = sp_idx[:, :, :, :self.sp_points]
         # x = x[:, :, :, idx_step.long()]
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
-        out = torch.cat((x, part), 1).contiguous()
+        out = torch.cat((sp_cube, sp_cabin, part), 1).contiguous()
         # out = x
         return out, sp_idx, trans
 
@@ -270,7 +276,7 @@ class MSN(nn.Module):
         self.n_primitives = n_primitives
         self.sp_points = sp_points
         self.pncoder = nn.Sequential(
-            PointNetFeat(num_points, dim_pn=1024), 
+            PointNetFeat(num_points, 1024), 
             nn.Linear(1024, dim_pn),
             nn.BatchNorm1d(dim_pn), 
             nn.ReLU())
@@ -280,13 +286,12 @@ class MSN(nn.Module):
         # We merge regional informations in latent space
         self.ptmapper = nn.Sequential(
             nn.Conv2d(
-                dim_pn + 3,
+                dim_pn + dim_pn + 3,
                 dim_pn,
                 kernel_size=(1, 7),
-                stride=(1, 1),
+                stride=(1, 2),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh(),
-            nn.MaxPool2d(kernel_size=(1, 2), stride=(1, 2)),
             nn.Conv2d(
                 dim_pn,
                 2 * dim_pn,
@@ -359,7 +364,7 @@ class MSN(nn.Module):
         # nn.Flatten(start_dim=2, end_dim=3))
         self.decoder1 = nn.ModuleList([
             # PointGenCon(bottleneck_size=self.n_primitives + self.dim_pn)
-            PointGenCon(bottleneck_size=256)
+            PointGenCon(bottleneck_size=self.dim_pn)
             for i in range(0, self.n_primitives)
         ])
         self.decoder2 = PointGenCon2D(bottleneck_size=3 + self.dim_pn)
@@ -414,8 +419,8 @@ class MSN(nn.Module):
                     (mesh_grid, torch.zeros(
                         part.size(0), 1, mesh_grid.shape[2])),
                     dim=1)
-            y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
-            # y = sp_feat_conv
+            # y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
+            y = sp_feat_conv[:,:,i,:]
             out_seg.append(y)
             # y = torch.cat((y, pn_feat), 1).contiguous()
             out_sp_local.append(self.decoder1[i](y))

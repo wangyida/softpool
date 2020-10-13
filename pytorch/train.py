@@ -131,7 +131,7 @@ dataloader_test = torch.utils.data.DataLoader(
     num_workers=int(opt.workers))
 
 len_dataset = len(dataset)
-print("Train Set Size: ", len_dataset)
+print("Train set size: ", len_dataset)
 
 network = MSN(num_points=opt.num_points, n_primitives=opt.n_primitives)
 network = torch.nn.DataParallel(FullModel(network))
