@@ -17,10 +17,7 @@ def SoftPool(x, regions=8):
     bth_size = list(x.shape)[0]
     featdim = list(x.shape)[1]
     points = list(x.shape)[2]
-    cabins = 8
-    points_cabin = points//cabins
     sp_cube = torch.zeros(bth_size, featdim, regions, points).cuda()
-    sp_cabin = torch.zeros(bth_size, featdim, regions, cabins).cuda()
     sp_idx = torch.zeros(bth_size, 3, regions, points).cuda()
     for idx in range(regions):
         x_val, x_idx = torch.sort(x[:, idx, :], dim=1, descending=True)
@@ -28,11 +25,21 @@ def SoftPool(x, regions=8):
         x_order = torch.gather(x, dim=2, index=index)
         sp_cube[:, :, idx, :] = x_order
         sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 3, 1)
-    for idx in range(cabins):
-        sp_cabin[:,:,:,idx] = torch.max(sp_cube[:,:,:,idx*points_cabin:(idx+1)*points_cabin], dim=3, keepdim=False)[0]
+    sp_windows, sp_cabins = Cabins(sp_cube, 8)
+    return sp_cube, sp_idx, sp_windows, sp_cabins
+
+def Cabins(windows, num_cabin=8):
+    bth_size = list(windows.shape)[0]
+    featdim = list(windows.shape)[1]
+    regions = list(windows.shape)[2]
+    points = list(windows.shape)[3]
+    points_cabin = points // num_cabin
+    cabins = torch.zeros(bth_size, featdim, regions, num_cabin).cuda()
+    for idx in range(num_cabin):
+        cabins[:,:,:,idx] = torch.max(windows[:,:,:,idx*points_cabin:(idx+1)*points_cabin], dim=3, keepdim=False)[0]
     # we need to use succession manner to repeat cabin to fit with cube    
-    sp_cabin = torch.repeat_interleave(sp_cabin, repeats=points_cabin, dim=3)
-    return sp_cube, sp_idx, sp_cabin
+    windows_in_cabin = torch.repeat_interleave(cabins, repeats=points_cabin, dim=3)
+    return windows_in_cabin, cabins
 
 
 class STN3d(nn.Module):
@@ -137,7 +144,7 @@ class SoftPoolFeat(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
-        sp_cube, sp_idx, sp_cabin = SoftPool(x, self.regions)
+        sp_cube, sp_idx, sp_window, cabins = SoftPool(x, self.regions)
         # 2048 / 63 = 32
         idx_step = torch.floor(
             torch.linspace(0, (sp_cube.shape[3] - 1), steps=self.sp_points))
@@ -146,9 +153,8 @@ class SoftPoolFeat(nn.Module):
         # x = x[:, :, :, idx_step.long()]
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
-        out = torch.cat((sp_cube, sp_cabin, part), 1).contiguous()
-        # out = x
-        return out, sp_idx, trans
+        feature = torch.cat((sp_cube, sp_window, part), 1).contiguous()
+        return feature, cabins, sp_idx, trans
 
 
 class PointGenCon(nn.Module):
@@ -161,7 +167,8 @@ class PointGenCon(nn.Module):
                                      self.bottleneck_size // 2, 1)
         self.conv3 = torch.nn.Conv1d(self.bottleneck_size // 2,
                                      self.bottleneck_size // 4, 1)
-        self.conv4 = torch.nn.Conv1d(self.bottleneck_size // 4, 3, 1)
+        self.conv4 = torch.nn.Conv1d(self.bottleneck_size // 4, 
+                                     3, 1)
 
         self.th = nn.Tanh()
         self.bn1 = torch.nn.BatchNorm1d(self.bottleneck_size)
@@ -367,13 +374,17 @@ class MSN(nn.Module):
             PointGenCon(bottleneck_size=self.dim_pn)
             for i in range(0, self.n_primitives)
         ])
-        self.decoder2 = PointGenCon2D(bottleneck_size=3 + self.dim_pn)
+        self.decoder2 = nn.ModuleList([
+            # PointGenCon(bottleneck_size=self.n_primitives + self.dim_pn)
+            PointGenCon(bottleneck_size=2 + 2*self.dim_pn)
+            for i in range(0, self.n_primitives)
+        ])
         self.decoder3 = PointGenCon(bottleneck_size=3 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
 
     def forward(self, part):
-        sp_feat, sp_idx, trans = self.spcoder(part)
+        sp_feat, sp_cabins, sp_idx, trans = self.spcoder(part)
         loss_trans = feature_transform_regularizer(trans)
         pn_feat = self.pncoder(part)
         pn_feat = pn_feat.unsqueeze(2).expand(
@@ -392,55 +403,56 @@ class MSN(nn.Module):
             # stn3d
             part_regions.append(
                     sp_feat[:,-3:,i,:])
-            deform = 'patch_pcn'
-            if deform == 'patch_msn':
-                rand_grid = Variable(
-                    torch.cuda.FloatTensor(
-                        part.size(0), 2, self.num_points // self.n_primitives))
-                rand_grid.data.uniform_(0, 1)
-                # here self.num_points // self.n_primitives = 8*4
-            elif deform == 'patch_pcn':
-                mesh_grid = torch.meshgrid([
-                    torch.linspace(0.0, 1.0, 64),
-                    torch.linspace(0.0, 1.0, self.num_points // 64)
-                ])
-                mesh_grid = torch.cat(
-                    (torch.reshape(mesh_grid[0],
-                                   (self.num_points // self.n_primitives *
-                                    self.n_primitives, 1)),
-                     torch.reshape(mesh_grid[1],
-                                   (self.num_points // self.n_primitives *
-                                    self.n_primitives, 1))),
-                    dim=1)
-                mesh_grid = torch.transpose(mesh_grid, 0,
-                                            1).unsqueeze(0).repeat(
-                                                sp_feat_conv.shape[0], 1, 1)
-                mesh_grid = torch.cat(
-                    (mesh_grid, torch.zeros(
-                        part.size(0), 1, mesh_grid.shape[2])),
-                    dim=1)
+
+            rand_grid = Variable(
+                torch.cuda.FloatTensor(
+                    part.size(0), 2, self.num_points // 8))
+            rand_grid.data.uniform_(0, 1)
+            # here self.num_points // self.n_primitives = 8*4
+
+            mesh_grid = torch.meshgrid([
+                torch.linspace(0.0, 1.0, 64),
+                torch.linspace(0.0, 1.0, self.num_points // 64)
+            ])
+            mesh_grid = torch.cat(
+                (torch.reshape(mesh_grid[0],
+                               (self.num_points // self.n_primitives *
+                                self.n_primitives, 1)),
+                 torch.reshape(mesh_grid[1],
+                               (self.num_points // self.n_primitives *
+                                self.n_primitives, 1))),
+                dim=1)
+            mesh_grid = torch.transpose(mesh_grid, 0,
+                                        1).unsqueeze(0).repeat(
+                                            sp_feat_conv.shape[0], 1, 1)
+            mesh_grid = torch.cat(
+                (mesh_grid, torch.zeros(
+                    part.size(0), 1, mesh_grid.shape[2])),
+                dim=1)
             # y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
             y = sp_feat_conv[:,:,i,:]
             out_seg.append(y)
             # y = torch.cat((y, pn_feat), 1).contiguous()
             out_sp_local.append(self.decoder1[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
-        y = torch.cat((torch.stack(out_sp_local, dim=2), torch.cat(8*[pn_feat.unsqueeze(2)], 2)), 1).contiguous()
-        out_sp_global = torch.squeeze(self.decoder2(y), dim=2)
+
+            y = torch.cat((rand_grid.repeat(1, 1, 8), torch.repeat_interleave(sp_cabins[:,:,i,:], repeats=self.num_points // 8, dim=2), pn_feat), 1).contiguous()
+            out_sp_global.append(self.decoder2[i](y))
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
         y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
         out_pcn = self.decoder3(y)
 
         # part_regions = torch.cat(part_regions, 2).contiguous()
         out1 = []
+        out3 = []
         for i in range(np.size(part_regions)):
             part_regions[i] = part_regions[i].transpose(1, 2).contiguous()
             out1.append(out_sp_local[i].transpose(1, 2).contiguous())
             out_seg[i] = out_seg[i].transpose(1, 2).contiguous()
             sm = nn.Softmax(dim=2)
             out_seg[i] = sm(out_seg[i])
+            out3.append(out_sp_global[i].transpose(1, 2).contiguous())
 
-        out3 = out_sp_global.transpose(1, 2).contiguous()
         out4 = out_pcn.transpose(1, 2).contiguous()
         # out_sp_local = torch.cat(out_sp_local, 2).contiguous()
         # out_sp_global = torch.cat(out_sp_global, 2).contiguous()

@@ -66,12 +66,14 @@ class FullModel(nn.Module):
             dist, indexes = self.EMD(output1[i][:,:1024,:], gt_regions[i], eps, iters)
             emd1 += torch.sqrt(dist).mean(1)
             """
+            dist, _ = self.EMD(output3[i], gt, eps, iters)
+            emd3 += torch.sqrt(dist).mean(1)
+
         emd1 /= opt.n_primitives
         emd1 += 10 * loss_trans
 
 
-        dist, _ = self.EMD(output3, gt, eps, iters)
-        emd3 += torch.sqrt(dist).mean(1)
+        emd3 /= opt.n_primitives
         emd3 += 10 * loss_trans
 
         dist, _ = self.EMD(output4, gt, eps, iters)
