@@ -174,11 +174,9 @@ class SoftPoolFeat(nn.Module):
     def forward(self, x):
         batchsize = x.size()[0]
         trans = self.stn(x)
-        """
         x = x.transpose(2, 1)
         x = torch.bmm(x, trans)
         x = x.transpose(2, 1)
-        """
         part = x.unsqueeze(2).repeat(1, 1, self.regions, 1)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
@@ -429,9 +427,9 @@ class MSN(nn.Module):
         part_seg = part_seg[:,:,0]
         part_seg = torch.nn.functional.one_hot(part_seg.to(torch.int64), 12).transpose(1, 2)
 
-        sp_feat, sp_cabins, sp_idx, trans = self.spcoder(torch.cat((part.long(), part_seg), 1).float())
+        sp_feat, sp_cabins, sp_idx, trans = self.spcoder(torch.cat((part_seg.float(), part), 1))
         loss_trans = feature_transform_regularizer(trans)
-        pn_feat = self.pncoder(torch.cat((part.long(), part_seg), 1).float())
+        pn_feat = self.pncoder(torch.cat((part_seg.float(), part), 1).float())
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
         part_regions = []
@@ -447,7 +445,7 @@ class MSN(nn.Module):
             """
             # stn3d
             part_regions.append(
-                    sp_feat[:,-3-15:-15:,i,:])
+                    sp_feat[:,-3:,i,:])
 
             rand_grid = Variable(
                 torch.cuda.FloatTensor(

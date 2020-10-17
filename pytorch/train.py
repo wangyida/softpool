@@ -70,11 +70,11 @@ class FullModel(nn.Module):
             emd3 += torch.sqrt(dist).mean(1)
 
         emd1 /= opt.n_primitives
-        emd1 += 10 * loss_trans
+        emd1 += loss_trans
 
 
         emd3 /= opt.n_primitives
-        emd3 += 10 * loss_trans
+        emd3 += loss_trans
 
         dist, _ = self.EMD(output4, gt, eps, iters)
         emd4 += torch.sqrt(dist).mean(1)
@@ -95,7 +95,7 @@ class FullModel(nn.Module):
 
         dist, _ = self.EMD(output2, gt, eps, iters)
         emd2 = torch.sqrt(dist).mean(1)
-        emd2 += 10 * loss_trans
+        emd2 += loss_trans
 
         return output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty, loss_trans
 

@@ -24,12 +24,12 @@ class ShapeNet(data.Dataset):
         self.dataset = 'suncg'
         if train:
             if self.dataset == 'suncg':
-                self.list_path = './data/train_suncg_fur.list'
+                self.list_path = './data/train_suncg.list'
             elif self.dataset == 'shapenet':
                 self.list_path = './data/train_shapenet.list'
         else:
             if self.dataset == 'suncg':
-                self.list_path = './data/valid_suncg_fur.list'
+                self.list_path = './data/valid_suncg.list'
             elif self.dataset == 'shapenet':
                 self.list_path = './data/valid_shapenet.list'
         self.npoints = npoints
@@ -62,17 +62,17 @@ class ShapeNet(data.Dataset):
             if self.dataset == 'suncg':
                 part, part_color = read_pcd(
                     os.path.join(
-                        "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete_fur/",
+                        "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete/",
                         '%s.pcd' % model_id))
                 """
                 part, part_color = read_pcd(
                     os.path.join(
-                        "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial_fur/",
+                        "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial/",
                         '%s.pcd' % model_id))
                 """
                 comp, comp_color = read_pcd(
                     os.path.join(
-                        "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete_fur/",
+                        "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete/",
                         '%s.pcd' % model_id))
             elif self.dataset == 'shapenet':
                 part, part_color = read_pcd(
@@ -97,17 +97,17 @@ class ShapeNet(data.Dataset):
             if self.dataset == 'suncg':
                 part, part_color = read_pcd(
                     os.path.join(
-                        "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/",
+                        "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/",
                         '%s.pcd' % model_id))
                 """
                 part, part_color = read_pcd(
                     os.path.join(
-                        "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/",
+                        "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial/",
                         '%s.pcd' % model_id))
                 """
                 comp, comp_color = read_pcd(
                     os.path.join(
-                        "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/",
+                        "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/",
                         '%s.pcd' % model_id))
             elif self.dataset == 'shapenet':
                 part, part_color = read_pcd(
