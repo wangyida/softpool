@@ -175,7 +175,7 @@ class SoftPoolFeat(nn.Module):
         batchsize = x.size()[0]
         trans = self.stn(x)
         x = x.transpose(2, 1)
-        x = torch.bmm(x, trans)
+        # x = torch.bmm(x, trans)
         x = x.transpose(2, 1)
         part = x.unsqueeze(2).repeat(1, 1, self.regions, 1)
         x = F.relu(self.bn1(self.conv1(x)))
@@ -428,6 +428,7 @@ class MSN(nn.Module):
         part_seg = torch.nn.functional.one_hot(part_seg.to(torch.int64), 12).transpose(1, 2)
 
         sp_feat, sp_cabins, sp_idx, trans = self.spcoder(torch.cat((part.long(), part_seg), 1).float())
+        # import ipdb; ipdb.set_trace()
         loss_trans = feature_transform_regularizer(trans)
         pn_feat = self.pncoder(torch.cat((part.long(), part_seg), 1).float())
         pn_feat = pn_feat.unsqueeze(2).expand(
