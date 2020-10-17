@@ -14,16 +14,8 @@ import visdom
 sys.path.append("./emd/")
 import emd_module as emd
 from chamfer_pkg.dist_chamfer import chamferDist as cd
+from dataset import resample_pcd
 cd = cd()
-
-
-def resample_pcd(pcd, n):
-    """Drop or duplicate points so that pcd has exactly n points"""
-    idx = np.random.permutation(pcd.shape[0])
-    if idx.shape[0] < n:
-        idx = np.concatenate(
-            [idx, np.random.randint(pcd.shape[0], size=n - pcd.shape[0])])
-    return pcd[idx[:n]]
 
 
 def points_save(points, colors, root='pcds/regions', child='all', pfile=''):
@@ -74,7 +66,8 @@ network.eval()
 if opt.dataset == 'suncg':
     with open(os.path.join('./data/valid_suncg_fur.list')) as file:
         model_list = [line.strip().replace('/', '/') for line in file]
-    partial_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
+    # part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
+    part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
     gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
 elif opt.dataset == 'shapenet':
     hash_tab = {
@@ -173,13 +166,13 @@ elif opt.dataset == 'shapenet':
     if complete3d_benchmark == True:
         with open(os.path.join('./data/test_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
-        partial_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
+        part_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
         gt_dir = "/media/wangyida/HDD/database/shapenet/test/partial/"
     else:
         with open(os.path.join('./data/valid_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
-        partial_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
-        # partial_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
+        part_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
+        # part_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
         gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -203,34 +196,39 @@ with torch.no_grad():
         print(model)
         subfold = model[:model.rfind('/')]
         part = torch.zeros((1, 1024, 3), device='cuda')
+        part_seg = torch.zeros((1, 1024, 3), device='cuda')
         part_regions = torch.zeros((1, 1024, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         gt_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
             if opt.dataset == 'suncg':
                 pcd = o3d.read_point_cloud(
-                    os.path.join(partial_dir, model + '.pcd'))
-                part[j, :, :] = torch.from_numpy(
-                    resample_pcd(np.array(pcd.points), 2048))
+                    os.path.join(part_dir, model + '.pcd'))
+                part_sampled, idx_sampled = resample_pcd(np.array(pcd.points), opt.num_points // 2)
+                part_seg_sampled = np.round(np.array(pcd.colors)[idx_sampled] * 11)
+                part[j, :, :] = torch.from_numpy(part_sampled)
+                part_seg[j, :, :] = torch.from_numpy(part_seg_sampled)
+
                 pcd = o3d.read_point_cloud(
                     os.path.join(gt_dir, model + '.pcd'))
-                gt[j, :, :] = torch.from_numpy(
-                    resample_pcd(np.array(pcd.points), opt.num_points))
+                gt_sampled, idx_sampled = resample_pcd(np.array(pcd.points), opt.num_points)
+                gt_seg_sampled = np.round(np.array(pcd.colors)[idx_sampled] * 11)
+                gt[j, :, :] = torch.from_numpy(gt_sampled)
             elif opt.dataset == 'shapenet':
-                fh5 = h5py.File(os.path.join(partial_dir, model + '.h5'), 'r')
-                part[j, :, :] = torch.from_numpy(
+                fh5 = h5py.File(os.path.join(part_dir, model + '.h5'), 'r')
+                part[j, :, :], _ = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), 1024))
                 fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
-                gt[j, :, :] = torch.from_numpy(
+                gt[j, :, :], _ = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), opt.num_points))
 
         output1, output2, output3, output4, expansion_penalty, out_seg, part_regions, _ = network(
-            part.transpose(2, 1).contiguous())
+            part.transpose(2, 1).contiguous(), part_seg)
         """
         _, _, _, _, _, _, gt_regions, _ = network(
             gt.transpose(2, 1).contiguous())
         """
-        if complete3d_benchmark == False:
+        if opt.dataset == 'shapenet' and complete3d_benchmark == False:
             dist, _ = EMD(output1[0], gt, 0.002, 10000)
             emd1 = torch.sqrt(dist).mean()
             hash_tab[str(subfold)]['cnt'] += 1
@@ -344,7 +342,7 @@ with torch.no_grad():
             child=subfold,
             pfile=model)
         # Submission
-        if complete3d_benchmark == True:
+        if opt.dataset == 'shapenet' and complete3d_benchmark == True:
             os.makedirs('benchmark', exist_ok=True)
             os.makedirs('benchmark/' + subfold, exist_ok=True)
             with h5py.File('benchmark/' + model + '.h5', "w") as f:

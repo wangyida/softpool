@@ -18,13 +18,13 @@ def SoftPool(x, regions=8):
     featdim = list(x.shape)[1]
     points = list(x.shape)[2]
     sp_cube = torch.zeros(bth_size, featdim, regions, points).cuda()
-    sp_idx = torch.zeros(bth_size, 3, regions, points).cuda()
+    sp_idx = torch.zeros(bth_size, 3 + 12, regions, points).cuda()
     for idx in range(regions):
         x_val, x_idx = torch.sort(x[:, idx, :], dim=1, descending=True)
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         x_order = torch.gather(x, dim=2, index=index)
         sp_cube[:, :, idx, :] = x_order
-        sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 3, 1)
+        sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 3 + 12, 1)
     sp_windows, sp_cabins = Cabins(sp_cube, 8)
     return sp_cube, sp_idx, sp_windows, sp_cabins
 
@@ -43,9 +43,8 @@ def Cabins(windows, num_cabin=8):
 
 
 class STN3d(nn.Module):
-    def __init__(self, num_points=8192, dim_pn=1024):
+    def __init__(self, dim_pn=1024):
         super(STN3d, self).__init__()
-        self.num_points = num_points
         self.dim_pn = dim_pn
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
@@ -84,6 +83,44 @@ class STN3d(nn.Module):
         x = x.view(-1, 3, 3)
         return x
 
+class STNkd(nn.Module):
+    def __init__(self, k=3 + 12):
+        super(STNkd, self).__init__()
+        self.conv1 = torch.nn.Conv1d(k, 64, 1)
+        self.conv2 = torch.nn.Conv1d(64, 128, 1)
+        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, k*k)
+        self.relu = nn.ReLU()
+
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.bn3 = nn.BatchNorm1d(1024)
+        self.bn4 = nn.BatchNorm1d(512)
+        self.bn5 = nn.BatchNorm1d(256)
+
+        self.k = k
+
+    def forward(self, x):
+        batchsize = x.size()[0]
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = torch.max(x, 2, keepdim=True)[0]
+        x = x.view(-1, 1024)
+
+        x = F.relu(self.bn4(self.fc1(x)))
+        x = F.relu(self.bn5(self.fc2(x)))
+        x = self.fc3(x)
+
+        iden = Variable(torch.from_numpy(np.eye(self.k).flatten().astype(np.float32))).view(1,self.k*self.k).repeat(batchsize,1)
+        if x.is_cuda:
+            iden = iden.cuda()
+        x = x + iden
+        x = x.view(-1, self.k, self.k)
+        return x
+
 def feature_transform_regularizer(trans):
     d = trans.size()[1]
     batchsize = trans.size()[0]
@@ -96,9 +133,9 @@ def feature_transform_regularizer(trans):
 class PointNetFeat(nn.Module):
     def __init__(self, num_points=8192, dim_pn=1024):
         super(PointNetFeat, self).__init__()
-        self.stn = STN3d(num_points=num_points)
+        self.stn = STNkd(k=3+12)
         self.dim_pn = dim_pn
-        self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.conv1 = torch.nn.Conv1d(3 + 12, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, dim_pn, 1)
 
@@ -121,8 +158,8 @@ class PointNetFeat(nn.Module):
 class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=64, sp_points=256):
         super(SoftPoolFeat, self).__init__()
-        self.stn = STN3d(num_points=num_points)
-        self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.stn = STNkd(k=3+12)
+        self.conv1 = torch.nn.Conv1d(3 + 12, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
@@ -293,7 +330,7 @@ class MSN(nn.Module):
         # We merge regional informations in latent space
         self.ptmapper = nn.Sequential(
             nn.Conv2d(
-                dim_pn + dim_pn + 3,
+                dim_pn + dim_pn + 3 + 12,
                 dim_pn,
                 kernel_size=(1, 7),
                 stride=(1, 2),
@@ -383,10 +420,16 @@ class MSN(nn.Module):
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
 
-    def forward(self, part):
-        sp_feat, sp_cabins, sp_idx, trans = self.spcoder(part)
+    def forward(self, part, part_seg):
+
+
+        # part_seg -> one hot coding
+        part_seg = part_seg[:,:,0]
+        part_seg = torch.nn.functional.one_hot(part_seg.to(torch.int64), 12).transpose(1, 2)
+
+        sp_feat, sp_cabins, sp_idx, trans = self.spcoder(torch.cat((part.long(), part_seg), 1).float())
         loss_trans = feature_transform_regularizer(trans)
-        pn_feat = self.pncoder(part)
+        pn_feat = self.pncoder(torch.cat((part.long(), part_seg), 1).float())
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
         part_regions = []

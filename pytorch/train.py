@@ -42,18 +42,18 @@ class FullModel(nn.Module):
         self.model = model
         self.EMD = emd.emdModule()
 
-    def forward(self, inputs, gt, seg, eps, iters):
+    def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
         """
         _, _, _, _, _, _, gt_regions, _ = self.model(gt.transpose(2, 1))
         """
         output1, output2, output3, output4, expansion_penalty, out_seg, part_regions, loss_trans = self.model(
-            inputs)
+            parts, part_seg)
         """
         for i in range(16):
             out_seg[i] = out_seg[i].transpose(1, 2).contiguous()
-            gt_seg = gt[(torch.abs((i-seg[:, :, 0]*11))<0.1).nonzero()]
+            gt_seg = gt[(torch.abs((i-gt_seg[:, :, 0]*11))<0.1).nonzero()]
         """
-        gt = gt[:, :, :3]
+        # gt = gt[:, :, :3]
 
         emd1 = 0
         emd3 = 0
@@ -79,10 +79,10 @@ class FullModel(nn.Module):
         dist, _ = self.EMD(output4, gt, eps, iters)
         emd4 += torch.sqrt(dist).mean(1)
 
-        # dist, _ = self.EMD(gt_regions[0], inputs.transpose(2, 1), eps, iters)
+        # dist, _ = self.EMD(gt_regions[0], parts.transpose(2, 1), eps, iters)
         # emd4 = torch.sqrt(dist).mean(1)
         """
-        gt_seg = seg[:,:,0]
+        gt_seg = gt_seg[:,:,0]
         size = list(gt_seg.size())
         gt_seg = torch.gather(gt_seg, dim=1, index=indexes.long()).view(-1)
         ones = torch.sparse.torch.eye(16).cuda()
@@ -176,15 +176,16 @@ for epoch in range(opt.nepoch):
 
     for i, data in enumerate(dataloader, 0):
         optimizer.zero_grad()
-        id, input, gt, seg = data
-        input = input.float().cuda()
+        id, part, gt, part_seg, gt_seg = data
+        part = part.float().cuda()
+        part_seg = part_seg.float().cuda()
         gt = gt.float().cuda()
-        seg = seg.float().cuda()
+        gt_seg = gt_seg.float().cuda()
         output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty, l_trans = network(
-            input.transpose(2, 1), gt, seg, 0.005, 50)
+            part.transpose(2, 1), gt, part_seg, gt_seg, 0.005, 50)
         """
         output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
-            input, full_regions, seg.contiguous(), 0.005, 50)
+            part, full_regions, seg.contiguous(), 0.005, 50)
         """
         """
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
@@ -197,7 +198,7 @@ for epoch in range(opt.nepoch):
         optimizer.step()
 
         if i % 10 == 0:
-            idx = random.randint(0, input.size()[0] - 1)
+            idx = random.randint(0, part.size()[0] - 1)
         if i % 3000 == 0:
             print('saving net...')
             torch.save(network.module.model.state_dict(),
@@ -217,14 +218,15 @@ for epoch in range(opt.nepoch):
         network.module.model.eval()
         with torch.no_grad():
             for i, data in enumerate(dataloader_test, 0):
-                id, input, gt, seg = data
-                input = input.float().cuda()
+                id, part, gt, gt_seg = data
+                part = part.float().cuda()
+                part_seg = part_seg.float().cuda()
                 gt = gt.float().cuda()
-                seg = seg.float().cuda()
+                gt_seg = gt_seg.float().cuda()
                 output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty, l_trans = network(
-                    input.transpose(2, 1), gt, seg, 0.004, 3000)
+                    part.transpose(2, 1), gt, part_seg, gt_seg, 0.004, 3000)
                 val_loss.update(emd2.mean().item())
-                idx = random.randint(0, input.size()[0] - 1)
+                idx = random.randint(0, part.size()[0] - 1)
                 print(
                     opt.env +
                     ' val [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f expansion_penalty: %f'

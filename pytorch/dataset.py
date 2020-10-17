@@ -21,7 +21,7 @@ def resample_pcd(pcd, n):
 
 class ShapeNet(data.Dataset):
     def __init__(self, train=True, npoints=8192):
-        self.dataset = 'shapenet'
+        self.dataset = 'suncg'
         if train:
             if self.dataset == 'suncg':
                 self.list_path = './data/train_suncg_fur.list'
@@ -60,68 +60,81 @@ class ShapeNet(data.Dataset):
 
         if self.train:
             if self.dataset == 'suncg':
-                partial, _ = read_pcd(
+                part, part_color = read_pcd(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete_fur/",
+                        '%s.pcd' % model_id))
+                """
+                part, part_color = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial_fur/",
                         '%s.pcd' % model_id))
-                complete, colors = read_pcd(
+                """
+                comp, comp_color = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete_fur/",
                         '%s.pcd' % model_id))
             elif self.dataset == 'shapenet':
-                partial, _ = read_pcd(
+                part, part_color = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/train/partial/",
                         '%s.h5' % model_id))
-                complete, colors = read_pcd(
+                comp, comp_color = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/train/gt/",
                         '%s.h5' % model_id))
                 """
-                partial, _ = read_pcd(
+                part, _ = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
-                complete, colors = read_pcd(
+                comp, comp_color = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
                 """
         else:
             if self.dataset == 'suncg':
-                partial, _ = read_pcd(
+                part, part_color = read_pcd(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/",
+                        '%s.pcd' % model_id))
+                """
+                part, part_color = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/",
                         '%s.pcd' % model_id))
-                complete, colors = read_pcd(
+                """
+                comp, comp_color = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/",
                         '%s.pcd' % model_id))
             elif self.dataset == 'shapenet':
-                partial, _ = read_pcd(
+                part, part_color = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/partial/",
                         '%s.h5' % model_id))
                 """
-                partial, _ = read_pcd(
+                part, _ = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
                 """
-                complete, colors = read_pcd(
+                comp, comp_color = read_pcd(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
-        partial_sampled, _ = resample_pcd(partial, self.npoints // 2)
-        complete_sampled, idx_sampled = resample_pcd(complete, self.npoints)
-        labels_sampled = np.round(colors[idx_sampled] * 11)
+        part_sampled, idx_sampled = resample_pcd(part, self.npoints // 2)
+        part_seg = np.round(part_color[idx_sampled] * 11)
+        comp_sampled, idx_sampled = resample_pcd(comp, self.npoints)
+        comp_seg = np.round(comp_color[idx_sampled] * 11)
         """
-        complete_seg = []
+        comp_seg = []
         for i in range (1, 12):
             import ipdb; ipdb.set_trace()
-            complete_seg.append(resample_pcd(complete_sampled[labels_sampled == i], 512))
+            comp_seg.append(resample_pcd(comp_sampled[comp_color == i], 512))
         """
-        return model_id, partial_sampled, complete_sampled, labels_sampled
+        return model_id, part_sampled, comp_sampled, part_seg, comp_seg
 
     def __len__(self):
         return self.len
