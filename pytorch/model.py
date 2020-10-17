@@ -445,7 +445,7 @@ class MSN(nn.Module):
             """
             # stn3d
             part_regions.append(
-                    sp_feat[:,-3:,i,:])
+                    sp_feat[:,-3-13:-13:,i,:])
 
             rand_grid = Variable(
                 torch.cuda.FloatTensor(
