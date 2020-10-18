@@ -13,23 +13,24 @@ sys.path.append("./MDS/")
 import MDS_module
 
 
-def SoftPool(x, regions=8):
+def SoftPool(x, regions=16):
     bth_size = list(x.shape)[0]
     featdim = list(x.shape)[1]
     points = list(x.shape)[2]
     sp_cube = torch.zeros(bth_size, featdim, regions, points).cuda()
+    conv1d = torch.nn.Conv1d(featdim, regions, 1).cuda()
     sp_idx = torch.zeros(bth_size, 12 + 3, regions, points).cuda()
     for idx in range(regions):
-        x_val, x_idx = torch.sort(x[:, idx, :], dim=1, descending=True)
+        x_val, x_idx = torch.sort(conv1d(x)[:, idx, :], dim=1, descending=True)
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         x_order = torch.gather(x, dim=2, index=index)
         sp_cube[:, :, idx, :] = x_order
         sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 12 + 3, 1)
-    sp_windows, sp_cabins = Cabins(sp_cube, 8)
+    sp_windows, sp_cabins = Cabins(sp_cube, 16)
     return sp_cube, sp_idx, sp_windows, sp_cabins
 
 
-def Cabins(windows, num_cabin=8):
+def Cabins(windows, num_cabin=16):
     bth_size = list(windows.shape)[0]
     featdim = list(windows.shape)[1]
     regions = list(windows.shape)[2]
@@ -328,7 +329,7 @@ class PointNetRes(nn.Module):
 class MSN(nn.Module):
     def __init__(self,
                  num_points=8192,
-                 n_primitives=8,
+                 n_primitives=16,
                  dim_pn=256,
                  sp_points=1024):
         super(MSN, self).__init__()
@@ -368,12 +369,6 @@ class MSN(nn.Module):
                 padding_mode='same'), nn.Tanh(),
             nn.ConvTranspose2d(
                 2 * dim_pn,
-                dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)),
-            nn.ConvTranspose2d(
-                dim_pn,
                 dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
@@ -464,7 +459,7 @@ class MSN(nn.Module):
             part_regions.append(sp_feat[:, -3:, i, :])
 
             rand_grid = Variable(
-                torch.cuda.FloatTensor(part.size(0), 2, self.num_points // 8))
+                torch.cuda.FloatTensor(part.size(0), 2, self.num_points // 16))
             rand_grid.data.uniform_(0, 1)
             # here self.num_points // self.n_primitives = 8*4
 
@@ -494,10 +489,10 @@ class MSN(nn.Module):
             out_sp_local.append(self.decoder1[i](y))
             # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
 
-            y = torch.cat((rand_grid.repeat(1, 1, 8),
+            y = torch.cat((rand_grid.repeat(1, 1, 16),
                            torch.repeat_interleave(
                                sp_cabins[:, :, i, :],
-                               repeats=self.num_points // 8,
+                               repeats=self.num_points // 16,
                                dim=2), pn_feat), 1).contiguous()
             out_sp_global.append(self.decoder2[i](y))
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()

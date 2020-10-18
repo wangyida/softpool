@@ -124,7 +124,7 @@ class ShapeNet(data.Dataset):
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
-        part_sampled, idx_sampled = resample_pcd(part, self.npoints // 2)
+        part_sampled, idx_sampled = resample_pcd(part, self.npoints)
         part_seg = np.round(part_color[idx_sampled] * 11)
         comp_sampled, idx_sampled = resample_pcd(comp, self.npoints)
         comp_seg = np.round(comp_color[idx_sampled] * 11)

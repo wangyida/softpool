@@ -186,18 +186,18 @@ labels_generated_points = torch.Tensor(
 labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
-labels_inputs_points = torch.Tensor(range(0, 1024)).view(1, 1024).transpose(
+labels_inputs_points = torch.Tensor(range(0, opt.num_points)).view(1, opt.num_points).transpose(
     0, 1)
-labels_inputs_points = (labels_inputs_points) % (1024 + 1)
+labels_inputs_points = (labels_inputs_points) % (opt.num_points + 1)
 labels_inputs_points = labels_inputs_points.contiguous().view(-1)
 
 with torch.no_grad():
     for i, model in enumerate(model_list):
         print(model)
         subfold = model[:model.rfind('/')]
-        part = torch.zeros((1, 1024, 3), device='cuda')
-        part_seg = torch.zeros((1, 1024, 3), device='cuda')
-        part_regions = torch.zeros((1, 1024, 3), device='cuda')
+        part = torch.zeros((1, opt.num_points, 3), device='cuda')
+        part_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
+        part_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         gt_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
         for j in range(1):
@@ -205,7 +205,7 @@ with torch.no_grad():
                 pcd = o3d.read_point_cloud(
                     os.path.join(part_dir, model + '.pcd'))
                 part_sampled, idx_sampled = resample_pcd(
-                    np.array(pcd.points), opt.num_points // 2)
+                    np.array(pcd.points), opt.num_points)
                 part_seg_sampled = np.round(
                     np.array(pcd.colors)[idx_sampled] * 11)
                 part[j, :, :] = torch.from_numpy(part_sampled)
@@ -221,7 +221,7 @@ with torch.no_grad():
             elif opt.dataset == 'shapenet':
                 fh5 = h5py.File(os.path.join(part_dir, model + '.h5'), 'r')
                 part[j, :, :], _ = torch.from_numpy(
-                    resample_pcd(np.array(fh5['data']), 1024))
+                    resample_pcd(np.array(fh5['data']), opt.num_points))
                 fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
                 gt[j, :, :], _ = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), opt.num_points))
