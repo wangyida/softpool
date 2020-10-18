@@ -59,7 +59,7 @@ class FullModel(nn.Module):
         emd3 = 0
         emd4 = 0
         for i in range(opt.n_primitives):
-            dist, indexes = self.EMD(output1[i], gt, eps, iters) 
+            dist, indexes = self.EMD(output1[i], gt, eps, iters)
             emd1 += torch.sqrt(dist).mean(1)
             # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
             """
@@ -71,7 +71,6 @@ class FullModel(nn.Module):
 
         emd1 /= opt.n_primitives
         emd1 += loss_trans
-
 
         emd3 /= opt.n_primitives
         emd3 += loss_trans

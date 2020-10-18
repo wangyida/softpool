@@ -64,11 +64,11 @@ if opt.model != '':
 
 network.eval()
 if opt.dataset == 'suncg':
-    with open(os.path.join('./data/valid_suncg_fur.list')) as file:
+    with open(os.path.join('./data/valid_suncg.list')) as file:
         model_list = [line.strip().replace('/', '/') for line in file]
     # part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
-    part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
-    gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete_fur/"
+    part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/"
+    gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/"
 elif opt.dataset == 'shapenet':
     hash_tab = {
         'all': {
@@ -204,15 +204,19 @@ with torch.no_grad():
             if opt.dataset == 'suncg':
                 pcd = o3d.read_point_cloud(
                     os.path.join(part_dir, model + '.pcd'))
-                part_sampled, idx_sampled = resample_pcd(np.array(pcd.points), opt.num_points // 2)
-                part_seg_sampled = np.round(np.array(pcd.colors)[idx_sampled] * 11)
+                part_sampled, idx_sampled = resample_pcd(
+                    np.array(pcd.points), opt.num_points // 2)
+                part_seg_sampled = np.round(
+                    np.array(pcd.colors)[idx_sampled] * 11)
                 part[j, :, :] = torch.from_numpy(part_sampled)
                 part_seg[j, :, :] = torch.from_numpy(part_seg_sampled)
 
                 pcd = o3d.read_point_cloud(
                     os.path.join(gt_dir, model + '.pcd'))
-                gt_sampled, idx_sampled = resample_pcd(np.array(pcd.points), opt.num_points)
-                gt_seg_sampled = np.round(np.array(pcd.colors)[idx_sampled] * 11)
+                gt_sampled, idx_sampled = resample_pcd(
+                    np.array(pcd.points), opt.num_points)
+                gt_seg_sampled = np.round(
+                    np.array(pcd.colors)[idx_sampled] * 11)
                 gt[j, :, :] = torch.from_numpy(gt_sampled)
             elif opt.dataset == 'shapenet':
                 fh5 = h5py.File(os.path.join(part_dir, model + '.h5'), 'r')
