@@ -8,107 +8,7 @@ import os
 import random
 
 #from utils import *
-hash_tab = {
-    'all': {
-        'name': 'Test',
-        'label': 100,
-        'emd1': 0.0,
-        'emd2': 0.0,
-        'emd3': 0.0,
-        'cd1': 0.0,
-        'cd2': 0.0,
-        'cd3': 0.0,
-        'cnt': 0
-    },
-    '04530566': {
-        'name': 'Watercraft',
-        'label': 1,
-        'emd1': 0.0,
-        'emd2': 0.0,
-        'emd3': 0.0,
-        'cd1': 0.0,
-        'cd2': 0.0,
-        'cd3': 0.0,
-        'cnt': 0
-    },
-    '02933112': {
-        'name': 'Cabinet',
-        'label': 2,
-        'emd1': 0.0,
-        'emd2': 0.0,
-        'emd3': 0.0,
-        'cd1': 0.0,
-        'cd2': 0.0,
-        'cd3': 0.0,
-        'cnt': 0
-    },
-    '04379243': {
-        'name': 'Table',
-        'label': 3,
-        'emd1': 0.0,
-        'emd2': 0.0,
-        'emd3': 0.0,
-        'cd1': 0.0,
-        'cd2': 0.0,
-        'cd3': 0.0,
-        'cnt': 0
-    },
-    '02691156': {
-        'name': 'Airplane',
-        'label': 4,
-        'emd1': 0.0,
-        'emd2': 0.0,
-        'emd3': 0.0,
-        'cd1': 0.0,
-        'cd2': 0.0,
-        'cd3': 0.0,
-        'cnt': 0
-    },
-    '02958343': {
-        'name': 'Car',
-        'label': 5,
-        'emd1': 0.0,
-        'emd2': 0.0,
-        'emd3': 0.0,
-        'cd1': 0.0,
-        'cd2': 0.0,
-        'cd3': 0.0,
-        'cnt': 0
-    },
-    '03001627': {
-        'name': 'Chair',
-        'label': 6,
-        'emd1': 0.0,
-        'emd2': 0.0,
-        'emd3': 0.0,
-        'cd1': 0.0,
-        'cd2': 0.0,
-        'cd3': 0.0,
-        'cnt': 0
-    },
-    '04256520': {
-        'name': 'Couch',
-        'label': 7,
-        'emd1': 0.0,
-        'emd2': 0.0,
-        'emd3': 0.0,
-        'cd1': 0.0,
-        'cd2': 0.0,
-        'cd3': 0.0,
-        'cnt': 0
-    },
-    '03636649': {
-        'name': 'Lamp',
-        'label': 8,
-        'emd1': 0.0,
-        'emd2': 0.0,
-        'emd3': 0.0,
-        'cd1': 0.0,
-        'cd2': 0.0,
-        'cd3': 0.0,
-        'cnt': 0
-    }
-}
+
 def read_points(filename, dataset):
     if dataset == 'suncg':
         pcd = o3d.read_point_cloud(filename)
@@ -116,6 +16,107 @@ def read_points(filename, dataset):
         color = torch.from_numpy(np.array(pcd.colors)).float()
         return coord, color
     elif dataset == 'shapenet':
+        hash_tab = {
+            'all': {
+                'name': 'Test',
+                'label': 100,
+                'emd1': 0.0,
+                'emd2': 0.0,
+                'emd3': 0.0,
+                'cd1': 0.0,
+                'cd2': 0.0,
+                'cd3': 0.0,
+                'cnt': 0
+            },
+            '04530566': {
+                'name': 'Watercraft',
+                'label': 1,
+                'emd1': 0.0,
+                'emd2': 0.0,
+                'emd3': 0.0,
+                'cd1': 0.0,
+                'cd2': 0.0,
+                'cd3': 0.0,
+                'cnt': 0
+            },
+            '02933112': {
+                'name': 'Cabinet',
+                'label': 2,
+                'emd1': 0.0,
+                'emd2': 0.0,
+                'emd3': 0.0,
+                'cd1': 0.0,
+                'cd2': 0.0,
+                'cd3': 0.0,
+                'cnt': 0
+            },
+            '04379243': {
+                'name': 'Table',
+                'label': 3,
+                'emd1': 0.0,
+                'emd2': 0.0,
+                'emd3': 0.0,
+                'cd1': 0.0,
+                'cd2': 0.0,
+                'cd3': 0.0,
+                'cnt': 0
+            },
+            '02691156': {
+                'name': 'Airplane',
+                'label': 4,
+                'emd1': 0.0,
+                'emd2': 0.0,
+                'emd3': 0.0,
+                'cd1': 0.0,
+                'cd2': 0.0,
+                'cd3': 0.0,
+                'cnt': 0
+            },
+            '02958343': {
+                'name': 'Car',
+                'label': 5,
+                'emd1': 0.0,
+                'emd2': 0.0,
+                'emd3': 0.0,
+                'cd1': 0.0,
+                'cd2': 0.0,
+                'cd3': 0.0,
+                'cnt': 0
+            },
+            '03001627': {
+                'name': 'Chair',
+                'label': 6,
+                'emd1': 0.0,
+                'emd2': 0.0,
+                'emd3': 0.0,
+                'cd1': 0.0,
+                'cd2': 0.0,
+                'cd3': 0.0,
+                'cnt': 0
+            },
+            '04256520': {
+                'name': 'Couch',
+                'label': 7,
+                'emd1': 0.0,
+                'emd2': 0.0,
+                'emd3': 0.0,
+                'cd1': 0.0,
+                'cd2': 0.0,
+                'cd3': 0.0,
+                'cnt': 0
+            },
+            '03636649': {
+                'name': 'Lamp',
+                'label': 8,
+                'emd1': 0.0,
+                'emd2': 0.0,
+                'emd3': 0.0,
+                'cd1': 0.0,
+                'cd2': 0.0,
+                'cd3': 0.0,
+                'cnt': 0
+            }
+        }
         fh5 = h5py.File(filename, 'r')
         label = float(hash_tab[filename.split("/")[-2]]['label'])
         coord = torch.from_numpy(np.array(fh5['data'])).float()
