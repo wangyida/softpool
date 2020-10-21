@@ -14,7 +14,7 @@ import visdom
 sys.path.append("./emd/")
 import emd_module as emd
 from chamfer_pkg.dist_chamfer import chamferDist as cd
-from dataset import resample_pcd
+from dataset import resample_pcd, read_points
 cd = cd()
 
 
@@ -73,6 +73,7 @@ elif opt.dataset == 'shapenet':
     hash_tab = {
         'all': {
             'name': 'Test',
+            'label': 100,
             'emd1': 0.0,
             'emd2': 0.0,
             'emd3': 0.0,
@@ -83,6 +84,7 @@ elif opt.dataset == 'shapenet':
         },
         '04530566': {
             'name': 'Watercraft',
+            'label': 1,
             'emd1': 0.0,
             'emd2': 0.0,
             'emd3': 0.0,
@@ -93,6 +95,7 @@ elif opt.dataset == 'shapenet':
         },
         '02933112': {
             'name': 'Cabinet',
+            'label': 2,
             'emd1': 0.0,
             'emd2': 0.0,
             'emd3': 0.0,
@@ -103,6 +106,7 @@ elif opt.dataset == 'shapenet':
         },
         '04379243': {
             'name': 'Table',
+            'label': 3,
             'emd1': 0.0,
             'emd2': 0.0,
             'emd3': 0.0,
@@ -113,6 +117,7 @@ elif opt.dataset == 'shapenet':
         },
         '02691156': {
             'name': 'Airplane',
+            'label': 4,
             'emd1': 0.0,
             'emd2': 0.0,
             'emd3': 0.0,
@@ -123,6 +128,7 @@ elif opt.dataset == 'shapenet':
         },
         '02958343': {
             'name': 'Car',
+            'label': 5,
             'emd1': 0.0,
             'emd2': 0.0,
             'emd3': 0.0,
@@ -133,6 +139,7 @@ elif opt.dataset == 'shapenet':
         },
         '03001627': {
             'name': 'Chair',
+            'label': 6,
             'emd1': 0.0,
             'emd2': 0.0,
             'emd3': 0.0,
@@ -143,6 +150,7 @@ elif opt.dataset == 'shapenet':
         },
         '04256520': {
             'name': 'Couch',
+            'label': 7,
             'emd1': 0.0,
             'emd2': 0.0,
             'emd3': 0.0,
@@ -153,6 +161,7 @@ elif opt.dataset == 'shapenet':
         },
         '03636649': {
             'name': 'Lamp',
+            'label': 8,
             'emd1': 0.0,
             'emd2': 0.0,
             'emd3': 0.0,
@@ -199,9 +208,35 @@ with torch.no_grad():
         part_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
         part_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
+        gt_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
         gt_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
+
+        """
+        def read_points(filename, dataset=self.dataset):
+            if self.dataset == 'suncg':
+                pcd = o3d.read_point_cloud(filename)
+                coord = torch.from_numpy(np.array(pcd.points)).float()
+                color = torch.from_numpy(np.array(pcd.colors)).float()
+                return coord, color
+            elif self.dataset == 'shapenet':
+                fh5 = h5py.File(filename, 'r')
+                label = float(self.hash_tab[filename.split("/")[-2]]['label'])
+                coord = torch.from_numpy(np.array(fh5['data'])).float()
+                color = torch.from_numpy(np.ones_like(np.array(fh5['data'])) / 11 * label).float()
+                return coord, color
+        """
+
         for j in range(1):
             if opt.dataset == 'suncg':
+                part1, part_color = read_points(os.path.join(part_dir, model + '.pcd'), opt.dataset)
+                gt1, gt_color = read_points(os.path.join(gt_dir, model + '.pcd'), opt.dataset)
+                part[j, :, :], idx_sampled = resample_pcd(part1, opt.num_points)
+                part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
+                gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points)
+                gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
+                # Yida!!!
+
+                """
                 pcd = o3d.read_point_cloud(
                     os.path.join(part_dir, model + '.pcd'))
                 part_sampled, idx_sampled = resample_pcd(
@@ -218,13 +253,22 @@ with torch.no_grad():
                 gt_seg_sampled = np.round(
                     np.array(pcd.colors)[idx_sampled] * 11)
                 gt[j, :, :] = torch.from_numpy(gt_sampled)
+                """
             elif opt.dataset == 'shapenet':
+                part1, part_color = read_points(os.path.join(part_dir, model + '.h5'), opt.dataset)
+                gt1, gt_color = read_points(os.path.join(gt_dir, model + '.h5'), opt.dataset)
+                part[j, :, :], idx_sampled = resample_pcd(part1, opt.num_points)
+                part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
+                gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points)
+                gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
+                """
                 fh5 = h5py.File(os.path.join(part_dir, model + '.h5'), 'r')
                 part[j, :, :], _ = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), opt.num_points))
                 fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
                 gt[j, :, :], _ = torch.from_numpy(
                     resample_pcd(np.array(fh5['data']), opt.num_points))
+                """
 
         output1, output2, output3, output4, expansion_penalty, out_seg, part_regions, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)

@@ -8,6 +8,119 @@ import os
 import random
 
 #from utils import *
+hash_tab = {
+    'all': {
+        'name': 'Test',
+        'label': 100,
+        'emd1': 0.0,
+        'emd2': 0.0,
+        'emd3': 0.0,
+        'cd1': 0.0,
+        'cd2': 0.0,
+        'cd3': 0.0,
+        'cnt': 0
+    },
+    '04530566': {
+        'name': 'Watercraft',
+        'label': 1,
+        'emd1': 0.0,
+        'emd2': 0.0,
+        'emd3': 0.0,
+        'cd1': 0.0,
+        'cd2': 0.0,
+        'cd3': 0.0,
+        'cnt': 0
+    },
+    '02933112': {
+        'name': 'Cabinet',
+        'label': 2,
+        'emd1': 0.0,
+        'emd2': 0.0,
+        'emd3': 0.0,
+        'cd1': 0.0,
+        'cd2': 0.0,
+        'cd3': 0.0,
+        'cnt': 0
+    },
+    '04379243': {
+        'name': 'Table',
+        'label': 3,
+        'emd1': 0.0,
+        'emd2': 0.0,
+        'emd3': 0.0,
+        'cd1': 0.0,
+        'cd2': 0.0,
+        'cd3': 0.0,
+        'cnt': 0
+    },
+    '02691156': {
+        'name': 'Airplane',
+        'label': 4,
+        'emd1': 0.0,
+        'emd2': 0.0,
+        'emd3': 0.0,
+        'cd1': 0.0,
+        'cd2': 0.0,
+        'cd3': 0.0,
+        'cnt': 0
+    },
+    '02958343': {
+        'name': 'Car',
+        'label': 5,
+        'emd1': 0.0,
+        'emd2': 0.0,
+        'emd3': 0.0,
+        'cd1': 0.0,
+        'cd2': 0.0,
+        'cd3': 0.0,
+        'cnt': 0
+    },
+    '03001627': {
+        'name': 'Chair',
+        'label': 6,
+        'emd1': 0.0,
+        'emd2': 0.0,
+        'emd3': 0.0,
+        'cd1': 0.0,
+        'cd2': 0.0,
+        'cd3': 0.0,
+        'cnt': 0
+    },
+    '04256520': {
+        'name': 'Couch',
+        'label': 7,
+        'emd1': 0.0,
+        'emd2': 0.0,
+        'emd3': 0.0,
+        'cd1': 0.0,
+        'cd2': 0.0,
+        'cd3': 0.0,
+        'cnt': 0
+    },
+    '03636649': {
+        'name': 'Lamp',
+        'label': 8,
+        'emd1': 0.0,
+        'emd2': 0.0,
+        'emd3': 0.0,
+        'cd1': 0.0,
+        'cd2': 0.0,
+        'cd3': 0.0,
+        'cnt': 0
+    }
+}
+def read_points(filename, dataset):
+    if dataset == 'suncg':
+        pcd = o3d.read_point_cloud(filename)
+        coord = torch.from_numpy(np.array(pcd.points)).float()
+        color = torch.from_numpy(np.array(pcd.colors)).float()
+        return coord, color
+    elif dataset == 'shapenet':
+        fh5 = h5py.File(filename, 'r')
+        label = float(hash_tab[filename.split("/")[-2]]['label'])
+        coord = torch.from_numpy(np.array(fh5['data'])).float()
+        color = torch.from_numpy(np.ones_like(np.array(fh5['data'])) / 11 * label).float()
+        return coord, color
 
 
 def resample_pcd(pcd, n):
@@ -21,7 +134,7 @@ def resample_pcd(pcd, n):
 
 class ShapeNet(data.Dataset):
     def __init__(self, train=True, npoints=8192):
-        self.dataset = 'suncg'
+        self.dataset = 'shapenet'
         if train:
             if self.dataset == 'suncg':
                 self.list_path = './data/train_suncg.list'
@@ -40,90 +153,78 @@ class ShapeNet(data.Dataset):
         random.shuffle(self.model_list)
         self.len = len(self.model_list)
 
+
+
     def __getitem__(self, index):
         model_id = self.model_list[index]
         scan_id = index
 
-        def read_pcd(filename, d_format='pcd'):
-            # if d_format == 'pcd':
-            if self.dataset == 'suncg':
-                pcd = o3d.read_point_cloud(filename)
-                coord = torch.from_numpy(np.array(pcd.points)).float()
-                color = torch.from_numpy(np.array(pcd.colors)).float()
-                return coord, color
-            # elif d_format == 'h5':
-            elif self.dataset == 'shapenet':
-                fh5 = h5py.File(filename, 'r')
-                coord = torch.from_numpy(np.array(fh5['data'])).float()
-                color = torch.from_numpy(np.array(fh5['data'])).float()
-                return coord, color
-
         if self.train:
             if self.dataset == 'suncg':
-                part, part_color = read_pcd(
+                part, part_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete/",
-                        '%s.pcd' % model_id))
+                        '%s.pcd' % model_id), self.dataset)
                 """
-                part, part_color = read_pcd(
+                part, part_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial/",
                         '%s.pcd' % model_id))
                 """
-                comp, comp_color = read_pcd(
+                comp, comp_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete/",
-                        '%s.pcd' % model_id))
+                        '%s.pcd' % model_id), self.dataset)
             elif self.dataset == 'shapenet':
-                part, part_color = read_pcd(
+                part, part_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/train/partial/",
-                        '%s.h5' % model_id))
-                comp, comp_color = read_pcd(
+                        '%s.h5' % model_id), self.dataset)
+                comp, comp_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/train/gt/",
-                        '%s.h5' % model_id))
+                        '%s.h5' % model_id), self.dataset)
                 """
-                part, _ = read_pcd(
+                part, _ = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
-                comp, comp_color = read_pcd(
+                comp, comp_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
                 """
         else:
             if self.dataset == 'suncg':
-                part, part_color = read_pcd(
+                part, part_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/",
-                        '%s.pcd' % model_id))
+                        '%s.pcd' % model_id), self.dataset)
                 """
-                part, part_color = read_pcd(
+                part, part_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial/",
                         '%s.pcd' % model_id))
                 """
-                comp, comp_color = read_pcd(
+                comp, comp_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/",
-                        '%s.pcd' % model_id))
+                        '%s.pcd' % model_id), self.dataset)
             elif self.dataset == 'shapenet':
-                part, part_color = read_pcd(
+                part, part_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/partial/",
-                        '%s.h5' % model_id))
+                        '%s.h5' % model_id), self.dataset)
                 """
-                part, _ = read_pcd(
+                part, _ = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/gt/",
                         '%s.h5' % model_id))
                 """
-                comp, comp_color = read_pcd(
+                comp, comp_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/val/gt/",
-                        '%s.h5' % model_id))
+                        '%s.h5' % model_id), self.dataset)
         part_sampled, idx_sampled = resample_pcd(part, self.npoints)
         part_seg = np.round(part_color[idx_sampled] * 11)
         comp_sampled, idx_sampled = resample_pcd(comp, self.npoints)

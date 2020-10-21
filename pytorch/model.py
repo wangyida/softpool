@@ -13,39 +13,92 @@ sys.path.append("./MDS/")
 import MDS_module
 
 
-def SoftPool(x, regions=16):
+def SoftPool(x, regions=8):
     bth_size = list(x.shape)[0]
     featdim = list(x.shape)[1]
-    points = list(x.shape)[2]
-    sp_cube = torch.zeros(bth_size, featdim, regions, points).cuda()
+    num_points = list(x.shape)[2]
+
+    # Reduce dimention to sort
     conv1d = torch.nn.Conv1d(featdim, regions, 1).cuda()
-    sp_idx = torch.zeros(bth_size, 12 + 3, regions, points).cuda()
+    sorter = conv1d(x)
+
+    # initialize empty space for softpool feature
+    sp_cube = torch.zeros(bth_size, featdim, regions, num_points).cuda()
+    sp_idx = torch.zeros(bth_size, 12 + 3, regions, num_points).cuda()
+
     for idx in range(regions):
         x_val, x_idx = torch.sort(conv1d(x)[:, idx, :], dim=1, descending=True)
         index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
         x_order = torch.gather(x, dim=2, index=index)
         sp_cube[:, :, idx, :] = x_order
         sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, 12 + 3, 1)
-    sp_windows, sp_cabins = Cabins(sp_cube, 16)
-    return sp_cube, sp_idx, sp_windows, sp_cabins
+
+    # local pointnet feature
+    num_cabin = 16
+    points_cabin = num_points // num_cabin
+    cabins = Cabins(sp_cube, num_cabin)
+
+    # we need to use succession manner to repeat cabin to fit with cube
+    sp_windows = torch.repeat_interleave(
+        cabins, repeats=points_cabin, dim=3)
+
+    # merge cabins in train
+    # cabin -4
+    conv2d_1 = nn.Conv2d(
+        featdim,
+        featdim,
+        kernel_size=(1, 5),
+        stride=(1, 1)).cuda()
+    # cabin -4
+    conv2d_2 = nn.Conv2d(
+        featdim,
+        featdim,
+        kernel_size=(1, 5),
+        stride=(1, 1)).cuda()
+    # cabin -4
+    conv2d_3 = nn.Conv2d(
+        featdim,
+        featdim,
+        kernel_size=(1, 5),
+        stride=(1, 1),).cuda()
+    conv2d_4 = nn.Conv2d(
+        featdim,
+        featdim,
+        kernel_size=(1, num_cabin-3*(5-1)),
+        stride=(1, 1)).cuda()
+    trains = conv2d_4(conv2d_3(conv2d_2(conv2d_1(cabins))))
+    # we need to use succession manner to repeat cabin to fit with cube
+    sp_trains = trains.repeat(1, 1, 1, num_points)
+
+    # now make a station
+    conv2d_5 = nn.Conv2d(
+        featdim,
+        featdim,
+        kernel_size=(regions, 1),
+        stride=(1, 1)).cuda()
+    station = conv2d_5(trains)
+    sp_station = station.repeat(1, 1, regions, num_points)
+
+    sp_cube = torch.cat((sp_cube, sp_windows, sp_trains, sp_station), 1).contiguous()
+
+    return sp_cube, sp_idx, cabins 
 
 
+# Produce a set of pointnet features in several sorted cloud
 def Cabins(windows, num_cabin=16):
     bth_size = list(windows.shape)[0]
     featdim = list(windows.shape)[1]
     regions = list(windows.shape)[2]
-    points = list(windows.shape)[3]
-    points_cabin = points // num_cabin
+    num_points = list(windows.shape)[3]
     cabins = torch.zeros(bth_size, featdim, regions, num_cabin).cuda()
+    points_cabin = num_points // num_cabin
     for idx in range(num_cabin):
         cabins[:, :, :, idx] = torch.max(
             windows[:, :, :, idx * points_cabin:(idx + 1) * points_cabin],
             dim=3,
             keepdim=False)[0]
-    # we need to use succession manner to repeat cabin to fit with cube
-    windows_in_cabin = torch.repeat_interleave(
-        cabins, repeats=points_cabin, dim=3)
-    return windows_in_cabin, cabins
+
+    return cabins
 
 
 class STN3d(nn.Module):
@@ -193,7 +246,7 @@ class SoftPoolFeat(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
-        sp_cube, sp_idx, sp_window, cabins = SoftPool(x, self.regions)
+        sp_cube, sp_idx, cabins = SoftPool(x, self.regions)
         # 2048 / 63 = 32
         idx_step = torch.floor(
             torch.linspace(0, (sp_cube.shape[3] - 1), steps=self.sp_points))
@@ -202,7 +255,7 @@ class SoftPoolFeat(nn.Module):
         # x = x[:, :, :, idx_step.long()]
         # sp_idx = sp_idx[:, :, :, idx_step.long()]
         part = torch.gather(part, dim=3, index=sp_idx.long())
-        feature = torch.cat((sp_cube, sp_window, part), 1).contiguous()
+        feature = torch.cat((sp_cube, part), 1).contiguous()
         return feature, cabins, sp_idx, trans
 
 
@@ -347,7 +400,7 @@ class MSN(nn.Module):
         # We merge regional informations in latent space
         self.ptmapper = nn.Sequential(
             nn.Conv2d(
-                dim_pn + dim_pn + 12 + 3,
+                dim_pn*4 + 12 + 3,
                 dim_pn,
                 kernel_size=(1, 7),
                 stride=(1, 2),
