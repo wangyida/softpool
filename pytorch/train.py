@@ -15,6 +15,8 @@ import visdom
 from time import time
 sys.path.append("./emd/")
 import emd_module as emd
+sys.path.append("./chamfer/")
+import dist_chamfer as cd
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -41,6 +43,7 @@ class FullModel(nn.Module):
         super(FullModel, self).__init__()
         self.model = model
         self.EMD = emd.emdModule()
+        self.CD = cd.chamferDist()
 
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
         """
@@ -59,14 +62,16 @@ class FullModel(nn.Module):
         emd3 = 0
         emd4 = 0
         for i in range(opt.n_primitives):
-            dist, indexes = self.EMD(output1[i], gt, eps, iters)
+            # dist, indexes = self.EMD(output1[i], gt, eps, iters)
+            dist, indexes = self.CD(output1[i], gt)
             emd1 += torch.sqrt(dist).mean(1)
             # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
             """
             dist, indexes = self.EMD(output1[i][:,:1024,:], gt_regions[i], eps, iters)
             emd1 += torch.sqrt(dist).mean(1)
             """
-            dist, _ = self.EMD(output3[i], gt, eps, iters)
+            # dist, _ = self.EMD(output3[i], gt, eps, iters)
+            dist, _ = self.CD(output3[i], gt)
             emd3 += torch.sqrt(dist).mean(1)
 
         emd1 /= opt.n_primitives
@@ -75,11 +80,10 @@ class FullModel(nn.Module):
         emd3 /= opt.n_primitives
         emd3 += loss_trans
 
-        dist, _ = self.EMD(output4, gt, eps, iters)
+        # dist, _ = self.EMD(output4, gt, eps, iters)
+        dist, _ = self.CD(output4, gt)
         emd4 += torch.sqrt(dist).mean(1)
 
-        # dist, _ = self.EMD(gt_regions[0], parts.transpose(2, 1), eps, iters)
-        # emd4 = torch.sqrt(dist).mean(1)
         """
         gt_seg = gt_seg[:,:,0]
         size = list(gt_seg.size())
@@ -92,7 +96,8 @@ class FullModel(nn.Module):
         emd1 += enp
         """
 
-        dist, _ = self.EMD(output2, gt, eps, iters)
+        # dist, _ = self.EMD(output2, gt, eps, iters)
+        dist, _ = self.CD(output2, gt)
         emd2 = torch.sqrt(dist).mean(1)
         emd2 += loss_trans
 
