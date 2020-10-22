@@ -63,16 +63,19 @@ class FullModel(nn.Module):
         emd4 = 0
         for i in range(opt.n_primitives):
             # dist, indexes = self.EMD(output1[i], gt, eps, iters)
-            dist, indexes = self.CD(output1[i], gt)
-            emd1 += torch.sqrt(dist).mean(1)
+            # emd1 += torch.sqrt(dist).mean(1)
+            dist1, dist2 = self.CD(output1[i], gt)
+            emd1 = torch.mean(dist1, 1)+torch.mean(dist2, 1)
             # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
             """
             dist, indexes = self.EMD(output1[i][:,:1024,:], gt_regions[i], eps, iters)
             emd1 += torch.sqrt(dist).mean(1)
             """
             # dist, _ = self.EMD(output3[i], gt, eps, iters)
-            dist, _ = self.CD(output3[i], gt)
-            emd3 += torch.sqrt(dist).mean(1)
+            # emd3 += torch.sqrt(dist).mean(1)
+
+            dist1, dist2 = self.CD(output3[i], gt)
+            emd3 = torch.mean(dist1, 1)+torch.mean(dist2, 1)
 
         emd1 /= opt.n_primitives
         emd1 += loss_trans
@@ -81,8 +84,9 @@ class FullModel(nn.Module):
         emd3 += loss_trans
 
         # dist, _ = self.EMD(output4, gt, eps, iters)
-        dist, _ = self.CD(output4, gt)
-        emd4 += torch.sqrt(dist).mean(1)
+        # emd4 += torch.sqrt(dist).mean(1)
+        dist1, dist2 = self.CD(output4, gt)
+        emd4 = torch.mean(dist1, 1)+torch.mean(dist2, 1)
 
         """
         gt_seg = gt_seg[:,:,0]
@@ -97,8 +101,9 @@ class FullModel(nn.Module):
         """
 
         # dist, _ = self.EMD(output2, gt, eps, iters)
-        dist, _ = self.CD(output2, gt)
-        emd2 = torch.sqrt(dist).mean(1)
+        # emd2 = torch.sqrt(dist).mean(1)
+        dist1, dist2 = self.CD(output2, gt)
+        emd2 = torch.mean(dist1, 1)+torch.mean(dist2, 1)
         emd2 += loss_trans
 
         return output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty, loss_trans
