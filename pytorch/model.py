@@ -1,4 +1,5 @@
 from __future__ import print_function
+from math import pi
 import torch
 import torch.nn as nn
 import torch.nn.parallel
@@ -276,8 +277,18 @@ class PointGenCon(nn.Module):
         self.bn2 = torch.nn.BatchNorm1d(self.bottleneck_size // 2)
         self.bn3 = torch.nn.BatchNorm1d(self.bottleneck_size // 4)
 
+        self.B = nn.Linear(self.bottleneck_size, self.bottleneck_size // 2)
+        nn.init.normal_(self.B.weight, std=10.0)
+        self.B.weight.requires_grad = False
+
+    def fourier_map(self, x):
+        sinside = torch.sin(2 * pi * self.B(x.transpose(2, 1)))
+        cosside = torch.cos(2 * pi * self.B(x.transpose(2, 1)))
+        return torch.cat([sinside, cosside], -1).transpose(2, 1)
+
     def forward(self, x):
         batchsize = x.size()[0]
+        x = self.fourier_map(x)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
@@ -480,7 +491,7 @@ class MSN(nn.Module):
             PointGenCon(bottleneck_size=2 + 2 * self.dim_pn)
             for i in range(0, self.n_primitives)
         ])
-        self.decoder3 = PointGenCon(bottleneck_size=3 + self.dim_pn)
+        self.decoder3 = PointGenCon(bottleneck_size=2 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
 
@@ -532,9 +543,11 @@ class MSN(nn.Module):
                 dim=1)
             mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
                 sp_feat_conv.shape[0], 1, 1)
+            """
             mesh_grid = torch.cat(
                 (mesh_grid, torch.zeros(part.size(0), 1, mesh_grid.shape[2])),
                 dim=1)
+            """
             # y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
             y = sp_feat_conv[:, :, i, :]
             out_seg.append(y)
