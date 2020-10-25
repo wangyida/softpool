@@ -83,10 +83,10 @@ class FullModel(nn.Module):
         emd3 /= opt.n_primitives
         emd3 += loss_trans
 
-        # dist, _ = self.EMD(output4, gt, eps, iters)
-        # emd4 += torch.sqrt(dist).mean(1)
         dist1, dist2 = self.CD(output4, gt)
         emd4 = torch.mean(dist1, 1)+torch.mean(dist2, 1)
+        dist, _ = self.EMD(output4, gt, eps, iters)
+        emd4 += torch.sqrt(dist).mean(1)
 
         """
         gt_seg = gt_seg[:,:,0]
