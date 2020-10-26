@@ -372,7 +372,7 @@ with torch.no_grad():
         pts_coord = output1[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output1[0].size(1)] / maxi)[:, 0:3]
+            labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -402,7 +402,7 @@ with torch.no_grad():
         pts_coord = output3[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output3[0].size(1)] / maxi)[:, 0:3]
+            labels_generated_points[0:output3.size(1)] / maxi)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -414,7 +414,7 @@ with torch.no_grad():
         pts_coord = output4[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output4[0].size(1)] / maxi)[:, 0:3]
+            labels_generated_points[0:output4.size(1)] / maxi)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
