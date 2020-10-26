@@ -195,8 +195,8 @@ labels_generated_points = torch.Tensor(
 labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
-labels_inputs_points = torch.Tensor(range(0, opt.num_points)).view(1, opt.num_points).transpose(
-    0, 1)
+labels_inputs_points = torch.Tensor(range(0, opt.num_points)).view(
+    1, opt.num_points).transpose(0, 1)
 labels_inputs_points = (labels_inputs_points) % (opt.num_points + 1)
 labels_inputs_points = labels_inputs_points.contiguous().view(-1)
 
@@ -210,7 +210,6 @@ with torch.no_grad():
         gt = torch.zeros((1, opt.num_points, 3), device='cuda')
         gt_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
         gt_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
-
         """
         def read_points(filename, dataset=self.dataset):
             if self.dataset == 'suncg':
@@ -228,14 +227,16 @@ with torch.no_grad():
 
         for j in range(1):
             if opt.dataset == 'suncg':
-                part1, part_color = read_points(os.path.join(part_dir, model + '.pcd'), opt.dataset)
-                gt1, gt_color = read_points(os.path.join(gt_dir, model + '.pcd'), opt.dataset)
-                part[j, :, :], idx_sampled = resample_pcd(part1, opt.num_points)
+                part1, part_color = read_points(
+                    os.path.join(part_dir, model + '.pcd'), opt.dataset)
+                gt1, gt_color = read_points(
+                    os.path.join(gt_dir, model + '.pcd'), opt.dataset)
+                part[j, :, :], idx_sampled = resample_pcd(
+                    part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
                 gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
                 # Yida!!!
-
                 """
                 pcd = o3d.read_point_cloud(
                     os.path.join(part_dir, model + '.pcd'))
@@ -255,9 +256,12 @@ with torch.no_grad():
                 gt[j, :, :] = torch.from_numpy(gt_sampled)
                 """
             elif opt.dataset == 'shapenet':
-                part1, part_color = read_points(os.path.join(part_dir, model + '.h5'), opt.dataset)
-                gt1, gt_color = read_points(os.path.join(gt_dir, model + '.h5'), opt.dataset)
-                part[j, :, :], idx_sampled = resample_pcd(part1, opt.num_points)
+                part1, part_color = read_points(
+                    os.path.join(part_dir, model + '.h5'), opt.dataset)
+                gt1, gt_color = read_points(
+                    os.path.join(gt_dir, model + '.h5'), opt.dataset)
+                part[j, :, :], idx_sampled = resample_pcd(
+                    part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
                 gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
@@ -277,7 +281,7 @@ with torch.no_grad():
             gt.transpose(2, 1).contiguous())
         """
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
-            dist, _ = EMD(output1[0], gt, 0.002, 10000)
+            dist, _ = EMD(output1, gt, 0.002, 10000)
             emd1 = torch.sqrt(dist).mean()
             hash_tab[str(subfold)]['cnt'] += 1
             hash_tab[str(subfold)]['emd1'] += emd1
@@ -286,11 +290,11 @@ with torch.no_grad():
             emd2 = torch.sqrt(dist).mean()
             hash_tab[str(subfold)]['emd2'] += emd2
 
-            dist, _ = EMD(output3[0], gt, 0.002, 10000)
+            dist, _ = EMD(output3, gt, 0.002, 10000)
             emd3 = torch.sqrt(dist).mean()
             hash_tab[str(subfold)]['emd3'] += emd3
 
-            dist, _ = cd.forward(input1=output1[0], input2=gt)
+            dist, _ = cd.forward(input1=output1, input2=gt)
             cd1 = dist.mean()
             hash_tab[str(subfold)]['cd1'] += cd1
 
@@ -298,7 +302,7 @@ with torch.no_grad():
             cd2 = dist.mean()
             hash_tab[str(subfold)]['cd2'] += cd2
 
-            dist, _ = cd.forward(input1=output3[0], input2=gt)
+            dist, _ = cd.forward(input1=output3, input2=gt)
             cd3 = dist.mean()
             hash_tab[str(subfold)]['cd3'] += cd3
 
@@ -364,19 +368,17 @@ with torch.no_grad():
                 pfile=model + '-' + str(i))
         """
 
-        pts_coord = []
-        for i in range(np.size(output1)):
-            # save output1
-            pts_coord.append(output1[i][0].data.cpu()[:, 0:3])
-            maxi = labels_generated_points.max()
-            pts_color = matplotlib.cm.rainbow(
-                labels_generated_points[0:output1[i].size(1)] / maxi)[:, 0:3]
-            points_save(
-                points=pts_coord[i],
-                colors=pts_color,
-                root='pcds/output1',
-                child=subfold,
-                pfile=model + '-' + str(i))
+        # save output1
+        pts_coord = output1[0].data.cpu()[:, 0:3]
+        maxi = labels_generated_points.max()
+        pts_color = matplotlib.cm.rainbow(
+            labels_generated_points[0:output1[0].size(1)] / maxi)[:, 0:3]
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/output1',
+            child=subfold,
+            pfile=model)
 
         # save output2
         pts_coord = output2[0].data.cpu()[:, 0:3]
@@ -396,25 +398,23 @@ with torch.no_grad():
             with h5py.File('benchmark/' + model + '.h5', "w") as f:
                 f.create_dataset("data", data=np.float32(pts_coord))
 
-        pts_coord = []
-        for i in range(np.size(output3)):
-            # save output3
-            pts_coord.append(output3[i][0].data.cpu()[:, 0:3])
-            maxi = labels_generated_points.max()
-            pts_color = matplotlib.cm.rainbow(
-                labels_generated_points[0:output3[i].size(1)] / maxi)[:, 0:3]
-            points_save(
-                points=pts_coord[i],
-                colors=pts_color,
-                root='pcds/output3',
-                child=subfold,
-                pfile=model + '-' + str(i))
+        # save output3
+        pts_coord = output3[0].data.cpu()[:, 0:3]
+        maxi = labels_generated_points.max()
+        pts_color = matplotlib.cm.rainbow(
+            labels_generated_points[0:output3[0].size(1)] / maxi)[:, 0:3]
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/output3',
+            child=subfold,
+            pfile=model)
 
         # save output4
         pts_coord = output4[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output4.size(1)] / maxi)[:, 0:3]
+            labels_generated_points[0:output4[0].size(1)] / maxi)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,

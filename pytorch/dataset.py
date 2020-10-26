@@ -9,6 +9,7 @@ import random
 
 #from utils import *
 
+
 def read_points(filename, dataset):
     if dataset == 'suncg':
         pcd = o3d.read_point_cloud(filename)
@@ -120,7 +121,8 @@ def read_points(filename, dataset):
         fh5 = h5py.File(filename, 'r')
         label = float(hash_tab[filename.split("/")[-2]]['label'])
         coord = torch.from_numpy(np.array(fh5['data'])).float()
-        color = torch.from_numpy(np.ones_like(np.array(fh5['data'])) / 11 * label).float()
+        color = torch.from_numpy(
+            np.ones_like(np.array(fh5['data'])) / 11 * label).float()
         return coord, color
 
 
@@ -153,8 +155,6 @@ class ShapeNet(data.Dataset):
             self.model_list = [line.strip().replace('/', '/') for line in file]
         random.shuffle(self.model_list)
         self.len = len(self.model_list)
-
-
 
     def __getitem__(self, index):
         model_id = self.model_list[index]
