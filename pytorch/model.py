@@ -213,11 +213,21 @@ class PointNetFeat(nn.Module):
         return x
 
 
+def fourier_map(x, dim_input=2):
+    B = nn.Linear(dim_input, 256)
+    nn.init.normal_(B.weight, std=10.0)
+    B.weight.requires_grad = False
+    sinside = torch.sin(2 * pi * B(x.transpose(2, 1)))
+    cosside = torch.cos(2 * pi * B(x.transpose(2, 1)))
+    return torch.cat([sinside, cosside], -1).transpose(2, 1)
+
+
 class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=64, sp_points=256):
         super(SoftPoolFeat, self).__init__()
         self.stn = STNkd(k=12 + 3)
-        self.conv1 = torch.nn.Conv1d(12 + 3, 64, 1)
+        # self.conv1 = torch.nn.Conv1d(12 + 3, 64, 1)
+        self.conv1 = torch.nn.Conv1d(256*2, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
@@ -236,6 +246,7 @@ class SoftPoolFeat(nn.Module):
         x = torch.bmm(x, trans)
         x = x.transpose(2, 1)
         part = x.unsqueeze(2).repeat(1, 1, self.regions, 1)
+        x = fourier_map(x.cpu(), 12 + 3).cuda()
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
@@ -250,15 +261,6 @@ class SoftPoolFeat(nn.Module):
         part = torch.gather(part, dim=3, index=sp_idx.long())
         feature = torch.cat((sp_cube, part), 1).contiguous()
         return feature, cabins, sp_idx, trans
-
-
-def fourier_map(x):
-    B = nn.Linear(2, 256)
-    nn.init.normal_(B.weight, std=10.0)
-    B.weight.requires_grad = False
-    sinside = torch.sin(2 * pi * B(x.transpose(2, 1)))
-    cosside = torch.cos(2 * pi * B(x.transpose(2, 1)))
-    return torch.cat([sinside, cosside], -1).transpose(2, 1)
 
 
 class PointGenCon(nn.Module):
@@ -422,7 +424,11 @@ class MSN(nn.Module):
                 stride=(1, 1),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh(),
-            nn.MaxPool2d((self.n_primitives, 1), stride=(1, 1)),
+            nn.Conv2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(self.n_primitives, 1), 
+                stride=(1, 1)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 dim_pn,
