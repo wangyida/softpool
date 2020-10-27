@@ -487,9 +487,9 @@ class MSN(nn.Module):
             for i in range(0, self.n_primitives)
         ])
         """
-        # self.decoder3 = PointGenCon(bottleneck_size=2 + self.dim_pn)
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
-        self.decoder2 = PointGenCon(bottleneck_size=2 + 2 * self.dim_pn)
+        # self.decoder2 = PointGenCon(bottleneck_size=2 + 2 * self.dim_pn)
+        self.decoder2 = PointGenCon(bottleneck_size=2 * 256 + 2 * self.dim_pn)
         self.decoder3 = PointGenCon(bottleneck_size=2 * 256 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
@@ -520,9 +520,10 @@ class MSN(nn.Module):
         # stn3d
 
         rand_grid = Variable(
-            torch.cuda.FloatTensor(
+            torch.FloatTensor(
                 part.size(0), 2, self.num_points // 16 // 8))
         rand_grid.data.uniform_(0, 1)
+        rand_grid = fourier_map(rand_grid).cuda()
         # here self.num_points // self.n_primitives = 8*4
 
         mesh_grid = torch.meshgrid([
