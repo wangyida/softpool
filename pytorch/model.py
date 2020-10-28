@@ -524,6 +524,18 @@ class MSN(nn.Module):
                 part.size(0), 2, self.num_points // 16 // 8))
         rand_grid.data.uniform_(0, 1)
         rand_grid = fourier_map(rand_grid).cuda()
+
+        mesh_grid_mini = torch.meshgrid([
+            torch.linspace(0.0, 1.0, 4),
+            torch.linspace(0.0, 1.0, 4)
+        ])
+        mesh_grid_mini = torch.cat(
+            (torch.reshape(mesh_grid_mini[0], (4 * 4, 1)),
+             torch.reshape(mesh_grid_mini[1], (4 * 4, 1))),
+            dim=1)
+        mesh_grid_mini = torch.transpose(mesh_grid_mini, 0, 1).unsqueeze(0).repeat(
+            sp_feat_conv.shape[0], 1, 1)
+        mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
         # here self.num_points // self.n_primitives = 8*4
 
         mesh_grid = torch.meshgrid([
@@ -550,7 +562,7 @@ class MSN(nn.Module):
         # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
 
         y = torch.cat(
-            (rand_grid.repeat(1, 1, 16 * 8),
+            (mesh_grid_mini.repeat(1, 1, 16 * 8),
              torch.repeat_interleave(
                  torch.reshape(sp_cabins,
                                (sp_cabins.shape[0], sp_cabins.shape[1],
