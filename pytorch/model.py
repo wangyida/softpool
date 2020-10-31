@@ -585,8 +585,8 @@ class MSN(nn.Module):
             sm = nn.Softmax(dim=2)
             out_seg[i] = sm(out_seg[i])
 
-        # out1 = out_sp_local.transpose(1, 2).contiguous()
-        out1 = self.grnet(part.transpose(1, 2))[0]
+        out1 = out_sp_local.transpose(1, 2).contiguous()
+        out1 = self.grnet(out1)[0]
         out3 = out_sp_global.transpose(1, 2).contiguous()
 
         out4 = out_pcn.transpose(1, 2).contiguous()
