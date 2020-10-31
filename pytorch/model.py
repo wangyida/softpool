@@ -12,6 +12,7 @@ sys.path.append("./expansion_penalty/")
 import expansion_penalty_module as expansion
 sys.path.append("./MDS/")
 import MDS_module
+import grnet
 
 
 def SoftPool(x, regions=8):
@@ -493,6 +494,7 @@ class MSN(nn.Module):
         self.decoder3 = PointGenCon(bottleneck_size=2 * 256 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
+        self.grnet = grnet.GRNet()
 
     def forward(self, part, part_seg):
 
@@ -583,7 +585,8 @@ class MSN(nn.Module):
             sm = nn.Softmax(dim=2)
             out_seg[i] = sm(out_seg[i])
 
-        out1 = out_sp_local.transpose(1, 2).contiguous()
+        # out1 = out_sp_local.transpose(1, 2).contiguous()
+        out1 = self.grnet(part.transpose(1, 2))[0]
         out3 = out_sp_global.transpose(1, 2).contiguous()
 
         out4 = out_pcn.transpose(1, 2).contiguous()
