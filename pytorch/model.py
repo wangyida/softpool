@@ -489,8 +489,8 @@ class MSN(nn.Module):
         ])
         """
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
-        # self.decoder2 = PointGenCon(bottleneck_size=2 + 2 * self.dim_pn)
-        self.decoder2 = PointGenCon(bottleneck_size=2 * 256 + 2 * self.dim_pn)
+        self.decoder2 = PointGenCon(bottleneck_size=2 + 2 * self.dim_pn)
+        # self.decoder2 = PointGenCon(bottleneck_size=2 * 256 + 2 * self.dim_pn)
         self.decoder3 = PointGenCon(bottleneck_size=2 * 256 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
@@ -510,10 +510,7 @@ class MSN(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
         sp_feat_conv = self.ptmapper(sp_feat)
-        out_sp_local = []
         out_seg = []
-        out_sp_global = []
-        out_pcn = []
         # for i in range(0, self.n_primitives):
         """
         part_regions.append(
@@ -537,7 +534,7 @@ class MSN(nn.Module):
             dim=1)
         mesh_grid_mini = torch.transpose(mesh_grid_mini, 0, 1).unsqueeze(0).repeat(
             sp_feat_conv.shape[0], 1, 1)
-        mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
+        # mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
         # here self.num_points // self.n_primitives = 8*4
 
         mesh_grid = torch.meshgrid([
@@ -564,7 +561,7 @@ class MSN(nn.Module):
         # pn_feat = torch.max(sp_feat[:,:,:,0], dim=1)[0].unsqueeze(2).expand(part.size(0),sp_feat_conv.size(1), mesh_grid.size(2)).contiguous()
 
         y = torch.cat(
-            (mesh_grid_mini.repeat(1, 1, 16 * 8),
+            (mesh_grid_mini.repeat(1, 1, 16 * 8).cuda(),
              torch.repeat_interleave(
                  torch.reshape(sp_cabins,
                                (sp_cabins.shape[0], sp_cabins.shape[1],
@@ -585,34 +582,33 @@ class MSN(nn.Module):
             sm = nn.Softmax(dim=2)
             out_seg[i] = sm(out_seg[i])
 
-        out1 = out_sp_local.transpose(1, 2).contiguous()
-        out1 = self.grnet(out1)[0]
+        # out1 = out_sp_local.transpose(1, 2).contiguous()
+        out1 = self.grnet(part.transpose(1, 2))[0]
+
         out3 = out_sp_global.transpose(1, 2).contiguous()
 
         out4 = out_pcn.transpose(1, 2).contiguous()
-        # out_sp_local = torch.cat(out_sp_local, 2).contiguous()
-        # out_sp_global = torch.cat(out_sp_global, 2).contiguous()
-        # out_pcn = torch.cat(out_pcn, 2).contiguous()
-        # out_seg = torch.cat(out_seg, 2).contiguous()
 
         dist, _, mean_mst_dis = self.expansion(
             out1, self.num_points // self.n_primitives // 8, 1.5)
         loss_mst = torch.mean(dist)
 
-        id0 = torch.zeros(out_sp_local.shape[0], 1,
+        """
+        id0 = torch.ones(out_sp_local.shape[0], 1,
                           out_sp_local.shape[2]).cuda().contiguous()
         out_sp_local = torch.cat((out_sp_local, id0), 1)
+        """
         id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
         part = torch.cat((part, id1), 1)
-        """
         id2 = torch.zeros(out_sp_global.shape[0], 1,
                           out_sp_global.shape[2]).cuda().contiguous()
         out_sp_global = torch.cat((out_sp_global, id2), 1)
-        id3 = torch.zeros(out_pcn.shape[0], 1,
+        """
+        id3 = torch.ones(out_pcn.shape[0], 1,
                           out_pcn.shape[2]).cuda().contiguous()
         out_pcn = torch.cat((out_pcn, id3), 1)
         """
-        fusion = torch.cat((out_sp_local, part), 2)
+        fusion = torch.cat((out_sp_global, part), 2)
         # fusion = torch.cat((out_sp_global, out_pcn, part), 2)
 
         resampled_idx = MDS_module.minimum_density_sample(
