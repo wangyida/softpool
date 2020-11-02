@@ -495,8 +495,8 @@ class MSN(nn.Module):
         ])
         """
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
-        self.decoder2 = PointGenCon(bottleneck_size=2 + 2 * self.dim_pn)
-        # self.decoder2 = PointGenCon(bottleneck_size=2 * 256 + 2 * self.dim_pn)
+        # self.decoder2 = PointGenCon(bottleneck_size=2 + 2 * self.dim_pn)
+        self.decoder2 = PointGenCon(bottleneck_size=2 * 256 + 2 * self.dim_pn)
         self.decoder3 = PointGenCon(bottleneck_size=2 + self.dim_pn)
         # self.decoder3 = PointGenCon(bottleneck_size=2 * 256 + self.dim_pn)
         self.res = PointNetRes()
@@ -542,7 +542,7 @@ class MSN(nn.Module):
             dim=1)
         mesh_grid_mini = torch.transpose(mesh_grid_mini, 0, 1).unsqueeze(0).repeat(
             sp_feat_conv.shape[0], 1, 1)
-        # mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
+        mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
         # here self.num_points // self.n_primitives = 8*4
 
         mesh_grid = torch.meshgrid([

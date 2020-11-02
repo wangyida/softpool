@@ -18,6 +18,7 @@ import emd_module as emd
 sys.path.append("./chamfer/")
 import dist_chamfer as cd
 from extensions.gridding_loss import GriddingLoss
+# gridding_loss = GriddingLoss(scales=[64, 128], alphas=[0.5, 0.1])
 gridding_loss = GriddingLoss(scales=[128], alphas=[0.1])
 
 parser = argparse.ArgumentParser()
@@ -35,6 +36,8 @@ parser.add_argument(
     '--n_primitives', type=int, default=16, help='number of surface elements')
 parser.add_argument(
     '--env', type=str, default="MSN_TRAIN", help='visdom environment')
+parser.add_argument(
+    '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 
 opt = parser.parse_args()
 print(opt)
@@ -129,7 +132,7 @@ random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 best_val_loss = 10
 
-dataset = ShapeNet(train=True, npoints=opt.num_points)
+dataset = ShapeNet(train=True, npoints=opt.num_points, dataset_name=opt.dataset)
 dataloader = torch.utils.data.DataLoader(
     dataset,
     batch_size=opt.batchSize,
