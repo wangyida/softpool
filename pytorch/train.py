@@ -19,7 +19,7 @@ sys.path.append("./chamfer/")
 import dist_chamfer as cd
 from extensions.gridding_loss import GriddingLoss
 # gridding_loss = GriddingLoss(scales=[64, 128], alphas=[0.5, 0.1])
-gridding_loss = GriddingLoss(scales=[64], alphas=[1])
+gridding_loss = GriddingLoss(scales=[64], alphas=[0.1])
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -70,7 +70,7 @@ class FullModel(nn.Module):
         emd1 += torch.sqrt(dist).mean(1)
         emd1 += loss_trans
         grid_loss = gridding_loss(output1, gt)
-        emd1 += grid_loss
+        # emd1 += grid_loss
         # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
         """
         dist, indexes = self.EMD(output1[i][:,:1024,:], gt_regions[i], eps, iters)
