@@ -274,7 +274,7 @@ with torch.no_grad():
                     resample_pcd(np.array(fh5['data']), opt.num_points))
                 """
 
-        output1, output2, output3, output4, expansion_penalty, out_seg, part_regions, _ = network(
+        output1, output2, output3, output4, out_seg, part_regions, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
         """
         _, _, _, _, _, _, gt_regions, _ = network(
@@ -309,11 +309,10 @@ with torch.no_grad():
             idx = random.randint(0, 0)
             print(
                 opt.env +
-                ' val [%d/%d]  emd1: %f emd2: %f emd3: %f cd2: %f expansion_penalty: %f, mean cd2: %f'
+                ' val [%d/%d]  emd1: %f emd2: %f emd3: %f cd2: %f , mean cd2: %f'
                 %
                 (i + 1, len(model_list), emd1.item(), emd2.item(), emd3.item(),
-                 cd2.item(), expansion_penalty.mean().item(),
-                 hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt'])
+                 cd2.item(), hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt'])
             )
 
         # save input
