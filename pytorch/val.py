@@ -274,7 +274,7 @@ with torch.no_grad():
                     resample_pcd(np.array(fh5['data']), opt.num_points))
                 """
 
-        output1, output2, output3, output4, out_seg, part_regions, _ = network(
+        output1, output2, output3, output4, out_seg, part_regions, _, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
         """
         _, _, _, _, _, _, gt_regions, _ = network(

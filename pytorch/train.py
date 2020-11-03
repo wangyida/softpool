@@ -54,7 +54,7 @@ class FullModel(nn.Module):
         """
         _, _, _, _, _, _, gt_regions, _ = self.model(gt.transpose(2, 1))
         """
-        output1, output2, output3, output4, out_seg, part_regions, loss_trans = self.model(
+        output1, output2, output3, output4, out_seg, part_regions, loss_trans, expansion_penalty = self.model(
             parts, part_seg)
         """
         for i in range(16):
@@ -110,7 +110,7 @@ class FullModel(nn.Module):
         emd2 += torch.sqrt(dist).mean(1)
         emd2 += loss_trans
 
-        return output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, loss_trans
+        return output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, loss_trans, expansion_penalty
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -194,7 +194,7 @@ for epoch in range(opt.nepoch):
         part_seg = part_seg.float().cuda()
         gt = gt.float().cuda()
         gt_seg = gt_seg.float().cuda()
-        output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, l_trans = network(
+        output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, l_trans, expansion_penalty = network(
             part.transpose(2, 1), gt, part_seg, gt_seg, 0.005, 50)
         """
         output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, expansion_penalty = network(
@@ -204,7 +204,7 @@ for epoch in range(opt.nepoch):
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
         """
-        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean()
+        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean() + expansion_penalty.mean() * 0.1
 
         loss_net.backward()
         train_loss.update(emd2.mean().item())
