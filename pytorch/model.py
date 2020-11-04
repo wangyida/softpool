@@ -491,7 +491,7 @@ class MSN(nn.Module):
         ])
         """
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
-        self.decoder2 = PointGenCon(bottleneck_size=2 + 2 * self.dim_pn)
+        self.decoder2 = PointGenCon(bottleneck_size=2 + self.dim_pn)
         # self.decoder2 = PointGenCon(bottleneck_size=2 * 256 + 2 * self.dim_pn)
         # self.decoder3 = PointGenCon(bottleneck_size=2 + self.dim_pn)
         self.decoder3 = PointGenCon(bottleneck_size=2 * 256 + self.dim_pn)
@@ -501,7 +501,7 @@ class MSN(nn.Module):
 
     def forward(self, part, part_seg):
 
-        out_grnet = self.grnet(part.transpose(1, 2))[0].transpose(1, 2)
+        out_grnet, out_grnet_fine = self.grnet(part.transpose(1, 2))[0].transpose(1, 2), self.grnet(part.transpose(1, 2))[1]
         out0 = out_grnet.transpose(1, 2)
         # part_seg -> one hot coding
         part_seg = part_seg[:, :, 0]
@@ -567,7 +567,7 @@ class MSN(nn.Module):
                                (sp_cabins.shape[0], sp_cabins.shape[1],
                                 sp_cabins.shape[2] * sp_cabins.shape[3])),
                  repeats=self.num_points // 8 // 4,
-                 dim=2), pn_feat), 1).contiguous()
+                 dim=2)), 1).contiguous()
         out_sp_global = self.decoder2(y)
         out3 = out_sp_global.transpose(1, 2).contiguous()
 
@@ -613,4 +613,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return out0, out_fusion, out3, out4, out_seg, part_regions, loss_trans, loss_mst
+        return out0, out_fusion, out3, out_grnet_fine, out_seg, part_regions, loss_trans, loss_mst

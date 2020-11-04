@@ -68,7 +68,6 @@ class FullModel(nn.Module):
         emd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
         dist, indexes = self.EMD(output1, gt, eps, iters)
         emd1 += torch.sqrt(dist).mean(1)
-        emd1 += loss_trans
         grid_loss = gridding_loss(output1, gt)
         # emd1 += grid_loss
         # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
@@ -89,9 +88,8 @@ class FullModel(nn.Module):
 
         dist1, dist2 = self.CD(output4, gt)
         emd4 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        dist, _ = self.EMD(output4, gt, eps, iters)
-        emd4 += torch.sqrt(dist).mean(1)
-        emd4 += loss_trans
+        # dist, _ = self.EMD(output4, gt, eps, iters)
+        # emd4 += torch.sqrt(dist).mean(1)
         """
         gt_seg = gt_seg[:,:,0]
         size = list(gt_seg.size())
