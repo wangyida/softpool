@@ -65,8 +65,11 @@ def SoftPool(x, regions=4):
     station = conv2d_5(trains)
     sp_station = station.repeat(1, 1, regions, num_points)
 
-    sp_cube = torch.cat((sp_cube, sp_windows, sp_trains, sp_station),
-                        1).contiguous()
+    scope = 'local'
+    if scope == 'global':
+        sp_cube = torch.cat((sp_cube, sp_windows, sp_trains, sp_station), 1).contiguous()
+    else: 
+        sp_cube = torch.cat((sp_cube, sp_windows), 1).contiguous()
 
     return sp_cube, sp_idx, cabins
 
@@ -396,7 +399,7 @@ class MSN(nn.Module):
         # We merge regional informations in latent space
         self.ptmapper = nn.Sequential(
             nn.Conv2d(
-                4 * dim_pn + 12 + 3,
+                2 * dim_pn + 12 + 3,
                 dim_pn,
                 kernel_size=(1, 7),
                 stride=(1, 2),
@@ -586,12 +589,12 @@ class MSN(nn.Module):
             out3, self.num_points // self.n_primitives // 8, 1.5)
         loss_mst = torch.mean(dist)
 
-        id0 = torch.zeros(out_grnet.shape[0], 1, out_grnet.shape[2]).cuda().contiguous()*2
+        id0 = torch.ones(out_grnet.shape[0], 1, out_grnet.shape[2]).cuda().contiguous()*2
         id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
-        id2 = torch.zeros(out_pcn.shape[0], 1, out_pcn.shape[2]).cuda().contiguous()
+        id2 = torch.zeros(out_sp_global.shape[0], 1, out_pcn.shape[2]).cuda().contiguous()
         fuse0 = torch.cat((out_grnet, id0), 1)
         fuse1 = torch.cat((part, id1), 1)
-        fuse2 = torch.cat((out_pcn, id2), 1)
+        fuse2 = torch.cat((out_sp_global, id2), 1)
         """
         id3 = torch.ones(out_pcn.shape[0], 1,
                           out_pcn.shape[2]).cuda().contiguous()
