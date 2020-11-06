@@ -294,15 +294,15 @@ with torch.no_grad():
             emd3 = torch.sqrt(dist).mean()
             hash_tab[str(subfold)]['emd3'] += emd3
 
-            dist, _ = cd.forward(input1=output1, input2=gt)
+            dist, _, _, _ = cd.forward(input1=output1, input2=gt)
             cd1 = dist.mean()
             hash_tab[str(subfold)]['cd1'] += cd1
 
-            dist, _ = cd.forward(input1=output2, input2=gt)
+            dist, _, _, _ = cd.forward(input1=output2, input2=gt)
             cd2 = dist.mean()
             hash_tab[str(subfold)]['cd2'] += cd2
 
-            dist, _ = cd.forward(input1=output3, input2=gt)
+            dist, _, _, _ = cd.forward(input1=output3, input2=gt)
             cd3 = dist.mean()
             hash_tab[str(subfold)]['cd3'] += cd3
 
@@ -412,8 +412,15 @@ with torch.no_grad():
         # save output4
         pts_coord = output4[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
+
+        dist, _, idx1, _ = cd.forward(input1=output4, input2=gt)
+        pts_color = matplotlib.cm.rainbow(gt_color[idx1[0].long()][:,0])[:, 0:3]
+        cd4 = dist.mean()
+
+        """
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output4.size(1)] / maxi)[:, 0:3]
+        """
         points_save(
             points=pts_coord,
             colors=pts_color,
