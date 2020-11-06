@@ -329,7 +329,7 @@ with torch.no_grad():
         # save gt
         pts_coord = gt[0].data.cpu()[:, 0:3]
         mini = gt[0].min()
-        pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0].cpu() / 11)[:, :3]
+        pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0].cpu())[:, :3]
         # pts_color = matplotlib.cm.cool(gt[0].data.cpu()[:, 1] - mini)[:, 0:3]
         points_save(
             points=pts_coord,
@@ -415,7 +415,7 @@ with torch.no_grad():
         maxi = labels_generated_points.max()
 
         dist, _, idx1, _ = cd.forward(input1=output4, input2=gt)
-        pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
+        pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0][idx1[0].long()])[:, 0:3]
         cd4 = dist.mean()
 
         """
