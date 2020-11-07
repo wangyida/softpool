@@ -392,7 +392,6 @@ class MSN(nn.Module):
         self.pncoder = nn.Sequential(
             PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),
             nn.BatchNorm1d(dim_pn), nn.ReLU())
-        # self.spcoder = SoftPoolFeat(num_points, regions=self.n_primitives, sp_points=self.sp_points)
         self.spcoder = SoftPoolFeat(
             num_points, regions=self.n_primitives, sp_points=2048)
         # Firstly we do not merge information among regions

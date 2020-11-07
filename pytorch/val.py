@@ -66,7 +66,8 @@ network.eval()
 if opt.dataset == 'suncg':
     with open(os.path.join('./data/valid_suncg.list')) as file:
         model_list = [line.strip().replace('/', '/') for line in file]
-    part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial/"
+    # part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial/"
+    part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/"
     gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/"
 elif opt.dataset == 'fusion':
     with open(os.path.join('./data/test_fusion.list')) as file:
