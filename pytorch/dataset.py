@@ -11,7 +11,7 @@ import random
 
 
 def read_points(filename, dataset):
-    if dataset == 'suncg':
+    if dataset == 'suncg' or dataset == 'fusion':
         pcd = o3d.read_point_cloud(filename)
         coord = torch.from_numpy(np.array(pcd.points)).float()
         color = torch.from_numpy(np.array(pcd.colors)).float()
@@ -141,11 +141,15 @@ class ShapeNet(data.Dataset):
         if train:
             if self.dataset == 'suncg':
                 self.list_path = './data/train_suncg.list'
+            elif self.dataset == 'fusion':
+                self.list_path = './data/train_fusion.list'
             elif self.dataset == 'shapenet':
                 self.list_path = './data/train_shapenet.list'
         else:
             if self.dataset == 'suncg':
                 self.list_path = './data/valid_suncg.list'
+            elif self.dataset == 'fusion':
+                self.list_path = './data/test_fusion.list'
             elif self.dataset == 'shapenet':
                 self.list_path = './data/valid_shapenet.list'
         self.npoints = npoints
@@ -164,17 +168,20 @@ class ShapeNet(data.Dataset):
             if self.dataset == 'suncg':
                 part, part_color = read_points(
                     os.path.join(
-                        "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete/",
-                        '%s.pcd' % model_id), self.dataset)
-                """
-                part, part_color = read_points(
-                    os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_partial/",
-                        '%s.pcd' % model_id))
-                """
+                        '%s.pcd' % model_id), self.dataset)
                 comp, comp_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/train/pcd_complete/",
+                        '%s.pcd' % model_id), self.dataset)
+            if self.dataset == 'fusion':
+                part, part_color = read_points(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/050_200/train/pcd_partial/",
+                        '%s.pcd' % model_id), self.dataset)
+                comp, comp_color = read_points(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/050_200/train/pcd_complete/",
                         '%s.pcd' % model_id), self.dataset)
             elif self.dataset == 'shapenet':
                 part, part_color = read_points(
@@ -199,17 +206,20 @@ class ShapeNet(data.Dataset):
             if self.dataset == 'suncg':
                 part, part_color = read_points(
                     os.path.join(
-                        "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/",
-                        '%s.pcd' % model_id), self.dataset)
-                """
-                part, part_color = read_points(
-                    os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial/",
                         '%s.pcd' % model_id))
-                """
                 comp, comp_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/",
+                        '%s.pcd' % model_id), self.dataset)
+            elif self.dataset == 'fusion':
+                part, part_color = read_points(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/050_200/test/pcd_partial/",
+                        '%s.pcd' % model_id))
+                comp, comp_color = read_points(
+                    os.path.join(
+                        "/media/wangyida/HDD/database/050_200/test/pcd_complete/",
                         '%s.pcd' % model_id), self.dataset)
             elif self.dataset == 'shapenet':
                 part, part_color = read_points(
@@ -228,7 +238,7 @@ class ShapeNet(data.Dataset):
                         '%s.h5' % model_id), self.dataset)
         part_sampled, idx_sampled = resample_pcd(part, self.npoints)
         part_seg = np.round(part_color[idx_sampled] * 11)
-        comp_sampled, idx_sampled = resample_pcd(comp, self.npoints)
+        comp_sampled, idx_sampled = resample_pcd(comp, 4096)
         comp_seg = np.round(comp_color[idx_sampled] * 11)
         """
         comp_seg = []

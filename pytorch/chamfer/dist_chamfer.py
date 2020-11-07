@@ -32,7 +32,7 @@ class chamferFunction(Function):
         return dist1, dist2, idx1, idx2 
 
     @staticmethod
-    def backward(ctx, graddist1, graddist2):
+    def backward(ctx, graddist1, graddist2, useless1, useless2):
         xyz1, xyz2, idx1, idx2 = ctx.saved_tensors
         graddist1 = graddist1.contiguous()
         graddist2 = graddist2.contiguous()
