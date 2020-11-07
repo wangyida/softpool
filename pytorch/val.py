@@ -66,9 +66,13 @@ network.eval()
 if opt.dataset == 'suncg':
     with open(os.path.join('./data/valid_suncg.list')) as file:
         model_list = [line.strip().replace('/', '/') for line in file]
-    # part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial_fur/"
-    part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/"
+    part_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_partial/"
     gt_dir = "/media/wangyida/HDD/database/SUNCG_Yida/test/pcd_complete/"
+elif opt.dataset == 'fusion':
+    with open(os.path.join('./data/test_fusion.list')) as file:
+        model_list = [line.strip().replace('/', '/') for line in file]
+    part_dir = "/media/wangyida/HDD/database/050_200/test/pcd_partial/"
+    gt_dir = "/media/wangyida/HDD/database/050_200/test/pcd_complete/"
 elif opt.dataset == 'shapenet':
     hash_tab = {
         'all': {
@@ -181,7 +185,6 @@ elif opt.dataset == 'shapenet':
         with open(os.path.join('./data/valid_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
         part_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
-        # part_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
         gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -226,7 +229,7 @@ with torch.no_grad():
         """
 
         for j in range(1):
-            if opt.dataset == 'suncg':
+            if opt.dataset == 'suncg' or opt.dataset == 'fusion':
                 part1, part_color = read_points(
                     os.path.join(part_dir, model + '.pcd'), opt.dataset)
                 gt1, gt_color = read_points(
