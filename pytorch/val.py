@@ -342,18 +342,16 @@ with torch.no_grad():
             pfile=model)
 
         # save selected points on input
-        pts_coord = []
-        for i in range(np.size(part_regions)):
-            pts_coord.append(part_regions[i][0].data.cpu()[:, 0:3])
-            maxi = labels_inputs_points.max()
-            pts_color = matplotlib.cm.rainbow(
-                labels_inputs_points[0:part_regions[i].size(1)] / maxi)[:, 0:3]
-            points_save(
-                points=pts_coord[i],
-                colors=pts_color,
-                root='pcds/regions_part',
-                child=subfold,
-                pfile=model + '-' + str(i))
+        pts_coord = part_regions[0].data.cpu()[:, 0:3]
+        maxi = labels_inputs_points.max()
+        pts_color = matplotlib.cm.rainbow(
+            labels_inputs_points[0:part_regions.size(1)] / maxi)[:, 0:3]
+        points_save(
+            points=pts_coord,
+            colors=pts_color,
+            root='pcds/regions_part',
+            child=subfold,
+            pfile=model)
 
         # save selected points on groung truth
         """

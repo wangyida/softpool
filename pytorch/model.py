@@ -555,7 +555,9 @@ class MSN(nn.Module):
         mesh_grid = fourier_map(mesh_grid)
         # y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
         y = sp_feat_conv[:, :, 0, :]
-        out_seg = y
+        out_seg = y.transpose(1, 2).contiguous()
+        sm = nn.Softmax(dim=2)
+        out_seg = sm(out_seg)
         # y = torch.cat((y, pn_feat), 1).contiguous()
         out_sp_local = self.decoder1(y)
         out1 = out_sp_local.transpose(1, 2).contiguous()
@@ -575,15 +577,7 @@ class MSN(nn.Module):
         out_pcn = self.decoder3(y)
         out4 = out_pcn.transpose(1, 2).contiguous()
 
-        # part_regions = torch.cat(part_regions, 2).contiguous()
-        part_regions = []
-        for i in range(np.size(part_regions)):
-            part_regions.append(sp_feat[:, -3:, i, :])
-            part_regions[i] = part_regions[i].transpose(1, 2).contiguous()
-            out_seg[i] = out_seg[i].transpose(1, 2).contiguous()
-            sm = nn.Softmax(dim=2)
-            out_seg[i] = sm(out_seg[i])
-
+        part_regions = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
 
         dist, _, mean_mst_dis = self.expansion(
             out3, self.num_points // self.n_primitives // 8, 1.5)
