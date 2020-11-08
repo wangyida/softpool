@@ -585,7 +585,7 @@ class MSN(nn.Module):
         out_pcn = self.decoder3(y)
         out4 = out_pcn.transpose(1, 2).contiguous()
 
-        part_regions = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
+        part_regions = sp_feat[:, -6:-3, 0, :].transpose(1, 2).contiguous()
 
         dist, _, mean_mst_dis = self.expansion(
             out3, self.num_points // self.n_primitives // 8, 1.5)
