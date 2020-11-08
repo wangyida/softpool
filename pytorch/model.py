@@ -237,6 +237,7 @@ class SoftPoolFeat(nn.Module):
 
     def forward(self, x):
         batchsize = x.size()[0]
+        # transform 
         trans = self.stn(x)
         x = x.transpose(2, 1)
         x = torch.bmm(x, trans)
@@ -552,7 +553,6 @@ class MSN(nn.Module):
         mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
             sp_feat_conv.shape[0], 1, 1)
         mesh_grid = fourier_map(mesh_grid)
-        # y = SoftPool(sp_feat_conv[:, :, i, :])[0][:,:,i,:]
         y = sp_feat_conv[:, :, 0, :]
         out_seg = y.transpose(1, 2).contiguous()
         sm = nn.Softmax(dim=2)
