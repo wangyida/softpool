@@ -177,7 +177,7 @@ class ShapeNet(data.Dataset):
             if self.dataset == 'fusion':
                 part, part_color = read_points(
                     os.path.join(
-                        "/media/wangyida/HDD/database/050_200/train/pcd_partial/",
+                        "/media/wangyida/HDD/database/050_200/train/pcd_complete/",
                         '%s.pcd' % model_id), self.dataset)
                 comp, comp_color = read_points(
                     os.path.join(
@@ -215,7 +215,7 @@ class ShapeNet(data.Dataset):
             elif self.dataset == 'fusion':
                 part, part_color = read_points(
                     os.path.join(
-                        "/media/wangyida/HDD/database/050_200/test/pcd_partial/",
+                        "/media/wangyida/HDD/database/050_200/test/pcd_complete/",
                         '%s.pcd' % model_id))
                 comp, comp_color = read_points(
                     os.path.join(
