@@ -519,7 +519,7 @@ class MSN(nn.Module):
         part_seg = torch.nn.functional.one_hot(part_seg.to(torch.int64),
                                                16).transpose(1, 2)
 
-        sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(x=part, x_seg=part_seg)
+        sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(x=part, x_seg=None)
         loss_trans = feature_transform_regularizer(trans)
         pn_feat = self.pn_enc(part)
         pn_feat = pn_feat.unsqueeze(2).expand(
