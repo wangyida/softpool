@@ -253,9 +253,11 @@ class SoftPoolFeat(nn.Module):
             point_wi_seg = torch.cat((x_seg.float(), part), 1)
 
         trans = self.stn(point_wi_seg)
+        """
         point_wi_seg = point_wi_seg.transpose(2, 1)
         point_wi_seg = torch.bmm(point_wi_seg, trans)
         point_wi_seg = point_wi_seg.transpose(2, 1)
+        """
         point_wi_seg = point_wi_seg.unsqueeze(2).repeat(1, 1, self.regions, 1)
 
         # 2048 / 63 = 32
