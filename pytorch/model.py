@@ -520,7 +520,7 @@ class MSN(nn.Module):
                                                16).transpose(1, 2)
 
         sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(x=part, x_seg=part_seg)
-        loss_trans = feature_transform_regularizer(trans)
+        loss_trans = feature_transform_regularizer(trans[-3:,-3:])
         pn_feat = self.pn_enc(part)
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
