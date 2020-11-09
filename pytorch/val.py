@@ -71,7 +71,7 @@ if opt.dataset == 'suncg':
 elif opt.dataset == 'fusion':
     with open(os.path.join('./data/test_fusion.list')) as file:
         model_list = [line.strip().replace('/', '/') for line in file]
-    part_dir = "/media/wangyida/HDD/database/050_200/test/pcd_partial/"
+    part_dir = "/media/wangyida/HDD/database/050_200/test/pcd_complete/"
     gt_dir = "/media/wangyida/HDD/database/050_200/test/pcd_complete/"
 elif opt.dataset == 'shapenet':
     hash_tab = {
