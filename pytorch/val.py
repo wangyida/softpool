@@ -333,6 +333,7 @@ with torch.no_grad():
         pts_coord = gt[0].data.cpu()[:, 0:3]
         mini = gt[0].min()
         pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0].cpu() / 11)[:, :3]
+
         # pts_color = matplotlib.cm.cool(gt[0].data.cpu()[:, 1] - mini)[:, 0:3]
         points_save(
             points=pts_coord,
@@ -343,9 +344,13 @@ with torch.no_grad():
 
         # save selected points on input
         pts_coord = part_regions[0].data.cpu()[:, 0:3]
+        dist, _, idx1, _ = cd.forward(input1=part_regions, input2=gt)
+        pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
+        """
         maxi = labels_inputs_points.max()
         pts_color = matplotlib.cm.rainbow(
             labels_inputs_points[0:part_regions.size(1)] / maxi)[:, 0:3]
+        """
         points_save(
             points=pts_coord,
             colors=pts_color,
