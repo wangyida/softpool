@@ -585,18 +585,16 @@ class MSN(nn.Module):
         out_pcn = self.decoder3(y)
         out4 = out_pcn.transpose(1, 2).contiguous()
 
-        part_regions = sp_feat[:, -6:-3, 0, :].transpose(1, 2).contiguous()
+        part_regions = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
 
         dist, _, mean_mst_dis = self.expansion(
             out3, self.num_points // self.n_primitives // 8, 1.5)
         loss_mst = torch.mean(dist)
 
-        id0 = torch.ones(out_grnet.shape[0], 1, out_grnet.shape[2]).cuda().contiguous()*2
         id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
-        id2 = torch.zeros(out_sp_global.shape[0], 1, out_pcn.shape[2]).cuda().contiguous()
-        fuse0 = torch.cat((out_grnet, id0), 1)
+        id2 = torch.zeros(out_sp_local.shape[0], 1, out_pcn.shape[2]).cuda().contiguous()
         fuse1 = torch.cat((part, id1), 1)
-        fuse2 = torch.cat((out_sp_global, id2), 1)
+        fuse2 = torch.cat((out_sp_local, id2), 1)
         """
         id3 = torch.ones(out_pcn.shape[0], 1,
                           out_pcn.shape[2]).cuda().contiguous()
@@ -605,7 +603,7 @@ class MSN(nn.Module):
         """
         Fusion is combined with 0, 4
         """
-        fusion = torch.cat((fuse2, fuse1, fuse0), 2)
+        fusion = torch.cat((fuse2, fuse1), 2)
         # fusion = torch.cat((fuse2, out_pcn, fuse1), 2)
 
         resampled_idx = MDS_module.minimum_density_sample(
@@ -615,4 +613,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return out0, out_fusion, out3, out_grnet_fine, out_seg, part_regions, loss_trans, loss_mst
+        return out0, out_fusion, out1, out_grnet_fine, out_seg, part_regions, loss_trans, loss_mst
