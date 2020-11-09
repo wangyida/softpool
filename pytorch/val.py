@@ -210,9 +210,10 @@ with torch.no_grad():
         part = torch.zeros((1, opt.num_points, 3), device='cuda')
         part_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
         part_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
-        gt = torch.zeros((1, opt.num_points, 3), device='cuda')
-        gt_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
-        gt_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
+        gt = torch.zeros((1, opt.num_points*2, 3), device='cuda')
+        gt_seg = torch.zeros((1, opt.num_points*2, 3), device='cuda')
+        gt_regions = torch.zeros((1, opt.num_points*2, 3), device='cuda')
+
         """
         def read_points(filename, dataset=self.dataset):
             if self.dataset == 'suncg':
@@ -237,7 +238,7 @@ with torch.no_grad():
                 part[j, :, :], idx_sampled = resample_pcd(
                     part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
-                gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points)
+                gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points*2)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
                 # Yida!!!
                 """
