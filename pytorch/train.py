@@ -37,6 +37,8 @@ parser.add_argument(
     '--env', type=str, default="MSN_TRAIN", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
+parser.add_argument(
+    '--savepath', type=str, default="shapenet", help='path for saving')
 
 opt = parser.parse_args()
 print(opt)
@@ -112,7 +114,7 @@ class FullModel(nn.Module):
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 now = datetime.datetime.now()
-save_path = now.isoformat()
+save_path = opt.savepath # now.isoformat()
 if not os.path.exists('./log/'):
     os.mkdir('./log/')
 dir_name = os.path.join('log', save_path)
