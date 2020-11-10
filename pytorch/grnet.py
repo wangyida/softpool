@@ -140,11 +140,11 @@ class GRNet(torch.nn.Module):
             sparse_cloud = self.point_sampling(sparse_cloud, partial_cloud)
             # print(sparse_cloud.size())      # torch.Size([batch_size, 2048, 3])
         else:
-            pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4, 4)
+            pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4, 4) + pt_features_4_l
             # print(pt_features_4_r.size())   # torch.Size([batch_size, 256, 4, 4, 4])
-            pt_features_8_r = self.dconv7(pt_features_4_r)
+            pt_features_8_r = self.dconv7(pt_features_4_r) + pt_features_8_l
             # print(pt_features_8_r.size())   # torch.Size([batch_size, 128, 8, 8, 8])
-            pt_features_16_r = self.dconv8(pt_features_8_r)
+            pt_features_16_r = self.dconv8(pt_features_8_r) + pt_features_16_l
             # print(pt_features_16_r.size())  # torch.Size([batch_size, 64, 16, 16, 16])
             pt_features_32_r = self.dconv9(pt_features_16_r)
             # print(pt_features_32_r.size())  # torch.Size([batch_size, 32, 32, 32, 32])

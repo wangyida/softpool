@@ -38,7 +38,7 @@ parser.add_argument(
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 parser.add_argument(
-    '--savepath', type=str, default="shapenet", help='path for saving')
+    '--savepath', type=str, default='', help='path for saving')
 
 opt = parser.parse_args()
 print(opt)
