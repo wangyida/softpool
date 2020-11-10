@@ -148,7 +148,7 @@ class GRNet(torch.nn.Module):
             # print(pt_features_16_r.size())  # torch.Size([batch_size, 64, 16, 16, 16])
             pt_features_32_r = self.dconv9(pt_features_16_r)
             # print(pt_features_32_r.size())  # torch.Size([batch_size, 32, 32, 32, 32])
-            pt_features_64_r = self.dconv10(pt_features_32_r) + pt_features_64_l
+            pt_features_64_r = self.dconv10(pt_features_32_r) + 0.3
             # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
             sparse_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
             # print(sparse_cloud.size())      # torch.Size([batch_size, 262144, 3])
