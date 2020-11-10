@@ -209,7 +209,7 @@ for epoch in range(opt.nepoch):
 
         if i % 10 == 0:
             idx = random.randint(0, part.size()[0] - 1)
-        if i % 3000 == 0:
+        if i % 300 == 0:
             print('saving net...')
             torch.save(network.module.model.state_dict(),
                        '%s/network.pth' % (dir_name))

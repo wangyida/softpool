@@ -267,7 +267,7 @@ with torch.no_grad():
                 part[j, :, :], idx_sampled = resample_pcd(
                     part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
-                gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points)
+                gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points*2)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
                 """
                 fh5 = h5py.File(os.path.join(part_dir, model + '.h5'), 'r')
@@ -285,9 +285,9 @@ with torch.no_grad():
             gt.transpose(2, 1).contiguous())
         """
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
+            """
             dist, _ = EMD(output1, gt, 0.002, 10000)
             emd1 = torch.sqrt(dist).mean()
-            hash_tab[str(subfold)]['cnt'] += 1
             hash_tab[str(subfold)]['emd1'] += emd1
 
             dist, _ = EMD(output2, gt, 0.002, 10000)
@@ -297,6 +297,7 @@ with torch.no_grad():
             dist, _ = EMD(output3, gt, 0.002, 10000)
             emd3 = torch.sqrt(dist).mean()
             hash_tab[str(subfold)]['emd3'] += emd3
+            """
 
             dist, _, _, _ = cd.forward(input1=output1, input2=gt)
             cd1 = dist.mean()
@@ -310,13 +311,14 @@ with torch.no_grad():
             cd3 = dist.mean()
             hash_tab[str(subfold)]['cd3'] += cd3
 
+            hash_tab[str(subfold)]['cnt'] += 1
             idx = random.randint(0, 0)
             print(
                 opt.env +
-                ' val [%d/%d]  emd1: %f emd2: %f emd3: %f cd2: %f , mean cd2: %f'
+                ' val [%d/%d]  cd1: %f cd2: %f cd3: %f mean cd2: %f'
                 %
-                (i + 1, len(model_list), emd1.item(), emd2.item(), emd3.item(),
-                 cd2.item(), hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt'])
+                (i + 1, len(model_list), cd1.item(), cd2.item(), cd3.item(),
+                 hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt'])
             )
 
         # save input

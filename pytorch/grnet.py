@@ -107,6 +107,7 @@ class GRNet(torch.nn.Module):
             torch.nn.ReLU()
         )
         self.fc14 = torch.nn.Linear(112, 24)
+        self.unet = False
 
     def forward(self, data):
         partial_cloud = data
@@ -123,21 +124,36 @@ class GRNet(torch.nn.Module):
         # print(pt_features_4_l.size())   # torch.Size([batch_size, 256, 4, 4, 4])
         features = self.fc5(pt_features_4_l.view(-1, 16384))
         # print(features.size())          # torch.Size([batch_size, 2048])
-        pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4, 4) + pt_features_4_l
-        # print(pt_features_4_r.size())   # torch.Size([batch_size, 256, 4, 4, 4])
-        pt_features_8_r = self.dconv7(pt_features_4_r) + pt_features_8_l
-        # print(pt_features_8_r.size())   # torch.Size([batch_size, 128, 8, 8, 8])
-        pt_features_16_r = self.dconv8(pt_features_8_r) + pt_features_16_l
-        # print(pt_features_16_r.size())  # torch.Size([batch_size, 64, 16, 16, 16])
-        pt_features_32_r = self.dconv9(pt_features_16_r) + pt_features_32_l
-        # print(pt_features_32_r.size())  # torch.Size([batch_size, 32, 32, 32, 32])
-        pt_features_64_r = self.dconv10(pt_features_32_r) + pt_features_64_l
-        # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
-        sparse_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
-        # print(sparse_cloud.size())      # torch.Size([batch_size, 262144, 3])
-        # sparse_cloud = self.point_sampling(sparse_cloud, partial_cloud)
-        sparse_cloud = self.point_sampling(sparse_cloud, None)
-        # print(sparse_cloud.size())      # torch.Size([batch_size, 2048, 3])
+        if self.unet:
+            pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4, 4) + pt_features_4_l
+            # print(pt_features_4_r.size())   # torch.Size([batch_size, 256, 4, 4, 4])
+            pt_features_8_r = self.dconv7(pt_features_4_r) + pt_features_8_l
+            # print(pt_features_8_r.size())   # torch.Size([batch_size, 128, 8, 8, 8])
+            pt_features_16_r = self.dconv8(pt_features_8_r) + pt_features_16_l
+            # print(pt_features_16_r.size())  # torch.Size([batch_size, 64, 16, 16, 16])
+            pt_features_32_r = self.dconv9(pt_features_16_r) + pt_features_32_l
+            # print(pt_features_32_r.size())  # torch.Size([batch_size, 32, 32, 32, 32])
+            pt_features_64_r = self.dconv10(pt_features_32_r) + pt_features_64_l
+            # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
+            sparse_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
+            # print(sparse_cloud.size())      # torch.Size([batch_size, 262144, 3])
+            sparse_cloud = self.point_sampling(sparse_cloud, partial_cloud)
+            # print(sparse_cloud.size())      # torch.Size([batch_size, 2048, 3])
+        else:
+            pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4, 4) + pt_features_4_l
+            # print(pt_features_4_r.size())   # torch.Size([batch_size, 256, 4, 4, 4])
+            pt_features_8_r = self.dconv7(pt_features_4_r)
+            # print(pt_features_8_r.size())   # torch.Size([batch_size, 128, 8, 8, 8])
+            pt_features_16_r = self.dconv8(pt_features_8_r)
+            # print(pt_features_16_r.size())  # torch.Size([batch_size, 64, 16, 16, 16])
+            pt_features_32_r = self.dconv9(pt_features_16_r)
+            # print(pt_features_32_r.size())  # torch.Size([batch_size, 32, 32, 32, 32])
+            pt_features_64_r = self.dconv10(pt_features_32_r)
+            # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
+            sparse_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
+            # print(sparse_cloud.size())      # torch.Size([batch_size, 262144, 3])
+            sparse_cloud = self.point_sampling(sparse_cloud, None)
+            # print(sparse_cloud.size())      # torch.Size([batch_size, 2048, 3])
         point_features_32 = self.feature_sampling(sparse_cloud, pt_features_32_r).view(-1, 2048, 256)
         # print(point_features_32.size()) # torch.Size([batch_size, 2048, 256])
         point_features_16 = self.feature_sampling(sparse_cloud, pt_features_16_r).view(-1, 2048, 512)
