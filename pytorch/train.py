@@ -18,7 +18,7 @@ import emd_module as emd
 sys.path.append("./chamfer/")
 import dist_chamfer as cd
 from extensions.gridding_loss import GriddingLoss
-gridding_loss = GriddingLoss(scales=[64, 128], alphas=[0.1, 0.1])
+gridding_loss = GriddingLoss(scales=[128], alphas=[0.1])
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -156,8 +156,7 @@ if opt.model != '':
     network.module.model.load_state_dict(torch.load(opt.model))
     print("Previous weight loaded ")
 
-lrate = 0.001  #learning rate
-optimizer = optim.Adam(network.module.model.parameters(), lr=lrate)
+optimizer = optim.Adam(network.module.model.parameters(), lr=1e-4, weight_decay=0, betas=(.9, .999))
 
 train_loss = AverageValueMeter()
 val_loss = AverageValueMeter()
