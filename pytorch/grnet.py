@@ -142,7 +142,7 @@ class GRNet(torch.nn.Module):
         else:
             pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4, 4)
             # print(pt_features_4_r.size())   # torch.Size([batch_size, 256, 4, 4, 4])
-            pt_features_8_r = self.dconv7(pt_features_4_r + pt_features_4_l)
+            pt_features_8_r = self.dconv7(pt_features_4_r)
             # print(pt_features_8_r.size())   # torch.Size([batch_size, 128, 8, 8, 8])
             pt_features_16_r = self.dconv8(pt_features_8_r)
             # print(pt_features_16_r.size())  # torch.Size([batch_size, 64, 16, 16, 16])
