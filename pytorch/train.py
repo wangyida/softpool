@@ -68,7 +68,7 @@ class FullModel(nn.Module):
         dist1, dist2, _, _ = self.CD(output1, gt)
         emd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
         grid_loss = gridding_loss(output1, gt)
-        emd1 += 10 * grid_loss
+        emd1 += grid_loss
         # dist, indexes = self.EMD(output1, gt, eps, iters)
         # emd1 += torch.sqrt(dist).mean(1)
         # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
@@ -156,7 +156,8 @@ if opt.model != '':
     network.module.model.load_state_dict(torch.load(opt.model))
     print("Previous weight loaded ")
 
-optimizer = optim.Adam(network.module.model.parameters(), lr=1e-4, weight_decay=0, betas=(.9, .999))
+lrate=1e-4
+optimizer = optim.Adam(network.module.model.parameters(), lr=lrate, weight_decay=0, betas=(.9, .999))
 
 train_loss = AverageValueMeter()
 val_loss = AverageValueMeter()
