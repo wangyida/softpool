@@ -499,7 +499,23 @@ class MSN(nn.Module):
         sp_feat_conv3 = self.ptmapper3(sp_feat_conv2)
 
         sp_feat_deconv3 = torch.cat((self.ptmapper3_rev(sp_feat_conv3), sp_feat_conv2), dim=-1)
+        """
+        sorter3 = Sorter(512, 1)
+        val_activa, _ = sorter3(sp_feat_deconv3)
+        x_val, x_idx = torch.sort(val_activa[:, 0, :], dim=1, descending=True)
+        index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
+        sp_feat_deconv3 = torch.gather(sp_feat_deconv3, dim=2, index=index)
+        """
+
         sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3), sp_feat_conv1), dim=-1)
+        """
+        sorter2 = Sorter(256, 1)
+        val_activa, _ = sorter2(sp_feat_deconv2)
+        x_val, x_idx = torch.sort(val_activa[:, 0, :], dim=1, descending=True)
+        index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
+        sp_feat_deconv2 = torch.gather(sp_feat_deconv2, dim=2, index=index)
+        """
+
         sp_feat_deconv1 = self.ptmapper1_rev(sp_feat_deconv2)
         # for i in range(0, self.n_primitives):
         """
