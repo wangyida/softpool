@@ -184,6 +184,7 @@ class ShapeNet(data.Dataset):
                         "/media/wangyida/HDD/database/050_200/train/pcd_complete/",
                         '%s.pcd' % model_id), self.dataset)
             elif self.dataset == 'shapenet':
+                """
                 part, part_color = read_points(
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/train/partial/",
@@ -201,7 +202,6 @@ class ShapeNet(data.Dataset):
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet/train/gt/",
                         '%s.h5' % model_id), self.dataset)
-                """
         else:
             if self.dataset == 'suncg':
                 part, part_color = read_points(

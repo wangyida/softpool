@@ -107,7 +107,7 @@ class GRNet(torch.nn.Module):
             torch.nn.ReLU()
         )
         self.fc14 = torch.nn.Linear(112, 24)
-        self.unet = True
+        self.unet = False
 
     def forward(self, data):
         partial_cloud = data

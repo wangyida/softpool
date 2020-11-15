@@ -365,7 +365,7 @@ with torch.no_grad():
         pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
         """
         maxi = labels_inputs_points.max()
-        pts_color = matplotlib.cm.summer(
+        pts_color = matplotlib.cm.plasma(
             labels_inputs_points[0:part_regions.size(1)] / maxi)[:, 0:3]
         points_save(
             points=pts_coord,
