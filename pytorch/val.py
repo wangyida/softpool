@@ -84,6 +84,7 @@ elif opt.dataset == 'shapenet':
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
+            'cd4': 0.0,
             'cnt': 0
         },
         '04530566': {
@@ -95,6 +96,7 @@ elif opt.dataset == 'shapenet':
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
+            'cd4': 0.0,
             'cnt': 0
         },
         '02933112': {
@@ -106,6 +108,7 @@ elif opt.dataset == 'shapenet':
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
+            'cd4': 0.0,
             'cnt': 0
         },
         '04379243': {
@@ -117,6 +120,7 @@ elif opt.dataset == 'shapenet':
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
+            'cd4': 0.0,
             'cnt': 0
         },
         '02691156': {
@@ -128,6 +132,7 @@ elif opt.dataset == 'shapenet':
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
+            'cd4': 0.0,
             'cnt': 0
         },
         '02958343': {
@@ -139,6 +144,7 @@ elif opt.dataset == 'shapenet':
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
+            'cd4': 0.0,
             'cnt': 0
         },
         '03001627': {
@@ -150,6 +156,7 @@ elif opt.dataset == 'shapenet':
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
+            'cd4': 0.0,
             'cnt': 0
         },
         '04256520': {
@@ -161,6 +168,7 @@ elif opt.dataset == 'shapenet':
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
+            'cd4': 0.0,
             'cnt': 0
         },
         '03636649': {
@@ -172,6 +180,7 @@ elif opt.dataset == 'shapenet':
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
+            'cd4': 0.0,
             'cnt': 0
         }
     }
@@ -184,7 +193,7 @@ elif opt.dataset == 'shapenet':
     else:
         with open(os.path.join('./data/valid_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
-        part_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
+        part_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
         gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -310,6 +319,10 @@ with torch.no_grad():
             dist, _, _, _ = cd.forward(input1=output3, input2=gt)
             cd3 = dist.mean()
             hash_tab[str(subfold)]['cd3'] += cd3
+
+            dist, _, _, _ = cd.forward(input1=output4, input2=gt)
+            cd4 = dist.mean()
+            hash_tab[str(subfold)]['cd4'] += cd4
 
             hash_tab[str(subfold)]['cnt'] += 1
             idx = random.randint(0, 0)
@@ -444,7 +457,8 @@ with torch.no_grad():
                 '03001627', '04256520', '03636649'
         ]:
             print(
-                '%s cd1: %f cd2: %f cd3: %f' %
+                '%s cd1: %f cd2: %f cd3: %f cd4: %f' %
                 (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'],
                  hash_tab[i]['cd2'] / hash_tab[i]['cnt'],
-                 hash_tab[i]['cd3'] / hash_tab[i]['cnt']))
+                 hash_tab[i]['cd3'] / hash_tab[i]['cnt'],
+                 hash_tab[i]['cd4'] / hash_tab[i]['cnt']))
