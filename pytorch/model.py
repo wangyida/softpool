@@ -263,7 +263,7 @@ class SoftPoolFeat(nn.Module):
 
         trans = self.stn(point_wi_seg)
         point_wi_seg = point_wi_seg.transpose(2, 1)
-        # point_wi_seg = torch.bmm(point_wi_seg, trans)
+        point_wi_seg = torch.bmm(point_wi_seg, trans)
         point_wi_seg = point_wi_seg.transpose(2, 1)
         point_wi_seg = point_wi_seg.unsqueeze(2).repeat(1, 1, self.regions, 1)
 
@@ -465,8 +465,8 @@ class MSN(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
+                kernel_size=(1, 1),
+                stride=(1, 1),
                 padding=(0, 0)))
 
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
@@ -499,8 +499,8 @@ class MSN(nn.Module):
         sp_feat_conv2 = self.ptmapper2(sp_feat_conv1)
         sp_feat_conv3 = self.ptmapper3(sp_feat_conv2)
 
-        # sp_feat_deconv3 = torch.cat((self.ptmapper3_rev(sp_feat_conv3) + sp_feat_conv2, sp_feat_conv2), dim=-1)
-        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) + sp_feat_conv2
+        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3)
+        # sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) + sp_feat_conv2
         """
         sorter3 = Sorter(512, 1)
         val_activa, _ = sorter3(sp_feat_deconv3)
@@ -509,8 +509,8 @@ class MSN(nn.Module):
         sp_feat_deconv3 = torch.gather(sp_feat_deconv3, dim=2, index=index)
         """
 
-        # sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3) + sp_feat_conv1, sp_feat_conv1), dim=-1)
-        sp_feat_deconv2 = self.ptmapper2_rev(sp_feat_deconv3) + sp_feat_conv1
+        sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3), sp_feat_conv1), dim=-1)
+        # sp_feat_deconv2 = self.ptmapper2_rev(sp_feat_deconv3) + sp_feat_conv1
         """
         sorter2 = Sorter(256, 1)
         val_activa, _ = sorter2(sp_feat_deconv2)
@@ -526,8 +526,7 @@ class MSN(nn.Module):
             torch.gather(part, dim=2, index=sp_idx[:, :, i, :].long()))
         """
         # stn3d
-
-
+        sp_feat_ae = self.ptmapper1_rev(sp_feat_conv1)
 
         rand_grid = Variable(
             torch.FloatTensor(
@@ -566,6 +565,10 @@ class MSN(nn.Module):
         # y = torch.cat((y, pn_feat), 1).contiguous()
         out_sp_local = self.decoder1(y)
         out1 = out_sp_local.transpose(1, 2).contiguous()
+
+        y = sp_feat_ae[:, :, 0, :]
+        out_sp_ae = self.decoder1(y)
+        out_ae = out_sp_local.transpose(1, 2).contiguous()
 
         y = torch.cat(
             (mesh_grid_mini.repeat(1, 1, 8 * self.n_primitives).cuda(),
@@ -610,4 +613,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return out0, out1, out3, out_grnet_fine, out_seg, part_regions, loss_trans, loss_mst
+        return out0, out1, out3, out_ae, out_seg, part_regions, loss_trans, loss_mst
