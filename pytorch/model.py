@@ -262,9 +262,11 @@ class SoftPoolFeat(nn.Module):
             point_wi_seg = torch.cat((x_seg.float(), part), 1)
 
         trans = self.stn(point_wi_seg)
+        """
         point_wi_seg = point_wi_seg.transpose(2, 1)
         point_wi_seg = torch.bmm(point_wi_seg, trans)
         point_wi_seg = point_wi_seg.transpose(2, 1)
+        """
         point_wi_seg = point_wi_seg.unsqueeze(2).repeat(1, 1, self.regions, 1)
 
         # 2048 / 63 = 32
@@ -424,7 +426,7 @@ class MSN(nn.Module):
                 kernel_size=(1, 7),
                 stride=(1, 2),
                 padding=(0, 3),
-                padding_mode='same'), nn.Tanh())
+                padding_mode='same'))
         self.ptmapper2 = nn.Sequential(
             nn.Conv2d(
                 dim_pn,
@@ -432,7 +434,7 @@ class MSN(nn.Module):
                 kernel_size=(1, 7),
                 stride=(1, 2),
                 padding=(0, 3),
-                padding_mode='same'), nn.Tanh())
+                padding_mode='same'))
         self.ptmapper3 = nn.Sequential(
             nn.Conv2d(
                 2 * dim_pn,
@@ -440,7 +442,7 @@ class MSN(nn.Module):
                 kernel_size=(1, 5),
                 stride=(1, 2),
                 padding=(0, 2),
-                padding_mode='same'), nn.Tanh())
+                padding_mode='same'))
         self.ptmapper4 = nn.Sequential(
             nn.Conv2d(
                 4 * dim_pn,
@@ -453,14 +455,14 @@ class MSN(nn.Module):
                 2 * dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
-                padding=(0, 0)), nn.Tanh())
+                padding=(0, 0)))
         self.ptmapper2_rev = nn.Sequential(
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
-                padding=(0, 0)), nn.Tanh())
+                padding=(0, 0)))
         self.ptmapper1_rev = nn.Sequential(
             nn.ConvTranspose2d(
                 dim_pn,
