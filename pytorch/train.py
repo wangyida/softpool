@@ -104,7 +104,7 @@ class FullModel(nn.Module):
         """
 
         dist1, dist2, _, _ = self.CD(output2, gt)
-        emd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+        emd2 = 0.1 * (torch.mean(dist1, 1) + torch.mean(dist2, 1))
         # dist, _ = self.EMD(output2, gt, eps, iters)
         # emd2 += torch.sqrt(dist).mean(1)
         emd2 += loss_trans
