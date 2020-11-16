@@ -470,6 +470,12 @@ class MSN(nn.Module):
                 kernel_size=(1, 1),
                 stride=(1, 1),
                 padding=(0, 0)))
+        self.tranlator1 = nn.Sequential(
+            nn.Conv2d(
+                dim_pn,
+                dim_pn,
+                kernel_size=(1, 1),
+                stride=(1, 1)))
 
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
         self.decoder2 = PointGenCon(bottleneck_size=2 + self.dim_pn)
@@ -511,8 +517,7 @@ class MSN(nn.Module):
         sp_feat_deconv3 = torch.gather(sp_feat_deconv3, dim=2, index=index)
         """
 
-        sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3), sp_feat_conv1), dim=-1)
-        # sp_feat_deconv2 = self.ptmapper2_rev(sp_feat_deconv3) + sp_feat_conv1
+        sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3), self.tranlator1(sp_feat_conv1)), dim=-1)
         """
         sorter2 = Sorter(256, 1)
         val_activa, _ = sorter2(sp_feat_deconv2)
@@ -528,7 +533,7 @@ class MSN(nn.Module):
             torch.gather(part, dim=2, index=sp_idx[:, :, i, :].long()))
         """
         # stn3d
-        sp_feat_ae = self.ptmapper1_rev(sp_feat_conv1)
+        sp_feat_ae = self.ptmapper1_rev(self.tranlator1(sp_feat_conv1))
 
         rand_grid = Variable(
             torch.FloatTensor(
