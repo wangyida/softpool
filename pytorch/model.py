@@ -28,7 +28,8 @@ class Sorter(nn.Module):
 def SoftPool(x, regions=16):
     bth_size = list(x.shape)[0]
     featdim = list(x.shape)[1]
-    pnt_chosen = list(x.shape)[2]//2
+    # pnt_chosen = list(x.shape)[2]//2
+    pnt_chosen = list(x.shape)[2]
 
     # Reduce dimention to sort
     sorter = Sorter(featdim, regions)
@@ -467,8 +468,8 @@ class MSN(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 4),
-                stride=(1, 4),
+                kernel_size=(1, 2),
+                stride=(1, 2),
                 padding=(0, 0)))
         self.tranlator1 = nn.Sequential(
             nn.Conv2d(
