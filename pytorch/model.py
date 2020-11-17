@@ -28,7 +28,7 @@ class Sorter(nn.Module):
 def SoftPool(x, regions=16):
     bth_size = list(x.shape)[0]
     featdim = list(x.shape)[1]
-    pnt_chosen = list(x.shape)[2]//2
+    pnt_chosen = list(x.shape)[2]
     # pnt_chosen = list(x.shape)[2]
 
     # Reduce dimention to sort
@@ -468,8 +468,8 @@ class MSN(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 4),
-                stride=(1, 4),
+                kernel_size=(1, 1),
+                stride=(1, 1),
                 padding=(0, 0)), nn.Tanh())
         self.tranlator1 = nn.Sequential(
             nn.Conv2d(
@@ -517,8 +517,8 @@ class MSN(nn.Module):
         sp_feat_deconv3 = torch.gather(sp_feat_deconv3, dim=2, index=index)
         """
 
-        # sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3), sp_feat_conv1), dim=-1)
-        sp_feat_deconv2 = self.ptmapper2_rev(sp_feat_deconv3) + sp_feat_conv1
+        sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3), sp_feat_conv1), dim=-1)
+        # sp_feat_deconv2 = self.ptmapper2_rev(sp_feat_deconv3) + sp_feat_conv1
         """
         sorter2 = Sorter(256, 1)
         val_activa, _ = sorter2(sp_feat_deconv2)
