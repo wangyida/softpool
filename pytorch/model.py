@@ -28,26 +28,26 @@ class Sorter(nn.Module):
 def SoftPool(x, regions=16):
     bth_size = list(x.shape)[0]
     featdim = list(x.shape)[1]
-    num_points = list(x.shape)[2]
+    pnt_chosen = list(x.shape)[2]//2
 
     # Reduce dimention to sort
     sorter = Sorter(featdim, regions)
     val_activa, id_activa = sorter(x)
 
     # initialize empty space for softpool feature
-    sp_cube = torch.zeros(bth_size, featdim, regions, num_points).cuda()
-    sp_idx = torch.zeros(bth_size, regions + 3, regions, num_points).cuda()
+    sp_cube = torch.zeros(bth_size, featdim, regions, pnt_chosen).cuda()
+    sp_idx = torch.zeros(bth_size, regions + 3, regions, pnt_chosen).cuda()
 
     for idx in range(regions):
         x_val, x_idx = torch.sort(val_activa[:, idx, :], dim=1, descending=True)
-        index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
+        index = x_idx[:, :pnt_chosen].unsqueeze(1).repeat(1, featdim, 1)
         x_order = torch.gather(x, dim=2, index=index)
         sp_cube[:, :, idx, :] = x_order
-        sp_idx[:, :, idx, :] = x_idx[:, :].unsqueeze(1).repeat(1, regions + 3, 1)
+        sp_idx[:, :, idx, :] = x_idx[:, :pnt_chosen].unsqueeze(1).repeat(1, regions + 3, 1)
 
     # local pointnet feature
     num_cabin = 8
-    points_cabin = num_points // num_cabin
+    points_cabin = pnt_chosen//num_cabin
     cabins = Cabins(sp_cube, num_cabin)
 
     # we need to use succession manner to repeat cabin to fit with cube
@@ -67,13 +67,13 @@ def SoftPool(x, regions=16):
         stride=(1, 1)).cuda()
     trains = conv2d_3(conv2d_2(conv2d_1(cabins)))
     # we need to use succession manner to repeat cabin to fit with cube
-    sp_trains = trains.repeat(1, 1, 1, num_points)
+    sp_trains = trains.repeat(1, 1, 1, pnt_chosen)
 
     # now make a station
     conv2d_5 = nn.Conv2d(
         featdim, featdim, kernel_size=(regions, 1), stride=(1, 1)).cuda()
     station = conv2d_5(trains)
-    sp_station = station.repeat(1, 1, regions, num_points)
+    sp_station = station.repeat(1, 1, regions, pnt_chosen)
 
     scope = 'global'
     if scope == 'global':
@@ -467,8 +467,8 @@ class MSN(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 1),
-                stride=(1, 1),
+                kernel_size=(1, 4),
+                stride=(1, 4),
                 padding=(0, 0)))
         self.tranlator1 = nn.Sequential(
             nn.Conv2d(
@@ -508,7 +508,7 @@ class MSN(nn.Module):
         sp_feat_conv3 = self.ptmapper3(sp_feat_conv2)
 
         sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3)
-        # sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) + sp_feat_conv2
+        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) + sp_feat_conv2
         """
         sorter3 = Sorter(512, 1)
         val_activa, _ = sorter3(sp_feat_deconv3)
@@ -517,7 +517,8 @@ class MSN(nn.Module):
         sp_feat_deconv3 = torch.gather(sp_feat_deconv3, dim=2, index=index)
         """
 
-        sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3), self.tranlator1(sp_feat_conv1)), dim=-1)
+        # sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3), sp_feat_conv1), dim=-1)
+        sp_feat_deconv2 = self.ptmapper2_rev(sp_feat_deconv3) + sp_feat_conv1
         """
         sorter2 = Sorter(256, 1)
         val_activa, _ = sorter2(sp_feat_deconv2)
@@ -533,7 +534,7 @@ class MSN(nn.Module):
             torch.gather(part, dim=2, index=sp_idx[:, :, i, :].long()))
         """
         # stn3d
-        sp_feat_ae = self.ptmapper1_rev(self.tranlator1(sp_feat_conv1))
+        sp_feat_ae = self.ptmapper1_rev(sp_feat_conv1)
 
         rand_grid = Variable(
             torch.FloatTensor(
@@ -575,7 +576,7 @@ class MSN(nn.Module):
 
         y = sp_feat_ae[:, :, 0, :]
         out_sp_ae = self.decoder1(y)
-        out_ae = out_sp_local.transpose(1, 2).contiguous()
+        out_ae = out_sp_ae.transpose(1, 2).contiguous()
 
         y = torch.cat(
             (mesh_grid_mini.repeat(1, 1, 8 * self.n_primitives).cuda(),
@@ -620,4 +621,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return out0, out1, out_grnet_fine, out_ae, out_seg, part_regions, loss_trans, loss_mst
+        return out0, out1, out_grnet_fine, out_fusion, out_seg, part_regions, loss_trans, loss_mst
