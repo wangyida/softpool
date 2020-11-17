@@ -232,7 +232,7 @@ class ShapeNet(data.Dataset):
                         '%s.h5' % model_id), self.dataset)
         part_sampled, idx_sampled = resample_pcd(part, self.npoints)
         part_seg = np.round(part_color[idx_sampled] * 11)
-        comp_sampled, idx_sampled = resample_pcd(comp, 4096)
+        comp_sampled, idx_sampled = resample_pcd(comp, self.npoints)
         comp_seg = np.round(comp_color[idx_sampled] * 11)
         """
         comp_seg = []
