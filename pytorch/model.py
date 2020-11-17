@@ -427,7 +427,7 @@ class MSN(nn.Module):
                 kernel_size=(1, 7),
                 stride=(1, 2),
                 padding=(0, 3),
-                padding_mode='same'))
+                padding_mode='same'), nn.Tanh())
         self.ptmapper2 = nn.Sequential(
             nn.Conv2d(
                 dim_pn,
@@ -435,7 +435,7 @@ class MSN(nn.Module):
                 kernel_size=(1, 7),
                 stride=(1, 2),
                 padding=(0, 3),
-                padding_mode='same'))
+                padding_mode='same'), nn.Tanh())
         self.ptmapper3 = nn.Sequential(
             nn.Conv2d(
                 2 * dim_pn,
@@ -443,7 +443,7 @@ class MSN(nn.Module):
                 kernel_size=(1, 5),
                 stride=(1, 2),
                 padding=(0, 2),
-                padding_mode='same'))
+                padding_mode='same'), nn.Tanh())
         self.ptmapper4 = nn.Sequential(
             nn.Conv2d(
                 4 * dim_pn,
@@ -470,7 +470,7 @@ class MSN(nn.Module):
                 dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
-                padding=(0, 0)))
+                padding=(0, 0)), nn.Tanh())
         self.tranlator1 = nn.Sequential(
             nn.Conv2d(
                 dim_pn,
@@ -508,7 +508,6 @@ class MSN(nn.Module):
         sp_feat_conv2 = self.ptmapper2(sp_feat_conv1)
         sp_feat_conv3 = self.ptmapper3(sp_feat_conv2)
 
-        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3)
         sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) + sp_feat_conv2
         """
         sorter3 = Sorter(512, 1)
@@ -622,4 +621,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return out0, out1, out_grnet_fine, out_fusion, out_seg, part_regions, loss_trans, loss_mst
+        return out0, out1, out3, out_fusion, out_seg, part_regions, loss_trans, loss_mst
