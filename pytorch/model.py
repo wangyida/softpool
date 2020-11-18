@@ -457,13 +457,13 @@ class MSN(nn.Module):
                 2 * dim_pn,
                 kernel_size=(1, 8),
                 stride=(1, 8),
-                padding=(0, 0)),
+                padding=(0, 0)), nn.Tanh(),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 8),
                 stride=(1, 8),
-                padding=(0, 0)))
+                padding=(0, 0)), nn.Tanh())
                 
         self.ptmapper4 = nn.Sequential(
             nn.Conv2d(
@@ -478,14 +478,14 @@ class MSN(nn.Module):
                 2 * dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
-                padding=(0, 0)))
+                padding=(0, 0)), nn.Tanh())
         self.ptmapper2_rev = nn.Sequential(
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
-                padding=(0, 0)))
+                padding=(0, 0)), nn.Tanh())
         self.ptmapper1_rev = nn.Sequential(
             nn.ConvTranspose2d(
                 dim_pn,
@@ -498,7 +498,7 @@ class MSN(nn.Module):
                 dim_pn,
                 dim_pn,
                 kernel_size=(1, 1),
-                stride=(1, 1)))
+                stride=(1, 1)), nn.Tanh())
 
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
         self.decoder2 = PointGenCon(bottleneck_size=2 + self.dim_pn)

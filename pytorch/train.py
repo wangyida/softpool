@@ -77,6 +77,12 @@ class FullModel(nn.Module):
         emd1 += torch.sqrt(dist).mean(1)
         """
 
+        dist1, dist2, _, _ = self.CD(output2, gt)
+        emd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+        dist, _ = self.EMD(output2, gt, eps, iters)
+        emd2 += torch.sqrt(dist).mean(1)
+        emd2 += loss_trans
+
         dist1, dist2, _, _ = self.CD(output3, gt)
         emd3 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
         # dist, _ = self.EMD(output3, gt, eps, iters)
@@ -102,12 +108,6 @@ class FullModel(nn.Module):
         enp = -torch.mean(torch.sum((gt_seg) * torch.log(out_seg+0.01), dim=2))-torch.mean(torch.sum((1-gt_seg) * torch.log(1-out_seg+0.01), dim=2))
         emd1 += enp
         """
-
-        dist1, dist2, _, _ = self.CD(output2, gt)
-        emd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        # dist, _ = self.EMD(output2, gt, eps, iters)
-        # emd2 += torch.sqrt(dist).mean(1)
-        emd2 += loss_trans
 
         return output1, output2, output3, output4, part_regions, emd1, emd2, emd3, emd4, loss_trans, expansion_penalty
 
