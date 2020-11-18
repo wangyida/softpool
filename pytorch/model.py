@@ -431,28 +431,50 @@ class MSN(nn.Module):
         self.ptmapper2 = nn.Sequential(
             nn.Conv2d(
                 dim_pn,
-                2 * dim_pn,
+                dim_pn,
                 kernel_size=(1, 7),
                 stride=(1, 2),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh())
         self.ptmapper3 = nn.Sequential(
             nn.Conv2d(
+                dim_pn,
                 2 * dim_pn,
-                4 * dim_pn,
                 kernel_size=(1, 5),
                 stride=(1, 2),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh())
+        self.embedding = nn.Sequential(
+            nn.MaxPool2d((1, 256)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 4),
+                stride=(1, 4),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 8),
+                stride=(1, 8),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 8),
+                stride=(1, 8),
+                padding=(0, 0)))
+                
         self.ptmapper4 = nn.Sequential(
             nn.Conv2d(
                 4 * dim_pn,
                 4 * dim_pn,
                 kernel_size=(self.n_primitives, 1), 
                 stride=(1, 1)))
+
         self.ptmapper3_rev = nn.Sequential(
             nn.ConvTranspose2d(
-                4 * dim_pn,
+                2 * dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
@@ -506,7 +528,7 @@ class MSN(nn.Module):
 
         sp_feat_conv1 = self.ptmapper1(sp_feat)
         sp_feat_conv2 = self.ptmapper2(sp_feat_conv1)
-        sp_feat_conv3 = self.ptmapper3(sp_feat_conv2)
+        sp_feat_conv3 = self.embedding(self.ptmapper3(sp_feat_conv2))
 
         sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) # + sp_feat_conv2
         """
