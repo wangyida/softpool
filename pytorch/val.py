@@ -309,26 +309,26 @@ with torch.no_grad():
             """
 
             dist, _, _, _ = cd.forward(input1=output1, input2=gt)
-            cd1 = dist.mean()
+            cd1 = dist.mean()*1e4
             hash_tab[str(subfold)]['cd1'] += cd1
 
             dist, _, _, _ = cd.forward(input1=output2, input2=gt)
-            cd2 = dist.mean()
+            cd2 = dist.mean()*1e4
             hash_tab[str(subfold)]['cd2'] += cd2
 
             dist, _, _, _ = cd.forward(input1=output3, input2=gt)
-            cd3 = dist.mean()
+            cd3 = dist.mean()*1e4
             hash_tab[str(subfold)]['cd3'] += cd3
 
             dist, _, _, _ = cd.forward(input1=output4, input2=gt)
-            cd4 = dist.mean()
+            cd4 = dist.mean()*1e4
             hash_tab[str(subfold)]['cd4'] += cd4
 
             hash_tab[str(subfold)]['cnt'] += 1
             idx = random.randint(0, 0)
             print(
                 opt.env +
-                ' val [%d/%d]  cd1: %f cd2: %f cd3: %f mean cd2: %f'
+                ' val [%d/%d]  cd1: %f cd2: %f cd3: %f mean cd2 so far: %f'
                 %
                 (i + 1, len(model_list), cd1.item(), cd2.item(), cd3.item(),
                  hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt'])
