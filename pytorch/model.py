@@ -643,4 +643,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return out0, out1, out3, out_ae, out_seg, part_regions, loss_trans, loss_mst
+        return out1, out_fusion, out3, out_ae, out_seg, part_regions, loss_trans, loss_mst
