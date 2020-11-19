@@ -431,14 +431,14 @@ class MSN(nn.Module):
         self.ptmapper2 = nn.Sequential(
             nn.Conv2d(
                 dim_pn,
-                dim_pn,
+                2 * dim_pn,
                 kernel_size=(1, 7),
                 stride=(1, 2),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh())
         self.ptmapper3 = nn.Sequential(
             nn.Conv2d(
-                dim_pn,
+                2 * dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 5),
                 stride=(1, 2),
@@ -530,7 +530,7 @@ class MSN(nn.Module):
         sp_feat_conv2 = self.ptmapper2(sp_feat_conv1)
         sp_feat_conv3 = self.embedding(self.ptmapper3(sp_feat_conv2))
 
-        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) # + sp_feat_conv2
+        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) + sp_feat_conv2
         """
         sorter3 = Sorter(512, 1)
         val_activa, _ = sorter3(sp_feat_deconv3)
