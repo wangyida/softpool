@@ -37,8 +37,7 @@ parser.add_argument(
     '--env', type=str, default="MSN_TRAIN", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
-parser.add_argument(
-    '--savepath', type=str, default='', help='path for saving')
+parser.add_argument('--savepath', type=str, default='', help='path for saving')
 
 opt = parser.parse_args()
 print(opt)
@@ -114,7 +113,7 @@ class FullModel(nn.Module):
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 now = datetime.datetime.now()
-save_path = opt.savepath # now.isoformat()
+save_path = opt.savepath  # now.isoformat()
 if not os.path.exists('./log/'):
     os.mkdir('./log/')
 dir_name = os.path.join('log', save_path)
@@ -131,7 +130,8 @@ random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 best_val_loss = 10
 
-dataset = ShapeNet(train=True, npoints=opt.num_points, dataset_name=opt.dataset)
+dataset = ShapeNet(
+    train=True, npoints=opt.num_points, dataset_name=opt.dataset)
 dataloader = torch.utils.data.DataLoader(
     dataset,
     batch_size=opt.batchSize,
@@ -156,8 +156,12 @@ if opt.model != '':
     network.module.model.load_state_dict(torch.load(opt.model))
     print("Previous weight loaded ")
 
-lrate=1e-4
-optimizer = optim.Adam(network.module.model.parameters(), lr=lrate, weight_decay=0, betas=(.9, .999))
+lrate = 1e-4
+optimizer = optim.Adam(
+    network.module.model.parameters(),
+    lr=lrate,
+    weight_decay=0,
+    betas=(.9, .999))
 
 train_loss = AverageValueMeter()
 val_loss = AverageValueMeter()
@@ -203,7 +207,8 @@ for epoch in range(opt.nepoch):
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
         """
-        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean() + expansion_penalty.mean() * 0.1
+        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean(
+        ) + expansion_penalty.mean() * 0.1
 
         loss_net.backward()
         train_loss.update(emd2.mean().item())
@@ -216,10 +221,9 @@ for epoch in range(opt.nepoch):
             torch.save(network.module.model.state_dict(),
                        '%s/network.pth' % (dir_name))
 
-        print(
-            opt.env +
-            ' train [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f'
-            % (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
+        print(opt.env +
+              ' train [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f' %
+              (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
                emd2.mean().item(), emd3.mean().item(), emd4.mean().item()))
     train_curve.append(train_loss.avg)
 
@@ -238,13 +242,11 @@ for epoch in range(opt.nepoch):
                     part.transpose(2, 1), gt, part_seg, gt_seg, 0.004, 3000)
                 val_loss.update(emd2.mean().item())
                 idx = random.randint(0, part.size()[0] - 1)
-                print(
-                    opt.env +
-                    ' val [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f'
-                    %
-                    (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
-                     emd2.mean().item(), emd3.mean().item(),
-                     emd4.mean().item()))
+                print(opt.env +
+                      ' val [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f' %
+                      (epoch, i, len_dataset / opt.batchSize,
+                       emd1.mean().item(), emd2.mean().item(),
+                       emd3.mean().item(), emd4.mean().item()))
 
     val_curve.append(val_loss.avg)
 

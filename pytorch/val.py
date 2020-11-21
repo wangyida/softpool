@@ -184,7 +184,7 @@ elif opt.dataset == 'shapenet':
             'cnt': 0
         }
     }
-    complete3d_benchmark = False
+    complete3d_benchmark = True
     if complete3d_benchmark == True:
         with open(os.path.join('./data/test_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
@@ -219,10 +219,9 @@ with torch.no_grad():
         part = torch.zeros((1, opt.num_points, 3), device='cuda')
         part_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
         part_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
-        gt = torch.zeros((1, opt.num_points*2, 3), device='cuda')
-        gt_seg = torch.zeros((1, opt.num_points*2, 3), device='cuda')
-        gt_regions = torch.zeros((1, opt.num_points*2, 3), device='cuda')
-
+        gt = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
+        gt_seg = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
+        gt_regions = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
         """
         def read_points(filename, dataset=self.dataset):
             if self.dataset == 'suncg':
@@ -247,7 +246,8 @@ with torch.no_grad():
                 part[j, :, :], idx_sampled = resample_pcd(
                     part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
-                gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points*2)
+                gt[j, :, :], idx_sampled = resample_pcd(
+                    gt1, opt.num_points * 2)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
                 # Yida!!!
                 """
@@ -276,7 +276,8 @@ with torch.no_grad():
                 part[j, :, :], idx_sampled = resample_pcd(
                     part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
-                gt[j, :, :], idx_sampled = resample_pcd(gt1, opt.num_points*2)
+                gt[j, :, :], idx_sampled = resample_pcd(
+                    gt1, opt.num_points * 2)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
                 """
                 fh5 = h5py.File(os.path.join(part_dir, model + '.h5'), 'r')
@@ -309,30 +310,28 @@ with torch.no_grad():
             """
 
             dist, _, _, _ = cd.forward(input1=output1, input2=gt)
-            cd1 = dist.mean()*1e4
+            cd1 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd1'] += cd1
 
             dist, _, _, _ = cd.forward(input1=output2, input2=gt)
-            cd2 = dist.mean()*1e4
+            cd2 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd2'] += cd2
 
             dist, _, _, _ = cd.forward(input1=output3, input2=gt)
-            cd3 = dist.mean()*1e4
+            cd3 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd3'] += cd3
 
             dist, _, _, _ = cd.forward(input1=output4, input2=gt)
-            cd4 = dist.mean()*1e4
+            cd4 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd4'] += cd4
 
             hash_tab[str(subfold)]['cnt'] += 1
             idx = random.randint(0, 0)
-            print(
-                opt.env +
-                ' val [%d/%d]  cd1: %f cd2: %f cd3: %f mean cd2 so far: %f'
-                %
-                (i + 1, len(model_list), cd1.item(), cd2.item(), cd3.item(),
-                 hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt'])
-            )
+            print(opt.env +
+                  ' val [%d/%d]  cd1: %f cd2: %f cd3: %f mean cd2 so far: %f' %
+                  (i + 1, len(model_list), cd1.item(), cd2.item(), cd3.item(),
+                   hash_tab[str(subfold)]['cd2'] /
+                   hash_tab[str(subfold)]['cnt']))
 
         # save input
         pts_coord = part[0].data.cpu()[:, 0:3]
@@ -437,9 +436,9 @@ with torch.no_grad():
         maxi = labels_generated_points.max()
 
         dist, _, idx1, _ = cd.forward(input1=output4, input2=gt)
-        pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
+        pts_color = matplotlib.cm.rainbow(
+            gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
         cd4 = dist.mean()
-
         """
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output4.size(1)] / maxi)[:, 0:3]
@@ -459,6 +458,5 @@ with torch.no_grad():
             print(
                 '%s cd1: %f cd2: %f cd3: %f cd4: %f' %
                 (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'],
-                 hash_tab[i]['cd2'] / hash_tab[i]['cnt'],
-                 hash_tab[i]['cd3'] / hash_tab[i]['cnt'],
-                 hash_tab[i]['cd4'] / hash_tab[i]['cnt']))
+                 hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] /
+                 hash_tab[i]['cnt'], hash_tab[i]['cd4'] / hash_tab[i]['cnt']))

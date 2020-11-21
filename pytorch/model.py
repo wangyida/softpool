@@ -14,6 +14,7 @@ sys.path.append("./MDS/")
 import MDS_module
 import grnet
 
+
 class Sorter(nn.Module):
     def __init__(self, dim_in, dim_out):
         super(Sorter, self).__init__()
@@ -40,15 +41,17 @@ def SoftPool(x, regions=16):
     sp_idx = torch.zeros(bth_size, regions + 3, regions, pnt_chosen).cuda()
 
     for idx in range(regions):
-        x_val, x_idx = torch.sort(val_activa[:, idx, :], dim=1, descending=True)
+        x_val, x_idx = torch.sort(
+            val_activa[:, idx, :], dim=1, descending=True)
         index = x_idx[:, :pnt_chosen].unsqueeze(1).repeat(1, featdim, 1)
         x_order = torch.gather(x, dim=2, index=index)
         sp_cube[:, :, idx, :] = x_order
-        sp_idx[:, :, idx, :] = x_idx[:, :pnt_chosen].unsqueeze(1).repeat(1, regions + 3, 1)
+        sp_idx[:, :, idx, :] = x_idx[:, :pnt_chosen].unsqueeze(1).repeat(
+            1, regions + 3, 1)
 
     # local pointnet feature
     num_cabin = 8
-    points_cabin = pnt_chosen//num_cabin
+    points_cabin = pnt_chosen // num_cabin
     cabins = Cabins(sp_cube, num_cabin)
 
     # we need to use succession manner to repeat cabin to fit with cube
@@ -78,8 +81,9 @@ def SoftPool(x, regions=16):
 
     scope = 'global'
     if scope == 'global':
-        sp_cube = torch.cat((sp_cube, sp_windows, sp_trains, sp_station), 1).contiguous()
-    else: 
+        sp_cube = torch.cat((sp_cube, sp_windows, sp_trains, sp_station),
+                            1).contiguous()
+    else:
         sp_cube = torch.cat((sp_cube, sp_windows), 1).contiguous()
 
     return sp_cube, sp_idx, cabins, id_activa
@@ -254,9 +258,9 @@ class SoftPoolFeat(nn.Module):
         x = self.bn3(self.conv3(x))
         sp_cube, sp_idx, cabins, id_activa = SoftPool(x, self.regions)
 
-        # transform 
-        id_activa = torch.nn.functional.one_hot(id_activa.to(torch.int64),
-                                               self.regions).transpose(1, 2)
+        # transform
+        id_activa = torch.nn.functional.one_hot(
+            id_activa.to(torch.int64), self.regions).transpose(1, 2)
         if x_seg is None:
             point_wi_seg = torch.cat((id_activa.float(), part), 1)
         else:
@@ -464,12 +468,12 @@ class MSN(nn.Module):
                 kernel_size=(1, 8),
                 stride=(1, 8),
                 padding=(0, 0)), nn.Tanh())
-                
+
         self.ptmapper4 = nn.Sequential(
             nn.Conv2d(
                 4 * dim_pn,
                 4 * dim_pn,
-                kernel_size=(self.n_primitives, 1), 
+                kernel_size=(self.n_primitives, 1),
                 stride=(1, 1)))
 
         self.ptmapper3_rev = nn.Sequential(
@@ -494,11 +498,8 @@ class MSN(nn.Module):
                 stride=(1, 1),
                 padding=(0, 0)), nn.Tanh())
         self.translate = nn.Sequential(
-            nn.Conv2d(
-                dim_pn,
-                dim_pn,
-                kernel_size=(1, 1),
-                stride=(1, 1)), nn.Tanh())
+            nn.Conv2d(dim_pn, dim_pn, kernel_size=(1, 1), stride=(1, 1)),
+            nn.Tanh())
 
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
         self.decoder2 = PointGenCon(bottleneck_size=2 + self.dim_pn)
@@ -509,28 +510,29 @@ class MSN(nn.Module):
 
     def forward(self, part, part_seg):
 
-        out_grnet, out_grnet_fine = self.grnet(part.transpose(1, 2))[0].transpose(1, 2), self.grnet(part.transpose(1, 2))[1]
+        out_grnet, out_grnet_fine = self.grnet(part.transpose(
+            1, 2))[0].transpose(1, 2), self.grnet(part.transpose(1, 2))[1]
         out0 = out_grnet.transpose(1, 2)
         # part_seg -> one hot coding
         part_seg = part_seg[:, :, 0]
-        part_seg = torch.nn.functional.one_hot(part_seg.to(torch.int64),
-                                               16).transpose(1, 2)
+        with_label = False
+        if with_label:
+            part_seg = torch.nn.functional.one_hot(part_seg.to(torch.int64),
+                                                   16).transpose(1, 2)
 
         # sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(x=part, x_seg=part_seg)
-        sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(x=part, x_seg=None)
-        loss_trans = feature_transform_regularizer(trans[-3:,-3:])
+        sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(
+            x=part, x_seg=None)
+        loss_trans = feature_transform_regularizer(trans[-3:, -3:])
         pn_feat = self.pn_enc(part)
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
-
-
-
 
         sp_feat_conv1 = self.ptmapper1(sp_feat)
         sp_feat_conv2 = self.ptmapper2(sp_feat_conv1)
         sp_feat_conv3 = self.embedding(self.ptmapper3(sp_feat_conv2))
 
-        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) # + sp_feat_conv2
+        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3)  # + sp_feat_conv2
         """
         sorter3 = Sorter(512, 1)
         val_activa, _ = sorter3(sp_feat_deconv3)
@@ -539,7 +541,9 @@ class MSN(nn.Module):
         sp_feat_deconv3 = torch.gather(sp_feat_deconv3, dim=2, index=index)
         """
 
-        sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3), self.translate(sp_feat_conv1)), dim=-1)
+        sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3),
+                                     self.translate(sp_feat_conv1)),
+                                    dim=-1)
         # sp_feat_deconv2 = self.ptmapper2_rev(sp_feat_deconv3) + sp_feat_conv1
         """
         sorter2 = Sorter(256, 1)
@@ -564,16 +568,16 @@ class MSN(nn.Module):
         rand_grid.data.uniform_(0, 1)
         rand_grid = fourier_map(rand_grid).cuda()
 
-        mesh_grid_mini = torch.meshgrid([
-            torch.linspace(0.0, 1.0, 8),
-            torch.linspace(0.0, 1.0, 16)
-        ])
+        mesh_grid_mini = torch.meshgrid(
+            [torch.linspace(0.0, 1.0, 8),
+             torch.linspace(0.0, 1.0, 16)])
         mesh_grid_mini = torch.cat(
             (torch.reshape(mesh_grid_mini[0], (8 * 16, 1)),
              torch.reshape(mesh_grid_mini[1], (8 * 16, 1))),
             dim=1)
-        mesh_grid_mini = torch.transpose(mesh_grid_mini, 0, 1).unsqueeze(0).repeat(
-            sp_feat_deconv1.shape[0], 1, 1)
+        mesh_grid_mini = torch.transpose(mesh_grid_mini, 0,
+                                         1).unsqueeze(0).repeat(
+                                             sp_feat_deconv1.shape[0], 1, 1)
         # mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
         # here self.num_points // self.n_primitives = 8*4
 
@@ -622,7 +626,8 @@ class MSN(nn.Module):
         loss_mst = torch.mean(dist)
 
         id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
-        id2 = torch.zeros(out_sp_local.shape[0], 1, out_pcn.shape[2]).cuda().contiguous()
+        id2 = torch.zeros(out_sp_local.shape[0], 1,
+                          out_pcn.shape[2]).cuda().contiguous()
         fuse1 = torch.cat((part, id1), 1)
         fuse2 = torch.cat((out_sp_local, id2), 1)
         """
