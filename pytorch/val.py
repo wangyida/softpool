@@ -184,7 +184,7 @@ elif opt.dataset == 'shapenet':
             'cnt': 0
         }
     }
-    complete3d_benchmark = True
+    complete3d_benchmark = False
     if complete3d_benchmark == True:
         with open(os.path.join('./data/test_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
