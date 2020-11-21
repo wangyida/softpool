@@ -66,6 +66,8 @@ class FullModel(nn.Module):
         # for i in range(opt.n_primitives):
         dist1, dist2, _, _ = self.CD(output1, gt)
         emd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+        dist1, dist2, _, _ = self.CD(output1[:,:1024,:], output1[:,1024:,:])
+        emd1 += 0.0001/(torch.mean(dist1, 1) + torch.mean(dist2, 1) + 0.0001)
         # grid_loss = gridding_loss(output1, gt)
         # emd1 += 10 * grid_loss
         # dist, indexes = self.EMD(output1, gt, eps, iters)
