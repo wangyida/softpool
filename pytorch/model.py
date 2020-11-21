@@ -530,7 +530,7 @@ class MSN(nn.Module):
         sp_feat_conv2 = self.ptmapper2(sp_feat_conv1)
         sp_feat_conv3 = self.embedding(self.ptmapper3(sp_feat_conv2))
 
-        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) + sp_feat_conv2
+        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3) # + sp_feat_conv2
         """
         sorter3 = Sorter(512, 1)
         val_activa, _ = sorter3(sp_feat_deconv3)
