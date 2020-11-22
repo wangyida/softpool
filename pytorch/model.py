@@ -533,33 +533,12 @@ class MSN(nn.Module):
         sp_feat_conv3 = self.embedding(self.ptmapper3(sp_feat_conv2))
 
         sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3)  # + sp_feat_conv2
-        """
-        sorter3 = Sorter(512, 1)
-        val_activa, _ = sorter3(sp_feat_deconv3)
-        x_val, x_idx = torch.sort(val_activa[:, 0, :], dim=1, descending=True)
-        index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
-        sp_feat_deconv3 = torch.gather(sp_feat_deconv3, dim=2, index=index)
-        """
-
         sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3),
                                      self.translate(sp_feat_conv1)),
                                     dim=-1)
-        # sp_feat_deconv2 = self.ptmapper2_rev(sp_feat_deconv3) + sp_feat_conv1
-        """
-        sorter2 = Sorter(256, 1)
-        val_activa, _ = sorter2(sp_feat_deconv2)
-        x_val, x_idx = torch.sort(val_activa[:, 0, :], dim=1, descending=True)
-        index = x_idx[:, :].unsqueeze(1).repeat(1, featdim, 1)
-        sp_feat_deconv2 = torch.gather(sp_feat_deconv2, dim=2, index=index)
-        """
-
         sp_feat_deconv1 = self.ptmapper1_rev(sp_feat_deconv2)
-        # for i in range(0, self.n_primitives):
-        """
-        part_regions.append(
-            torch.gather(part, dim=2, index=sp_idx[:, :, i, :].long()))
-        """
-        # stn3d
+
+
         sp_feat_ae = self.ptmapper1_rev(self.translate(sp_feat_conv1))
 
         rand_grid = Variable(
@@ -599,6 +578,24 @@ class MSN(nn.Module):
         # y = torch.cat((y, pn_feat), 1).contiguous()
         out_sp_local = self.decoder1(y)
         out1 = out_sp_local.transpose(1, 2).contiguous()
+
+        stage2 = True
+        if stage2:
+            sp_feat2, _, _, _ = self.softpool_enc(
+                x=out_sp_local, x_seg=None)
+
+            sp_feat_conv21 = self.ptmapper1(sp_feat2)
+            sp_feat_conv22 = self.ptmapper2(sp_feat_conv21)
+            sp_feat_conv23 = self.embedding(self.ptmapper3(sp_feat_conv22))
+
+            sp_feat_deconv23 = self.ptmapper3_rev(sp_feat_conv23)  # + sp_feat_conv2
+            sp_feat_deconv22 = torch.cat((self.ptmapper2_rev(sp_feat_deconv23),
+                                         self.translate(sp_feat_conv21)),
+                                        dim=-1)
+            sp_feat_deconv21 = self.ptmapper1_rev(sp_feat_deconv22)
+            y = sp_feat_deconv21[:, :, 0, :]
+            out_sp_local2 = self.decoder1(y)
+            out_hourglass = out_sp_local2.transpose(1, 2).contiguous()
 
         y = sp_feat_ae[:, :, 0, :]
         out_sp_ae = self.decoder1(y)
@@ -648,4 +645,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return out1, out_fusion, out3, out_ae, out_seg, part_regions, loss_trans, loss_mst
+        return out1, out_fusion, out_hourglass, out_ae, out_seg, part_regions, loss_trans, loss_mst
