@@ -193,7 +193,7 @@ elif opt.dataset == 'shapenet':
     else:
         with open(os.path.join('./data/valid_shapenet_plane.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
-        part_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
+        part_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
         gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
