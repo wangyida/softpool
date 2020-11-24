@@ -510,7 +510,7 @@ class MSN(nn.Module):
 
     def forward(self, part, part_seg):
 
-        [out_grnet, out_grnet_fine] = self.grnet(part.transpose(1, 2))
+        # [out_grnet, out_grnet_fine] = self.grnet(part.transpose(1, 2))
         # part_seg -> one hot coding
         part_seg = part_seg[:, :, 0]
         with_label = False
@@ -576,6 +576,8 @@ class MSN(nn.Module):
         # y = torch.cat((y, pn_feat), 1).contiguous()
         out_sp_local = self.decoder1(y)
         out1 = out_sp_local.transpose(1, 2).contiguous()
+
+        [out_grnet, out_grnet_fine] = self.grnet(out1)
 
         stage2 = False
         if stage2:
@@ -643,4 +645,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return [out1, out_ae], out_fusion, out3, [out_grnet, out_grnet_fine], out_seg, part_regions, loss_trans, loss_mst
+        return [out1, out_ae], out_fusion, out4, [out_grnet, out_grnet_fine], out_seg, part_regions, loss_trans, loss_mst
