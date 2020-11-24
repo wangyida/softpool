@@ -579,7 +579,7 @@ class MSN(nn.Module):
         out_sp_local = self.decoder1(y)
         out1 = out_sp_local.transpose(1, 2).contiguous()
 
-        stage2 = True
+        stage2 = False
         if stage2:
             sp_feat2, _, _, _ = self.softpool_enc(
                 x=out_sp_local, x_seg=None)
@@ -619,14 +619,14 @@ class MSN(nn.Module):
         part_regions = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
 
         dist, _, mean_mst_dis = self.expansion(
-            out3, self.num_points // self.n_primitives // 8, 1.5)
+            out1, self.num_points // self.n_primitives // 8, 1.5)
         loss_mst = torch.mean(dist)
 
         id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
         id2 = torch.zeros(out_sp_local.shape[0], 1,
-                          out_pcn.shape[2]).cuda().contiguous()
+                          out_sp_local.shape[2] // 2).cuda().contiguous()
         fuse1 = torch.cat((part, id1), 1)
-        fuse2 = torch.cat((out_sp_local, id2), 1)
+        fuse2 = torch.cat((out_sp_local[:,:,:self.num_points // 2], id2), 1)
         """
         id3 = torch.ones(out_pcn.shape[0], 1,
                           out_pcn.shape[2]).cuda().contiguous()
@@ -639,7 +639,7 @@ class MSN(nn.Module):
         # fusion = torch.cat((fuse2, out_pcn, fuse1), 2)
 
         resampled_idx = MDS_module.minimum_density_sample(
-            fusion[:, 0:3, :].transpose(1, 2).contiguous(), out3.shape[1],
+            fusion[:, 0:3, :].transpose(1, 2).contiguous(), out1.shape[1],
             mean_mst_dis)
         fusion = MDS_module.gather_operation(fusion, resampled_idx)
         delta = self.res(fusion)
