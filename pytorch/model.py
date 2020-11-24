@@ -510,9 +510,7 @@ class MSN(nn.Module):
 
     def forward(self, part, part_seg):
 
-        out_grnet, out_grnet_fine = self.grnet(part.transpose(
-            1, 2))[0].transpose(1, 2), self.grnet(part.transpose(1, 2))[1]
-        out0 = out_grnet.transpose(1, 2)
+        [out_grnet, out_grnet_fine] = self.grnet(part.transpose(1, 2))
         # part_seg -> one hot coding
         part_seg = part_seg[:, :, 0]
         with_label = False
@@ -645,4 +643,4 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return out1, out_fusion, out3, out_ae, out_seg, part_regions, loss_trans, loss_mst
+        return [out1, out_ae], out_fusion, out3, [out_grnet, out_grnet_fine], out_seg, part_regions, loss_trans, loss_mst

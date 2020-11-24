@@ -64,12 +64,13 @@ class FullModel(nn.Module):
         # gt = gt[:, :, :3]
 
         # for i in range(opt.n_primitives):
-        dist1, dist2, _, _ = self.CD(output1, gt)
+        dist1, dist2, _, _ = self.CD(output1[0], gt)
         emd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+        dist1, dist2, _, _ = self.CD(output1[1], part)
+        emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
         # dist1, dist2, _, _ = self.CD(output1[:,1024:,:], part)
         # emd1 += 0.00001/(torch.mean(dist1, 1) + torch.mean(dist2, 1) + 0.0001)
         # grid_loss = gridding_loss(output1, gt)
-        # emd1 += 10 * grid_loss
         # dist, indexes = self.EMD(output1, gt, eps, iters)
         # emd1 += torch.sqrt(dist).mean(1)
         # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
@@ -94,10 +95,13 @@ class FullModel(nn.Module):
 
         # emd3 /= opt.n_primitives
 
-        dist1, dist2, _, _ = self.CD(output4, part)
+        dist1, dist2, _, _ = self.CD(output4[0], gt)
         emd4 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        # dist, _ = self.EMD(output4, parts, eps, iters)
-        # emd4 += torch.sqrt(dist).mean(1)
+        grid_loss = gridding_loss(output4[0], gt)
+        emd4 += 10 * grid_loss
+
+        dist1, dist2, _, _ = self.CD(output4[1], gt)
+        emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
         """
         gt_seg = gt_seg[:,:,0]
         size = list(gt_seg.size())
