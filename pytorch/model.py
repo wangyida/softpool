@@ -624,9 +624,9 @@ class MSN(nn.Module):
 
         id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
         id2 = torch.zeros(out_sp_local.shape[0], 1,
-                          out_sp_local.shape[2] // 2).cuda().contiguous()
+                          out_sp_local.shape[2]).cuda().contiguous()
         fuse1 = torch.cat((part, id1), 1)
-        fuse2 = torch.cat((out_sp_local[:,:,:self.num_points // 2], id2), 1)
+        fuse2 = torch.cat((out_sp_local[:,:,:self.num_points], id2), 1)
         """
         id3 = torch.ones(out_pcn.shape[0], 1,
                           out_pcn.shape[2]).cuda().contiguous()
