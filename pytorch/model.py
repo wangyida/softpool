@@ -15,6 +15,32 @@ import MDS_module
 import grnet
 
 
+def fourier_map(x, dim_input=2):
+    B = nn.Linear(dim_input, 256)
+    nn.init.normal_(B.weight, std=10.0)
+    B.weight.requires_grad = False
+    sinside = torch.sin(2 * pi * B(x.transpose(2, 1)))
+    cosside = torch.cos(2 * pi * B(x.transpose(2, 1)))
+    return torch.cat([sinside, cosside], -1).transpose(2, 1)
+
+
+# Produce a set of pointnet features in several sorted cloud
+def Cabins(windows, num_cabin=8):
+    size_bth = list(windows.shape)[0]
+    size_feat = list(windows.shape)[1]
+    regions = list(windows.shape)[2]
+    num_points = list(windows.shape)[3]
+    cabins = torch.zeros(size_bth, size_feat, regions, num_cabin).cuda()
+    points_cabin = num_points // num_cabin
+    for idx in range(num_cabin):
+        cabins[:, :, :, idx] = torch.max(
+            windows[:, :, :, idx * points_cabin:(idx + 1) * points_cabin],
+            dim=3,
+            keepdim=False)[0]
+
+    return cabins
+
+
 class Sorter(nn.Module):
     def __init__(self, dim_in, dim_out):
         super(Sorter, self).__init__()
@@ -31,46 +57,54 @@ class SoftPool(nn.Module):
         super(SoftPool, self).__init__()
         self.regions = regions
         self.num_cabin = cabins
+
     def forward(self, x):
-        self.size_bth = list(x.shape)[0]
-        self.size_feat = list(x.shape)[1]
-        self.pnt_per_sort = list(x.shape)[2]
+        [self.size_bth, self.size_feat, self.pnt_per_sort] = list(x.shape)
         # cabin -2
         conv2d_1 = nn.Conv2d(
-            self.size_feat, self.size_feat, kernel_size=(1, 3), stride=(1, 1)).cuda()
+            self.size_feat, self.size_feat, kernel_size=(1, 3),
+            stride=(1, 1)).cuda()
         # cabin -2
         conv2d_2 = nn.Conv2d(
-            self.size_feat, self.size_feat, kernel_size=(1, 3), stride=(1, 1)).cuda()
+            self.size_feat, self.size_feat, kernel_size=(1, 3),
+            stride=(1, 1)).cuda()
         conv2d_3 = nn.Conv2d(
             self.size_feat,
             self.size_feat,
             kernel_size=(1, self.num_cabin - 2 * (3 - 1)),
             stride=(1, 1)).cuda()
         conv2d_5 = nn.Conv2d(
-            self.size_feat, self.size_feat, kernel_size=(self.regions, 1), stride=(1, 1)).cuda()
+            self.size_feat,
+            self.size_feat,
+            kernel_size=(self.regions, 1),
+            stride=(1, 1)).cuda()
 
         sorter = Sorter(self.size_feat, self.regions)
         val_activa, id_activa = sorter(x)
 
         # initialize empty space for softpool feature
-        sp_cube = torch.zeros(self.size_bth, self.size_feat, self.regions, self.pnt_per_sort).cuda()
-        sp_idx = torch.zeros(self.size_bth, self.regions + 3, self.regions, self.pnt_per_sort).cuda()
+        sp_cube = torch.zeros(self.size_bth, self.size_feat, self.regions,
+                              self.pnt_per_sort).cuda()
+        sp_idx = torch.zeros(self.size_bth, self.regions + 3, self.regions,
+                             self.pnt_per_sort).cuda()
 
         for idx in range(self.regions):
             x_val, x_idx = torch.sort(
                 val_activa[:, idx, :], dim=1, descending=True)
-            index = x_idx[:, :self.pnt_per_sort].unsqueeze(1).repeat(1, self.size_feat, 1)
+            index = x_idx[:, :self.pnt_per_sort].unsqueeze(1).repeat(
+                1, self.size_feat, 1)
             x_order = torch.gather(x, dim=2, index=index)
             sp_cube[:, :, idx, :] = x_order
-            sp_idx[:, :, idx, :] = x_idx[:, :self.pnt_per_sort].unsqueeze(1).repeat(
-                1, self.regions + 3, 1)
+            sp_idx[:, :, idx, :] = x_idx[:, :self.pnt_per_sort].unsqueeze(
+                1).repeat(1, self.regions + 3, 1)
 
         # local pointnet feature
         points_cabin = self.pnt_per_sort // self.num_cabin
         cabins = Cabins(sp_cube, self.num_cabin)
 
         # we need to use succession manner to repeat cabin to fit with cube
-        sp_windows = torch.repeat_interleave(cabins, repeats=points_cabin, dim=3)
+        sp_windows = torch.repeat_interleave(
+            cabins, repeats=points_cabin, dim=3)
 
         # merge cabins in train
         trains = conv2d_3(conv2d_2(conv2d_1(cabins)))
@@ -89,23 +123,6 @@ class SoftPool(nn.Module):
             sp_cube = torch.cat((sp_cube, sp_windows), 1).contiguous()
 
         return sp_cube, sp_idx, cabins, id_activa
-
-
-# Produce a set of pointnet features in several sorted cloud
-def Cabins(windows, num_cabin=8):
-    size_bth = list(windows.shape)[0]
-    size_feat = list(windows.shape)[1]
-    regions = list(windows.shape)[2]
-    num_points = list(windows.shape)[3]
-    cabins = torch.zeros(size_bth, size_feat, regions, num_cabin).cuda()
-    points_cabin = num_points // num_cabin
-    for idx in range(num_cabin):
-        cabins[:, :, :, idx] = torch.max(
-            windows[:, :, :, idx * points_cabin:(idx + 1) * points_cabin],
-            dim=3,
-            keepdim=False)[0]
-
-    return cabins
 
 
 class STN3d(nn.Module):
@@ -226,15 +243,6 @@ class PointNetFeat(nn.Module):
         return x
 
 
-def fourier_map(x, dim_input=2):
-    B = nn.Linear(dim_input, 256)
-    nn.init.normal_(B.weight, std=10.0)
-    B.weight.requires_grad = False
-    sinside = torch.sin(2 * pi * B(x.transpose(2, 1)))
-    cosside = torch.cos(2 * pi * B(x.transpose(2, 1)))
-    return torch.cat([sinside, cosside], -1).transpose(2, 1)
-
-
 class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=16, sp_points=256):
         super(SoftPoolFeat, self).__init__()
@@ -252,7 +260,7 @@ class SoftPoolFeat(nn.Module):
         self.regions = regions
         self.sp_points = sp_points
 
-        self.softpool=SoftPool(self.regions, cabins=8)
+        self.softpool = SoftPool(self.regions, cabins=8)
 
     def forward(self, x, x_seg=None):
         batchsize = x.size()[0]
@@ -411,13 +419,13 @@ class PointNetRes(nn.Module):
         return x
 
 
-class MSN(nn.Module):
+class Network(nn.Module):
     def __init__(self,
                  num_points=8192,
                  n_primitives=16,
                  dim_pn=256,
                  sp_points=1024):
-        super(MSN, self).__init__()
+        super(Network, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
         self.n_primitives = n_primitives
@@ -520,8 +528,8 @@ class MSN(nn.Module):
         part_seg = part_seg[:, :, 0]
         with_label = False
         if with_label:
-            part_seg = torch.nn.functional.one_hot(part_seg.to(torch.int64),
-                                                   16).transpose(1, 2)
+            part_seg = torch.nn.functional.one_hot(
+                part_seg.to(torch.int64), 16).transpose(1, 2)
 
         # sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(x=part, x_seg=part_seg)
         sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(
@@ -540,7 +548,6 @@ class MSN(nn.Module):
                                      self.translate(sp_feat_conv1)),
                                     dim=-1)
         sp_feat_deconv1 = self.ptmapper1_rev(sp_feat_deconv2)
-
 
         sp_feat_ae = self.ptmapper1_rev(self.translate(sp_feat_conv1))
 
@@ -584,24 +591,6 @@ class MSN(nn.Module):
 
         [out_grnet, out_grnet_fine] = self.grnet(out1)
 
-        stage2 = False
-        if stage2:
-            sp_feat2, _, _, _ = self.softpool_enc(
-                x=out_sp_local, x_seg=None)
-
-            sp_feat_conv21 = self.ptmapper1(sp_feat2)
-            sp_feat_conv22 = self.ptmapper2(sp_feat_conv21)
-            sp_feat_conv23 = self.embedding(self.ptmapper3(sp_feat_conv22))
-
-            sp_feat_deconv23 = self.ptmapper3_rev(sp_feat_conv23)  # + sp_feat_conv2
-            sp_feat_deconv22 = torch.cat((self.ptmapper2_rev(sp_feat_deconv23),
-                                         self.translate(sp_feat_conv21)),
-                                        dim=-1)
-            sp_feat_deconv21 = self.ptmapper1_rev(sp_feat_deconv22)
-            y = sp_feat_deconv21[:, :, 0, :]
-            out_sp_local2 = self.decoder1(y)
-            out_hourglass = out_sp_local2.transpose(1, 2).contiguous()
-
         y = sp_feat_ae[:, :, 0, :]
         out_sp_ae = self.decoder1(y)
         out_ae = out_sp_ae.transpose(1, 2).contiguous()
@@ -631,14 +620,11 @@ class MSN(nn.Module):
         id2 = torch.zeros(out_sp_local.shape[0], 1,
                           out_sp_local.shape[2]).cuda().contiguous()
         fuse1 = torch.cat((part, id1), 1)
-        fuse2 = torch.cat((out_sp_local[:,:,:self.num_points], id2), 1)
+        fuse2 = torch.cat((out_sp_local[:, :, :self.num_points], id2), 1)
         """
         id3 = torch.ones(out_pcn.shape[0], 1,
                           out_pcn.shape[2]).cuda().contiguous()
         out_pcn = torch.cat((out_pcn, id3), 1)
-        """
-        """
-        Fusion is combined with 0, 4
         """
         fusion = torch.cat((fuse2, fuse1), 2)
         # fusion = torch.cat((fuse2, out_pcn, fuse1), 2)
@@ -650,4 +636,6 @@ class MSN(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return [out1, out_ae], out_fusion, out4, [out_grnet, out_grnet_fine], out_seg, part_regions, loss_trans, loss_mst
+        return [out1, out_ae], out_fusion, out4, [
+            out_grnet, out_grnet_fine
+        ], out_seg, part_regions, loss_trans, loss_mst

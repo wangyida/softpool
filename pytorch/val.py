@@ -45,14 +45,14 @@ parser.add_argument(
     default=16,
     help='number of primitives in the atlas')
 parser.add_argument(
-    '--env', type=str, default="MSN_VAL", help='visdom environment')
+    '--env', type=str, default="Softpool_VAL", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 
 opt = parser.parse_args()
 print(opt)
 
-network = MSN(num_points=opt.num_points, n_primitives=opt.n_primitives)
+network = Network(num_points=opt.num_points, n_primitives=opt.n_primitives)
 network.cuda()
 network.apply(weights_init)
 

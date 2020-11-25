@@ -34,7 +34,7 @@ parser.add_argument(
 parser.add_argument(
     '--n_primitives', type=int, default=16, help='number of surface elements')
 parser.add_argument(
-    '--env', type=str, default="MSN_TRAIN", help='visdom environment')
+    '--env', type=str, default="Softpool_TRAIN", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 parser.add_argument('--savepath', type=str, default='', help='path for saving')
@@ -153,7 +153,7 @@ dataloader_test = torch.utils.data.DataLoader(
 len_dataset = len(dataset)
 print("Train set size: ", len_dataset)
 
-network = MSN(num_points=opt.num_points, n_primitives=opt.n_primitives)
+network = Network(num_points=opt.num_points, n_primitives=opt.n_primitives)
 network = torch.nn.DataParallel(FullModel(network))
 network.cuda()
 network.module.model.apply(weights_init)  #initialization of the weight
