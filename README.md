@@ -27,3 +27,12 @@ If you find this work useful in yourr research, please cite:
 
  <img src="2min_presentation_softpool.gif" alt="road condition" frameborder="0" style="border:0" >
 
+## Train
+
+### Pytorch
+As we have some comparison experiments on [GRNet](https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123540341.pdf) and [MSN](https://arxiv.org/pdf/1912.00280v1.pdf), we suggest that you compile python libs in `chamfer_pkg`, `emd`, `expansion_penalty` and `extensions`.
+Suppose that GPU 0 is used for training
+```bash
+cd pytorch
+CUDA_VISIBLE_DEVICES=0 python3 val.py --n_primitives 2 --num_points 2048 --model log/wo-unet_shapenet/network.pth  --dataset shapenet
+```
