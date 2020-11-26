@@ -32,9 +32,9 @@ parser.add_argument(
 parser.add_argument(
     '--num_points', type=int, default=8192, help='number of points')
 parser.add_argument(
-    '--n_primitives', type=int, default=16, help='number of surface elements')
+    '--n_regions', type=int, default=16, help='number of surface elements')
 parser.add_argument(
-    '--env', type=str, default="Softpool_TRAIN", help='visdom environment')
+    '--env', type=str, default="SoftPool_TRAIN", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 parser.add_argument('--savepath', type=str, default='', help='path for saving')
@@ -60,10 +60,8 @@ class FullModel(nn.Module):
         for i in range(16):
             out_seg[i] = out_seg[i].transpose(1, 2).contiguous()
             gt_seg = gt[(torch.abs((i-gt_seg[:, :, 0]*11))<0.1).nonzero()]
-        """
-        # gt = gt[:, :, :3]
 
-        # for i in range(opt.n_primitives):
+        """
         dist1, dist2, _, _ = self.CD(output1[0], gt)
         emd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
         dist1, dist2, _, _ = self.CD(output1[1], part)
@@ -91,9 +89,9 @@ class FullModel(nn.Module):
         # emd3 += torch.sqrt(dist).mean(1)
         # emd3 += loss_trans
 
-        # emd1 /= opt.n_primitives
+        # emd1 /= opt.n_regions
 
-        # emd3 /= opt.n_primitives
+        # emd3 /= opt.n_regions
 
         dist1, dist2, _, _ = self.CD(output4[0], gt)
         emd4 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
@@ -153,7 +151,7 @@ dataloader_test = torch.utils.data.DataLoader(
 len_dataset = len(dataset)
 print("Train set size: ", len_dataset)
 
-network = Network(num_points=opt.num_points, n_primitives=opt.n_primitives)
+network = Network(num_points=opt.num_points, n_regions=opt.n_regions)
 network = torch.nn.DataParallel(FullModel(network))
 network.cuda()
 network.module.model.apply(weights_init)  #initialization of the weight
@@ -177,10 +175,11 @@ with open(logname, 'a') as f:  #open and append
 train_curve = []
 val_curve = []
 labels_generated_points = torch.Tensor(
-    range(1, (opt.n_primitives + 1) * (opt.num_points // opt.n_primitives) +
-          1)).view(opt.num_points // opt.n_primitives,
-                   (opt.n_primitives + 1)).transpose(0, 1)
-labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
+    range(1,
+          (opt.n_regions + 1) * (opt.num_points // opt.n_regions) + 1)).view(
+              opt.num_points // opt.n_regions, (opt.n_regions + 1)).transpose(
+                  0, 1)
+labels_generated_points = (labels_generated_points) % (opt.n_regions + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
 for epoch in range(opt.nepoch):

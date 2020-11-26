@@ -13,9 +13,11 @@ import os
 import visdom
 sys.path.append("./emd/")
 import emd_module as emd
-from chamfer_pkg.dist_chamfer import chamferDist as cd
+sys.path.append("./chamfer/")
+import dist_chamfer as cd
 from dataset import resample_pcd, read_points
-cd = cd()
+EMD = emd.emdModule()
+CD = cd.chamferDist()
 
 
 def points_save(points, colors, root='pcds/regions', child='all', pfile=''):
@@ -40,7 +42,7 @@ parser.add_argument(
 parser.add_argument(
     '--num_points', type=int, default=8192, help='number of points')
 parser.add_argument(
-    '--n_primitives',
+    '--n_regions',
     type=int,
     default=16,
     help='number of primitives in the atlas')
@@ -52,7 +54,7 @@ parser.add_argument(
 opt = parser.parse_args()
 print(opt)
 
-network = Network(num_points=opt.num_points, n_primitives=opt.n_primitives)
+network = Network(num_points=opt.num_points, n_regions=opt.n_regions)
 network.cuda()
 network.apply(weights_init)
 
@@ -198,13 +200,12 @@ elif opt.dataset == 'shapenet':
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
-EMD = emd.emdModule()
-
 labels_generated_points = torch.Tensor(
-    range(1, (opt.n_primitives + 1) * (opt.num_points // opt.n_primitives) +
-          1)).view(opt.num_points // opt.n_primitives,
-                   (opt.n_primitives + 1)).transpose(0, 1)
-labels_generated_points = (labels_generated_points) % (opt.n_primitives + 1)
+    range(1,
+          (opt.n_regions + 1) * (opt.num_points // opt.n_regions) + 1)).view(
+              opt.num_points // opt.n_regions, (opt.n_regions + 1)).transpose(
+                  0, 1)
+labels_generated_points = (labels_generated_points) % (opt.n_regions + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
 labels_inputs_points = torch.Tensor(range(0, opt.num_points)).view(
@@ -311,19 +312,19 @@ with torch.no_grad():
             hash_tab[str(subfold)]['emd3'] += emd3
             """
 
-            dist, _, _, _ = cd.forward(input1=output1, input2=gt)
+            dist, _, _, _ = CD.forward(input1=output1, input2=gt)
             cd1 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd1'] += cd1
 
-            dist, _, _, _ = cd.forward(input1=output2, input2=gt)
+            dist, _, _, _ = CD.forward(input1=output2, input2=gt)
             cd2 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd2'] += cd2
 
-            dist, _, _, _ = cd.forward(input1=output3, input2=gt)
+            dist, _, _, _ = CD.forward(input1=output3, input2=gt)
             cd3 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd3'] += cd3
 
-            dist, _, _, _ = cd.forward(input1=output4, input2=gt)
+            dist, _, _, _ = CD.forward(input1=output4, input2=gt)
             cd4 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd4'] += cd4
 
@@ -362,7 +363,7 @@ with torch.no_grad():
         # save selected points on input
         pts_coord = part_regions[0].data.cpu()[:, 0:3]
         """
-        dist, _, idx1, _ = cd.forward(input1=part_regions, input2=gt)
+        dist, _, idx1, _ = CD.forward(input1=part_regions, input2=gt)
         pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
         """
         maxi = labels_inputs_points.max()
@@ -437,7 +438,7 @@ with torch.no_grad():
         pts_coord = output4[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
 
-        dist, _, idx1, _ = cd.forward(input1=output4, input2=gt)
+        dist, _, idx1, _ = CD.forward(input1=output4, input2=gt)
         pts_color = matplotlib.cm.rainbow(
             gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
         cd4 = dist.mean()

@@ -25,14 +25,19 @@ If you find this work useful in yourr research, please cite:
 
 ## SoftPoolNet
 
- <img src="2min_presentation_softpool.gif" alt="road condition" frameborder="0" style="border:0" >
+ <img src="imgs/2min_presentation_softpool.gif" alt="road condition" frameborder="0" style="border:0" >
 
 ## Train
+Our **SoftPool** operators are provided in both Tensorflow and Pytorch frameworks, we recommend to use the Pytorch version.
 
 ### Pytorch
 As we have some comparison experiments on [GRNet](https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123540341.pdf) and [MSN](https://arxiv.org/pdf/1912.00280v1.pdf), we suggest that you compile python libs in `chamfer_pkg`, `emd`, `expansion_penalty` and `extensions`.
-Suppose that GPU 0 is used for training
+You can go towards each folder which includes the mentioend libs by `cd`, then
+```python
+python setup.py install --user
+```
+Suppose that GPU 0 is supposed to get used for training
 ```bash
 cd pytorch
-CUDA_VISIBLE_DEVICES=0 python3 val.py --n_primitives 2 --num_points 2048 --model log/wo-unet_shapenet/network.pth  --dataset shapenet
+CUDA_VISIBLE_DEVICES=0 python3 val.py --n_regions 2 --num_points 2048 --model log/wo-unet_shapenet/network.pth  --dataset shapenet
 ```
