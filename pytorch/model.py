@@ -30,12 +30,12 @@ def feature_transform_regularizer(trans):
 def fourier_map(x, dim_input=2):
     # here are some options to check how to form the fourier feature
     upgrade_weights = False
-    B = nn.Linear(dim_input, 256)
+    B = nn.Conv1d(dim_input, 256, 1).cuda()
     nn.init.normal_(B.weight, std=10.0)
     B.weight.requires_grad = upgrade_weights
-    sinside = torch.sin(2 * pi * B(x.transpose(2, 1)))
-    cosside = torch.cos(2 * pi * B(x.transpose(2, 1)))
-    return torch.cat([sinside, cosside], -1).transpose(2, 1)
+    sinside = torch.sin(2 * pi * B(x))
+    cosside = torch.cos(2 * pi * B(x))
+    return torch.cat([sinside, cosside], 1)
 
 
 class STN3d(nn.Module):
@@ -148,7 +148,7 @@ class PointNetFeat(nn.Module):
 class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=16, sp_points=256):
         super(SoftPoolFeat, self).__init__()
-        self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.conv1 = torch.nn.Conv1d(512, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
@@ -167,6 +167,7 @@ class SoftPoolFeat(nn.Module):
     def forward(self, x, x_seg=None):
         batchsize = x.size()[0]
         part = x
+        x = fourier_map(x, dim_input=3)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
@@ -431,9 +432,11 @@ class Network(nn.Module):
             part_seg = torch.nn.functional.one_hot(
                 part_seg.to(torch.int64), self.n_regions).transpose(1, 2)
 
-            sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(x=part, x_seg=part_seg)
+            sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(
+                x=part, x_seg=part_seg)
         else:
-            sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(x=part, x_seg=None)
+            sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(
+                x=part, x_seg=None)
         loss_trans = feature_transform_regularizer(trans[-3:, -3:])
         pn_feat = self.pn_enc(part)
         pn_feat = pn_feat.unsqueeze(2).expand(
@@ -453,7 +456,8 @@ class Network(nn.Module):
 
         rand_grid = Variable(
             torch.FloatTensor(
-                part.size(0), 2, self.num_points // self.n_regions // 8))
+                part.size(0), 2,
+                self.num_points // self.n_regions // 8)).cuda()
         rand_grid.data.uniform_(0, 1)
         rand_grid = fourier_map(rand_grid).cuda()
 
@@ -479,7 +483,7 @@ class Network(nn.Module):
              torch.reshape(mesh_grid[1], (self.num_points, 1))),
             dim=1)
         mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
-            sp_feat_deconv1.shape[0], 1, 1)
+            sp_feat_deconv1.shape[0], 1, 1).cuda()
         mesh_grid = fourier_map(mesh_grid)
         y = sp_feat_deconv1[:, :, 0, :]
         out_seg = y.transpose(1, 2).contiguous()
@@ -531,8 +535,8 @@ class Network(nn.Module):
         # fusion = torch.cat((fuse2, out_fold_trans, fuse1), 2)
 
         resampled_idx = MDS_module.minimum_density_sample(
-            fusion[:, 0:3, :].transpose(1, 2).contiguous(), out_softpool.shape[1],
-            mean_mst_dis)
+            fusion[:, 0:3, :].transpose(1, 2).contiguous(),
+            out_softpool.shape[1], mean_mst_dis)
         fusion = MDS_module.gather_operation(fusion, resampled_idx)
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]

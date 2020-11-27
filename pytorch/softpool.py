@@ -6,6 +6,7 @@ from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
 
+
 # Produce a set of pointnet features in several sorted cloud
 def train2cabins(windows, num_cabin=8):
     size_bth = list(windows.shape)[0]
@@ -105,4 +106,3 @@ class SoftPool(nn.Module):
             sp_cube = torch.cat((sp_cube, sp_windows), 1).contiguous()
 
         return sp_cube, sp_idx, cabins, id_activa
-
