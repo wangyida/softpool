@@ -164,13 +164,17 @@ class SoftPoolFeat(nn.Module):
 
         self.softpool = sp.SoftPool(self.regions, cabins=8)
 
-    def forward(self, x, x_seg=None):
-        batchsize = x.size()[0]
-        part = x
-        x = fourier_map(x, dim_input=3)
+    def mlp(self, inputs):
+        x = fourier_map(inputs, dim_input=3)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
+        return x
+
+    def forward(self, x, x_seg=None):
+        part = x
+
+        x = self.mlp(x)
 
         sp_cube, sp_idx, cabins, id_activa = self.softpool(x)
 
@@ -220,7 +224,6 @@ class PointGenCon(nn.Module):
         self.bn3 = torch.nn.BatchNorm1d(self.bottleneck_size // 4)
 
     def forward(self, x):
-        batchsize = x.size()[0]
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
@@ -268,7 +271,6 @@ class PointGenCon2D(nn.Module):
         self.bn3 = torch.nn.BatchNorm2d(self.bottleneck_size // 4)
 
     def forward(self, x):
-        batchsize = x.size()[0]
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
@@ -305,7 +307,6 @@ class PointNetRes(nn.Module):
         self.th = nn.Tanh()
 
     def forward(self, x):
-        batchsize = x.size()[0]
         npoints = x.size()[2]
         x = F.relu(self.bn1(self.conv1(x)))
         pointfeat = x
