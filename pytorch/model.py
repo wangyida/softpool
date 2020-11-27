@@ -29,7 +29,7 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2):
     # here are some options to check how to form the fourier feature
-    upgrade_weights = False
+    upgrade_weights = True
     B = nn.Conv1d(dim_input, 256, 1).cuda()
     nn.init.normal_(B.weight, std=10.0)
     B.weight.requires_grad = upgrade_weights
