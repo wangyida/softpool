@@ -28,7 +28,7 @@ If you find this work useful in yourr research, please cite:
  <img src="imgs/2min_presentation_softpool.gif" alt="road condition" frameborder="0" style="border:0" >
 
 ## Train
-Our **SoftPool** operators are provided in both Tensorflow and Pytorch frameworks, we recommend to use the Pytorch version.
+Our **SoftPool** operators are provided in both Tensorflow and Pytorch frameworks, both using CUDA 10.2, we recommend to use the Pytorch version 1.2.0.
 
 ### Pytorch
 As we have some comparison experiments on [GRNet](https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123540341.pdf) and [MSN](https://arxiv.org/pdf/1912.00280v1.pdf), we suggest that you compile python libs in `chamfer_pkg`, `emd`, `expansion_penalty` and `extensions`.
