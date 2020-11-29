@@ -27,6 +27,14 @@ If you find this work useful in yourr research, please cite:
 
  <img src="imgs/2min_presentation_softpool.gif" alt="road condition" frameborder="0" style="border:0" >
 
+## Object Completion
+
+![shapenet](imgs/softpoolnet.png)
+
+## Soft-Pool Operation
+
+![softpool](imgs/softpool.png)
+
 ## Train
 Our **SoftPool** operators are provided in both Tensorflow and Pytorch frameworks, both using CUDA 10.2, we recommend to use the Pytorch version 1.2.0.
 
