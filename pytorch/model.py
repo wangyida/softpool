@@ -29,12 +29,15 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2):
     # here are some options to check how to form the fourier feature
-    upgrade_weights = True
+    upgrade_weights = False
+    omega0 = 5
     B = nn.Conv1d(dim_input, 256, 1).cuda()
-    nn.init.normal_(B.weight, std=10.0)
+    # nn.init.normal_(B.weight, std=10.0)
+    with torch.no_grad():
+        B.weight.uniform_(-1 / dim_input, 1 / dim_input)
     B.weight.requires_grad = upgrade_weights
-    sinside = torch.sin(2 * pi * B(x))
-    cosside = torch.cos(2 * pi * B(x))
+    sinside = torch.sin(2 * pi * B(x) * omega0)
+    cosside = torch.cos(2 * pi * B(x) * omega0)
     return torch.cat([sinside, cosside], 1)
 
 
