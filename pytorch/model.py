@@ -497,7 +497,7 @@ class Network(nn.Module):
         out_softpool_trans = self.decoder1(y)
         out_softpool = out_softpool_trans.transpose(1, 2).contiguous()
 
-        [out_grnet_coar, out_grnet_fine] = self.grnet(out_softpool)
+        [out_grnet_coar, out_grnet_fine] = self.grnet(part.transpose(1, 2))
 
         y = sp_feat_ae[:, :, 0, :]
         out_sp_ae = self.decoder1(y)
