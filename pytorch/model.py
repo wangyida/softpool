@@ -27,11 +27,16 @@ def feature_transform_regularizer(trans):
     return loss
 
 
-def fourier_map(x, dim_input=2, is_first=True):
+def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
     upgrade_weights = False
-    omega_0 = 5
-    B = nn.Conv1d(dim_input, 256, 1, bias=False).cuda()
+    with_phase = True
+    omega_0 = 30
+    if with_phase:
+        B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
+    else:
+        B = nn.Conv1d(dim_input, dim_output//2, 1, bias=with_phase).cuda()
+
     # nn.init.normal_(B.weight, std=10.0)
     with torch.no_grad():
         if is_first:
@@ -41,9 +46,13 @@ def fourier_map(x, dim_input=2, is_first=True):
                     np.sqrt(6 / dim_input) / omega_0)
 
     B.weight.requires_grad = upgrade_weights
-    sinside = torch.sin(2 * pi * B(x) * omega_0)
-    cosside = torch.cos(2 * pi * B(x) * omega_0)
-    return torch.cat([sinside, cosside], 1)
+    if with_phase:
+        sinside = torch.sin(B(x) * omega_0)
+        return sinside
+    else:
+        sinside = torch.sin(B(x) * omega_0)
+        cosside = torch.cos(B(x) * omega_0)
+        return torch.cat([sinside, cosside], 1)
 
 
 class STN3d(nn.Module):
@@ -158,7 +167,7 @@ class SoftPoolFeat(nn.Module):
         super(SoftPoolFeat, self).__init__()
         self.conv1 = torch.nn.Conv1d(512, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(512, 256, 1)
+        self.conv3 = torch.nn.Conv1d(256, 256, 1)
 
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
@@ -173,13 +182,13 @@ class SoftPoolFeat(nn.Module):
         self.softpool = sp.SoftPool(self.regions, cabins=8)
 
     def mlp(self, inputs):
-        x = fourier_map(inputs, dim_input=3)
+        x = fourier_map(inputs, dim_input=3, dim_output=512)
         """
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         """
-        x = fourier_map(x, dim_input=512, is_first=False)
-        x = fourier_map(x, dim_input=512, is_first=False)
+        x = fourier_map(x, dim_input=512, dim_output=256, is_first=False)
+        x = fourier_map(x, dim_input=256, dim_output=256, is_first=False)
         x = self.bn3(self.conv3(x))
         return x
 
