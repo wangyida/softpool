@@ -46,6 +46,7 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
                     np.sqrt(6 / dim_input) / omega_0)
 
     B.weight.requires_grad = upgrade_weights
+    
     if with_phase:
         sinside = torch.sin(B(x) * omega_0)
         return sinside
@@ -167,7 +168,7 @@ class SoftPoolFeat(nn.Module):
         super(SoftPoolFeat, self).__init__()
         self.conv1 = torch.nn.Conv1d(512, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(256, 256, 1)
+        self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
@@ -183,12 +184,12 @@ class SoftPoolFeat(nn.Module):
 
     def mlp(self, inputs):
         x = fourier_map(inputs, dim_input=3, dim_output=512)
-        """
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         """
         x = fourier_map(x, dim_input=512, dim_output=256, is_first=False)
         x = fourier_map(x, dim_input=256, dim_output=256, is_first=False)
+        """
         x = self.bn3(self.conv3(x))
         return x
 
@@ -485,10 +486,10 @@ class Network(nn.Module):
 
         mesh_grid_mini = torch.meshgrid(
             [torch.linspace(0.0, 1.0, 8),
-             torch.linspace(0.0, 1.0, 16)])
+             torch.linspace(0.0, 1.0, 8)])
         mesh_grid_mini = torch.cat(
-            (torch.reshape(mesh_grid_mini[0], (8 * 16, 1)),
-             torch.reshape(mesh_grid_mini[1], (8 * 16, 1))),
+            (torch.reshape(mesh_grid_mini[0], (8 * 8, 1)),
+             torch.reshape(mesh_grid_mini[1], (8 * 8, 1))),
             dim=1)
         mesh_grid_mini = torch.transpose(mesh_grid_mini, 0,
                                          1).unsqueeze(0).repeat(
