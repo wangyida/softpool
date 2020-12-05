@@ -30,7 +30,7 @@ def feature_transform_regularizer(trans):
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
     upgrade_weights = False
-    with_phase = True
+    with_phase = False
     omega_0 = 30
     if with_phase:
         B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
@@ -46,13 +46,14 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
                     np.sqrt(6 / dim_input) / omega_0)
 
     B.weight.requires_grad = upgrade_weights
+    m = nn.Dropout()
     
     if with_phase:
         sinside = torch.sin(B(x) * omega_0)
         return sinside
     else:
-        sinside = torch.sin(B(x) * omega_0)
-        cosside = torch.cos(B(x) * omega_0)
+        sinside = torch.sin(m(B(x)) * omega_0)
+        cosside = torch.cos(m(B(x)) * omega_0)
         return torch.cat([sinside, cosside], 1)
 
 
@@ -544,12 +545,12 @@ class Network(nn.Module):
             out_softpool, self.num_points // self.n_regions // 8, 1.5)
         loss_mst = torch.mean(dist)
 
-        id1 = torch.ones(part.shape[0], 1, part.shape[2] // 2).cuda().contiguous()
+        id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
         id2 = torch.zeros(out_softpool_trans.shape[0], 1,
-                          out_softpool_trans.shape[2] // 2).cuda().contiguous()
-        # fuse_observe = torch.cat((part, id1), 1)
-        fuse_observe = torch.cat((out_softpool_trans[:, :, self.num_points // 2:], id1), 1)
-        fuse_expand = torch.cat((out_softpool_trans[:, :, :self.num_points // 2], id2), 1)
+                          out_softpool_trans.shape[2]).cuda().contiguous()
+        fuse_observe = torch.cat((part, id1), 1)
+        # fuse_observe = torch.cat((out_softpool_trans[:, :, :self.num_points // 2:], id1), 1)
+        fuse_expand = torch.cat((out_softpool_trans, id2), 1)
         """
         id3 = torch.ones(out_fold_trans.shape[0], 1,
                           out_fold_trans.shape[2]).cuda().contiguous()
