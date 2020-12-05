@@ -30,7 +30,7 @@ def feature_transform_regularizer(trans):
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
     upgrade_weights = False
-    with_phase = False
+    with_phase = True
     omega_0 = 30
     if with_phase:
         B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
