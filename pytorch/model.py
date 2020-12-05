@@ -31,7 +31,7 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
     upgrade_weights = False
     with_phase = False
-    omega_0 = 30
+    omega_0 = 3000
     if with_phase:
         B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
     else:
@@ -46,14 +46,13 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
                     np.sqrt(6 / dim_input) / omega_0)
 
     B.weight.requires_grad = upgrade_weights
-    m = nn.Dropout()
     
     if with_phase:
         sinside = torch.sin(B(x) * omega_0)
         return sinside
     else:
-        sinside = torch.sin(m(B(x)) * omega_0)
-        cosside = torch.cos(m(B(x)) * omega_0)
+        sinside = torch.sin(B(x) * omega_0)
+        cosside = torch.cos(B(x) * omega_0)
         return torch.cat([sinside, cosside], 1)
 
 
