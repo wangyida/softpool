@@ -43,7 +43,7 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
         else:
             B.weight.uniform_(-np.sqrt(6 / dim_input) / omega_0,
                     np.sqrt(6 / dim_input) / omega_0)
-    
+
     if with_phase:
         sinside = torch.sin(B(x) * omega_0)
         return sinside
@@ -465,8 +465,9 @@ class Network(nn.Module):
 
         sp_feat_conv1 = self.pt_mapper1(sp_feat)
         sp_feat_conv2 = self.pt_mapper2(sp_feat_conv1)
-        # sp_feat_conv3 = self.embedding(self.pt_mapper3(sp_feat_conv2))
-        sp_feat_conv3 = self.pt_mixing(self.pt_mapper3(sp_feat_conv2))
+        sp_feat_conv3 = self.embedding(self.pt_mapper3(sp_feat_conv2))
+        sp_feat_conv3 = self.pt_mapper3(sp_feat_conv2)
+        # sp_feat_conv3 = self.pt_mixing(self.pt_mapper3(sp_feat_conv2))
 
 
         sp_feat_deconv3 = self.pt_mapper3_rev(sp_feat_conv3)  # + sp_feat_conv2
