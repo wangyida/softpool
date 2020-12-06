@@ -30,8 +30,8 @@ def feature_transform_regularizer(trans):
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
     upgrade_weights = False
-    with_phase = False
-    omega_0 = 3000
+    with_phase = True
+    omega_0 = 3
     if with_phase:
         B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
     else:
@@ -485,11 +485,11 @@ class Network(nn.Module):
         rand_grid = fourier_map(rand_grid).cuda()
 
         mesh_grid_mini = torch.meshgrid(
-            [torch.linspace(0.0, 1.0, 8),
+            [torch.linspace(0.0, 1.0, 16),
              torch.linspace(0.0, 1.0, 8)])
         mesh_grid_mini = torch.cat(
-            (torch.reshape(mesh_grid_mini[0], (8 * 8, 1)),
-             torch.reshape(mesh_grid_mini[1], (8 * 8, 1))),
+            (torch.reshape(mesh_grid_mini[0], (16 * 8, 1)),
+             torch.reshape(mesh_grid_mini[1], (16 * 8, 1))),
             dim=1)
         mesh_grid_mini = torch.transpose(mesh_grid_mini, 0,
                                          1).unsqueeze(0).repeat(

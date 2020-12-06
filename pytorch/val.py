@@ -292,7 +292,7 @@ with torch.no_grad():
         output1, output2, output3, output4, out_seg, part_regions, _, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
         output1 = output1[0]
-        output4 = output4[1]
+        output4 = output4[0]
         """
         _, _, _, _, _, _, gt_regions, _ = network(
             gt.transpose(2, 1).contiguous())
