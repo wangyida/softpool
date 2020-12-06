@@ -29,9 +29,8 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
-    upgrade_weights = False
-    with_phase = True
-    omega_0 = 3
+    with_phase = False
+    omega_0 = 30
     if with_phase:
         B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
     else:
@@ -44,8 +43,6 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
         else:
             B.weight.uniform_(-np.sqrt(6 / dim_input) / omega_0,
                     np.sqrt(6 / dim_input) / omega_0)
-
-    B.weight.requires_grad = upgrade_weights
     
     if with_phase:
         sinside = torch.sin(B(x) * omega_0)
@@ -363,7 +360,7 @@ class Network(nn.Module):
             num_points, regions=self.n_regions, sp_points=2048)
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
-        self.ptmapper1 = nn.Sequential(
+        self.pt_mapper1 = nn.Sequential(
             nn.Conv2d(
                 4 * dim_pn + n_regions + 3,
                 dim_pn,
@@ -371,7 +368,7 @@ class Network(nn.Module):
                 stride=(1, 2),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh())
-        self.ptmapper2 = nn.Sequential(
+        self.pt_mapper2 = nn.Sequential(
             nn.Conv2d(
                 dim_pn,
                 2 * dim_pn,
@@ -379,7 +376,7 @@ class Network(nn.Module):
                 stride=(1, 2),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh())
-        self.ptmapper3 = nn.Sequential(
+        self.pt_mapper3 = nn.Sequential(
             nn.Conv2d(
                 2 * dim_pn,
                 2 * dim_pn,
@@ -407,29 +404,30 @@ class Network(nn.Module):
                 kernel_size=(1, 8),
                 stride=(1, 8),
                 padding=(0, 0)), nn.Tanh())
+        self.pt_mixing = nn.Sequential(nn.Linear(256, 256))
 
-        self.ptmapper4 = nn.Sequential(
+        self.pt_mapper4 = nn.Sequential(
             nn.Conv2d(
                 4 * dim_pn,
                 4 * dim_pn,
                 kernel_size=(self.n_regions, 1),
                 stride=(1, 1)))
 
-        self.ptmapper3_rev = nn.Sequential(
+        self.pt_mapper3_rev = nn.Sequential(
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh())
-        self.ptmapper2_rev = nn.Sequential(
+        self.pt_mapper2_rev = nn.Sequential(
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh())
-        self.ptmapper1_rev = nn.Sequential(
+        self.pt_mapper1_rev = nn.Sequential(
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
@@ -465,17 +463,19 @@ class Network(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
 
-        sp_feat_conv1 = self.ptmapper1(sp_feat)
-        sp_feat_conv2 = self.ptmapper2(sp_feat_conv1)
-        sp_feat_conv3 = self.embedding(self.ptmapper3(sp_feat_conv2))
+        sp_feat_conv1 = self.pt_mapper1(sp_feat)
+        sp_feat_conv2 = self.pt_mapper2(sp_feat_conv1)
+        # sp_feat_conv3 = self.embedding(self.pt_mapper3(sp_feat_conv2))
+        sp_feat_conv3 = self.pt_mixing(self.pt_mapper3(sp_feat_conv2))
 
-        sp_feat_deconv3 = self.ptmapper3_rev(sp_feat_conv3)  # + sp_feat_conv2
-        sp_feat_deconv2 = torch.cat((self.ptmapper2_rev(sp_feat_deconv3),
+
+        sp_feat_deconv3 = self.pt_mapper3_rev(sp_feat_conv3)  # + sp_feat_conv2
+        sp_feat_deconv2 = torch.cat((self.pt_mapper2_rev(sp_feat_deconv3),
                                      self.translate(sp_feat_conv1)),
                                     dim=-1)
-        sp_feat_deconv1 = self.ptmapper1_rev(sp_feat_deconv2)
+        sp_feat_deconv1 = self.pt_mapper1_rev(sp_feat_deconv2)
 
-        sp_feat_ae = self.ptmapper1_rev(self.translate(sp_feat_conv1))
+        sp_feat_ae = self.pt_mapper1_rev(self.translate(sp_feat_conv1))
 
         rand_grid = Variable(
             torch.FloatTensor(
