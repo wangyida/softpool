@@ -29,7 +29,7 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
-    with_phase = True
+    with_phase = False
     omega_0 = 30
     if with_phase:
         B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
@@ -387,24 +387,31 @@ class Network(nn.Module):
         # input for embedding has 256 points
         self.embedding = nn.Sequential(
             nn.MaxPool2d(kernel_size=(1, 256//4), stride=(1, 256//4)),
-            nn.ConvTranspose2d(
+            nn.Conv2d(
                 2 * dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 4),
-                stride=(1, 4),
+                stride=(1, 1),
+                padding=(0, 0),
+                padding_mode='same'), nn.Tanh(),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 8),
+                stride=(1, 8),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 8),
+                stride=(1, 8),
                 padding=(0, 0)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 4),
                 stride=(1, 4),
-                padding=(0, 0)), nn.Tanh(),
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 4),
-                stride=(1, 4),
-                padding=(0, 0)), nn.Tanh())
+                padding=(0, 0)))
         self.pt_mixing = nn.Sequential(nn.Linear(256, 256))
 
         self.pt_mapper4 = nn.Sequential(
