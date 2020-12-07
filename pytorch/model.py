@@ -29,7 +29,7 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
-    with_phase = True
+    with_phase = False
     omega_0 = 30
     if with_phase:
         B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
@@ -384,8 +384,9 @@ class Network(nn.Module):
                 stride=(1, 2),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh())
+        # input for embedding has 256 points
         self.embedding = nn.Sequential(
-            nn.MaxPool2d((1, 256)),
+            nn.MaxPool2d(kernel_size=(1, 256//4), stride=(1, 256//4)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
@@ -395,14 +396,14 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 8),
-                stride=(1, 8),
+                kernel_size=(1, 4),
+                stride=(1, 4),
                 padding=(0, 0)), nn.Tanh(),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 8),
-                stride=(1, 8),
+                kernel_size=(1, 4),
+                stride=(1, 4),
                 padding=(0, 0)), nn.Tanh())
         self.pt_mixing = nn.Sequential(nn.Linear(256, 256))
 
@@ -466,7 +467,6 @@ class Network(nn.Module):
         sp_feat_conv1 = self.pt_mapper1(sp_feat)
         sp_feat_conv2 = self.pt_mapper2(sp_feat_conv1)
         sp_feat_conv3 = self.embedding(self.pt_mapper3(sp_feat_conv2))
-        sp_feat_conv3 = self.pt_mapper3(sp_feat_conv2)
         # sp_feat_conv3 = self.pt_mixing(self.pt_mapper3(sp_feat_conv2))
 
 
@@ -485,12 +485,14 @@ class Network(nn.Module):
         rand_grid.data.uniform_(0, 1)
         rand_grid = fourier_map(rand_grid).cuda()
 
+        mesh_y = 8
+        mesh_x = self.num_points // (8*self.n_regions*mesh_y)
         mesh_grid_mini = torch.meshgrid(
-            [torch.linspace(0.0, 1.0, 16),
-             torch.linspace(0.0, 1.0, 8)])
+            [torch.linspace(0.0, 1.0, mesh_x),
+             torch.linspace(0.0, 1.0, mesh_y)])
         mesh_grid_mini = torch.cat(
-            (torch.reshape(mesh_grid_mini[0], (16 * 8, 1)),
-             torch.reshape(mesh_grid_mini[1], (16 * 8, 1))),
+            (torch.reshape(mesh_grid_mini[0], (mesh_x * mesh_y, 1)),
+             torch.reshape(mesh_grid_mini[1], (mesh_x * mesh_y, 1))),
             dim=1)
         mesh_grid_mini = torch.transpose(mesh_grid_mini, 0,
                                          1).unsqueeze(0).repeat(
