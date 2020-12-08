@@ -29,28 +29,33 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
+    with_frequency = False
     with_phase = False
-    omega_0 = 30
-    if with_phase:
-        B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
-    else:
-        B = nn.Conv1d(dim_input, dim_output//2, 1, bias=with_phase).cuda()
-
-    # nn.init.normal_(B.weight, std=10.0)
-    with torch.no_grad():
-        if is_first:
-            B.weight.uniform_(-1 / dim_input, 1 / dim_input)
+    if with_frequency:
+        omega_0 = 30
+        if with_phase:
+            B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
         else:
-            B.weight.uniform_(-np.sqrt(6 / dim_input) / omega_0,
-                    np.sqrt(6 / dim_input) / omega_0)
+            B = nn.Conv1d(dim_input, dim_output//2, 1, bias=with_phase).cuda()
 
-    if with_phase:
-        sinside = torch.sin(B(x) * omega_0)
-        return sinside
+        # nn.init.normal_(B.weight, std=10.0)
+        with torch.no_grad():
+            if is_first:
+                B.weight.uniform_(-1 / dim_input, 1 / dim_input)
+            else:
+                B.weight.uniform_(-np.sqrt(6 / dim_input) / omega_0,
+                        np.sqrt(6 / dim_input) / omega_0)
+
+        if with_phase:
+            sinside = torch.sin(B(x) * omega_0)
+            return sinside
+        else:
+            sinside = torch.sin(B(x) * omega_0)
+            cosside = torch.cos(B(x) * omega_0)
+            return torch.cat([sinside, cosside], 1)
     else:
-        sinside = torch.sin(B(x) * omega_0)
-        cosside = torch.cos(B(x) * omega_0)
-        return torch.cat([sinside, cosside], 1)
+        B = nn.Conv1d(dim_input, dim_output, 1).cuda()
+        return B(x)
 
 
 class STN3d(nn.Module):
