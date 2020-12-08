@@ -54,7 +54,7 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
             cosside = torch.cos(B(x) * omega_0)
             return torch.cat([sinside, cosside], 1)
     else:
-        BN = nn.BatchNorm1d(dim_output)
+        BN = nn.BatchNorm1d(dim_output).cuda()
         B = nn.Conv1d(dim_input, dim_output, 1).cuda()
         return F.relu(BN(B(x)))
 
