@@ -36,14 +36,15 @@ class Sorter(nn.Module):
 
 
 class SoftPool(nn.Module):
-    def __init__(self, regions=16, cabins=8):
+    def __init__(self, regions=16, cabins=8, sp_ratio=4):
         super(SoftPool, self).__init__()
         self.regions = regions
         self.num_cabin = cabins
+        self.sp_ratio = sp_ratio
 
     def forward(self, x):
         [self.size_bth, self.size_feat, self.pnt_per_sort] = list(x.shape)
-        self.pnt_per_sort //= 4
+        self.pnt_per_sort //= self.sp_ratio
         # cabin -2
         conv2d_1 = nn.Conv2d(
             self.size_feat, self.size_feat, kernel_size=(1, 3),

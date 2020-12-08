@@ -29,7 +29,7 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
-    with_frequency = True
+    with_frequency = False
     with_phase = False
     if with_frequency:
         omega_0 = 30
@@ -167,7 +167,7 @@ class PointNetFeat(nn.Module):
 
 
 class SoftPoolFeat(nn.Module):
-    def __init__(self, num_points=8192, regions=16, sp_points=256):
+    def __init__(self, num_points=8192, regions=16, sp_points=2048, sp_ratio=4):
         super(SoftPoolFeat, self).__init__()
         self.conv1 = torch.nn.Conv1d(512, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
@@ -181,9 +181,9 @@ class SoftPoolFeat(nn.Module):
 
         self.num_points = num_points
         self.regions = regions
-        self.sp_points = sp_points
+        self.sp_points = sp_points // sp_ratio
 
-        self.softpool = sp.SoftPool(self.regions, cabins=8)
+        self.softpool = sp.SoftPool(self.regions, cabins=8, sp_ratio=sp_ratio)
 
     def mlp(self, inputs):
         x = fourier_map(inputs, dim_input=3, dim_output=512)
@@ -219,15 +219,11 @@ class SoftPoolFeat(nn.Module):
         """
         point_wi_seg = point_wi_seg.unsqueeze(2).repeat(1, 1, self.regions, 1)
 
-        # 2048 / 63 = 32
-        idx_step = torch.floor(
-            torch.linspace(0, (sp_cube.shape[3] - 1), steps=self.sp_points))
-        sp_cube = sp_cube[:, :, :, :self.sp_points]
-        # sp_idx = sp_idx[:, :, :, :self.sp_points]
-        # x = x[:, :, :, idx_step.long()]
-        # sp_idx = sp_idx[:, :, :, idx_step.long()]
         point_wi_seg = torch.gather(point_wi_seg, dim=3, index=sp_idx.long())
         feature = torch.cat((sp_cube, point_wi_seg), 1).contiguous()
+
+        feature = feature.view(feature.shape[0], feature.shape[1], 1, self.regions*self.sp_points)
+        sp_idx = sp_idx.view(sp_idx.shape[0], sp_idx.shape[1], 1, self.regions*self.sp_points)
         return feature, cabins, sp_idx, trans
 
 
