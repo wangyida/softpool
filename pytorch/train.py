@@ -34,7 +34,7 @@ parser.add_argument(
 parser.add_argument(
     '--n_regions', type=int, default=16, help='number of surface elements')
 parser.add_argument(
-    '--env', type=str, default="SoftPool_TRAIN", help='visdom environment')
+    '--env', type=str, default="SoftPoolNet", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 parser.add_argument('--savepath', type=str, default='', help='path for saving')

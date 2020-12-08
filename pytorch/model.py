@@ -29,7 +29,7 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
-    with_frequency = True
+    with_frequency = False
     with_phase = False
     if with_frequency:
         omega_0 = 30
@@ -54,8 +54,9 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
             cosside = torch.cos(B(x) * omega_0)
             return torch.cat([sinside, cosside], 1)
     else:
+        BN = nn.BatchNorm1d(dim_output)
         B = nn.Conv1d(dim_input, dim_output, 1).cuda()
-        return B(x)
+        return F.relu(BN(B(x)))
 
 
 class STN3d(nn.Module):
@@ -352,17 +353,22 @@ class Network(nn.Module):
                  num_points=8192,
                  n_regions=16,
                  dim_pn=256,
-                 sp_points=1024):
+                 sp_points=1024,
+                 sp_ratio=4):
         super(Network, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
         self.n_regions = n_regions
         self.sp_points = sp_points
+        self.sp_ratio = sp_ratio
+
         self.pn_enc = nn.Sequential(
             PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),
             nn.BatchNorm1d(dim_pn), nn.ReLU())
+
         self.softpool_enc = SoftPoolFeat(
             num_points, regions=self.n_regions, sp_points=2048)
+
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
         self.pt_mapper1 = nn.Sequential(
@@ -389,16 +395,10 @@ class Network(nn.Module):
                 stride=(1, 2),
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh())
+
         # input for embedding has 256 points
         self.embedding = nn.Sequential(
-            nn.MaxPool2d(kernel_size=(1, 256//4), stride=(1, 256//4)),
-            nn.Conv2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 4),
-                stride=(1, 1),
-                padding=(0, 0),
-                padding_mode='same'), nn.Tanh(),
+            nn.MaxPool2d(kernel_size=(1, 256//self.sp_ratio), stride=(1, 256//self.sp_ratio)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,

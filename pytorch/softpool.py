@@ -43,6 +43,7 @@ class SoftPool(nn.Module):
 
     def forward(self, x):
         [self.size_bth, self.size_feat, self.pnt_per_sort] = list(x.shape)
+        self.pnt_per_sort //= 4
         # cabin -2
         conv2d_1 = nn.Conv2d(
             self.size_feat, self.size_feat, kernel_size=(1, 3),
