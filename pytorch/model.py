@@ -29,34 +29,34 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
-    with_frequency = False
+    with_frequency = True
     with_phase = False
     if with_frequency:
         omega_0 = 30
         if with_phase:
-            B = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
+            Li = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
         else:
-            B = nn.Conv1d(dim_input, dim_output//2, 1, bias=with_phase).cuda()
+            Li = nn.Conv1d(dim_input, dim_output//2, 1, bias=with_phase).cuda()
 
         # nn.init.normal_(B.weight, std=10.0)
         with torch.no_grad():
             if is_first:
-                B.weight.uniform_(-1 / dim_input, 1 / dim_input)
+                Li.weight.uniform_(-1 / dim_input, 1 / dim_input)
             else:
-                B.weight.uniform_(-np.sqrt(6 / dim_input) / omega_0,
+                Li.weight.uniform_(-np.sqrt(6 / dim_input) / omega_0,
                         np.sqrt(6 / dim_input) / omega_0)
 
         if with_phase:
-            sinside = torch.sin(B(x) * omega_0)
+            sinside = torch.sin(Li(x) * omega_0)
             return sinside
         else:
-            sinside = torch.sin(B(x) * omega_0)
-            cosside = torch.cos(B(x) * omega_0)
+            sinside = torch.sin(Li(x) * omega_0)
+            cosside = torch.cos(Li(x) * omega_0)
             return torch.cat([sinside, cosside], 1)
     else:
         BN = nn.BatchNorm1d(dim_output).cuda()
-        B = nn.Conv1d(dim_input, dim_output, 1).cuda()
-        return F.relu(BN(B(x)))
+        Li = nn.Conv1d(dim_input, dim_output, 1).cuda()
+        return F.relu(BN(Li(x)))
 
 
 class STN3d(nn.Module):
@@ -396,6 +396,13 @@ class Network(nn.Module):
 
         self.embedding = nn.Sequential(
             nn.MaxPool2d(kernel_size=(1, 256//self.n_regions), stride=(1, 256//self.n_regions)),
+            nn.MaxPool2d(kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 8),
+                stride=(1, 8),
+                padding=(0, 0)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
@@ -405,14 +412,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)),
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
+                kernel_size=(1, 4),
+                stride=(1, 4),
                 padding=(0, 0)))
         self.pt_mixing = nn.Sequential(nn.Linear(256, 256))
 
