@@ -366,7 +366,7 @@ with torch.no_grad():
         dist, _, idx1, _ = CD.forward(input1=part_regions, input2=gt)
         pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
         """
-        maxi = labels_inputs_points.max()
+        maxi = labels_inputs_points.max() // 2
         pts_color = matplotlib.cm.rainbow(
             labels_inputs_points[0:part_regions.size(1)] / maxi)[:, 0:3]
         points_save(
