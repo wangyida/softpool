@@ -350,7 +350,7 @@ class Network(nn.Module):
                  n_regions=16,
                  dim_pn=256,
                  sp_points=1024,
-                 sp_ratio=4):
+                 sp_ratio=16):
         super(Network, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
@@ -363,7 +363,7 @@ class Network(nn.Module):
             nn.BatchNorm1d(dim_pn), nn.ReLU())
 
         self.softpool_enc = SoftPoolFeat(
-            num_points, regions=self.n_regions, sp_points=2048)
+            num_points, regions=self.n_regions, sp_points=2048, sp_ratio=sp_ratio)
 
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
@@ -392,26 +392,27 @@ class Network(nn.Module):
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh())
 
-        # input for embedding has 256 points
+        # input for embedding has 2048 / (ratio * regions) / 4 points = 256
+
         self.embedding = nn.Sequential(
-            nn.MaxPool2d(kernel_size=(1, 256//self.sp_ratio), stride=(1, 256//self.sp_ratio)),
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 8),
-                stride=(1, 8),
-                padding=(0, 0)),
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 8),
-                stride=(1, 8),
-                padding=(0, 0)),
+            nn.MaxPool2d(kernel_size=(1, 256//self.n_regions), stride=(1, 256//self.n_regions)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 4),
                 stride=(1, 4),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 2),
+                stride=(1, 2),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 2),
+                stride=(1, 2),
                 padding=(0, 0)))
         self.pt_mixing = nn.Sequential(nn.Linear(256, 256))
 
@@ -440,8 +441,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 1),
-                stride=(1, 1),
+                kernel_size=(1, 2),
+                stride=(1, 2),
                 padding=(0, 0)), nn.Tanh())
         self.translate = nn.Sequential(
             nn.Conv2d(dim_pn, dim_pn, kernel_size=(1, 1), stride=(1, 1)),
@@ -474,7 +475,9 @@ class Network(nn.Module):
 
         sp_feat_conv1 = self.pt_mapper1(sp_feat)
         sp_feat_conv2 = self.pt_mapper2(sp_feat_conv1)
-        sp_feat_conv3 = self.embedding(self.pt_mapper3(sp_feat_conv2))
+
+        # sp_feat_conv3 = self.embedding(self.pt_mapper3(sp_feat_conv2))
+        sp_feat_conv3 = self.embedding(sp_feat_conv2)
         # sp_feat_conv3 = self.pt_mixing(self.pt_mapper3(sp_feat_conv2))
 
 
