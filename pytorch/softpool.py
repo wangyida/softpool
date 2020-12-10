@@ -73,14 +73,14 @@ class SoftPool(nn.Module):
         sp_idx = torch.zeros(self.size_bth, self.regions + 3, self.regions,
                              self.pnt_per_sort).cuda()
 
-        for idx in range(self.regions):
+        for region in range(self.regions):
             x_val, x_idx = torch.sort(
-                val_activa[:, idx, :], dim=1, descending=True)
+                val_activa[:, region, :], dim=1, descending=True)
             index = x_idx[:, :self.pnt_per_sort].unsqueeze(1).repeat(
                 1, self.size_feat, 1)
-            x_order = torch.gather(x, dim=2, index=index)
-            sp_cube[:, :, idx, :] = x_order
-            sp_idx[:, :, idx, :] = x_idx[:, :self.pnt_per_sort].unsqueeze(
+            
+            sp_cube[:, :, region, :] = torch.gather(x, dim=2, index=index)
+            sp_idx[:, :, region, :] = x_idx[:, :self.pnt_per_sort].unsqueeze(
                 1).repeat(1, self.regions + 3, 1)
 
         # local pointnet feature
@@ -100,11 +100,9 @@ class SoftPool(nn.Module):
         station = conv2d_5(trains)
         sp_station = station.repeat(1, 1, self.regions, self.pnt_per_sort)
 
-        scope = 'global'
+        scope = 'local'
         if scope == 'global':
             sp_cube = torch.cat((sp_cube, sp_windows, sp_trains, sp_station),
                                 1).contiguous()
-        else:
-            sp_cube = torch.cat((sp_cube, sp_windows), 1).contiguous()
 
         return sp_cube, sp_idx, cabins, id_activa
