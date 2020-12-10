@@ -29,7 +29,7 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
-    with_frequency = True
+    with_frequency = False
     with_phase = False
     if with_frequency:
         omega_0 = 30

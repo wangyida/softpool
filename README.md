@@ -1,7 +1,8 @@
 # SoftPoolNet: Shape Descriptor for Point Cloud Completion and Classification
 
-The implementation of our paper accepted in **ECCV** *2020* (*EUROPEAN CONFERENCE ON COMPUTER VISION*, 16th)
-**[Yida Wang](https://wangyida.github.io/#about), David Tan, [Nassir Navab](http://campar.in.tum.de/Main/NassirNavab) and [Federico Tombari](http://campar.in.tum.de/Main/FedericoTombari)**.
+The implementation of our paper accepted in ECCV (*EUROPEAN CONFERENCE ON COMPUTER VISION*, 16th, 2020)
+
+Authors: [Yida Wang](https://wangyida.github.io), David Tan, [Nassir Navab](http://campar.in.tum.de/Main/NassirNavab) and [Federico Tombari](http://campar.in.tum.de/Main/FedericoTombari)
 If you find this work useful in yourr research, please cite:
 
 ```bash
@@ -47,5 +48,5 @@ python setup.py install --user
 Suppose that GPU 0 is supposed to get used for training
 ```bash
 cd pytorch
-CUDA_VISIBLE_DEVICES=0 python3 val.py --n_regions 2 --num_points 2048 --model log/wo-unet_shapenet/network.pth  --dataset shapenet
+CUDA_VISIBLE_DEVICES=0 python3 val.py --n_regions 8 --num_points 2048 --model log/wo-unet_shapenet/network.pth  --dataset shapenet
 ```
