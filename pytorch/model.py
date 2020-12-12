@@ -29,10 +29,10 @@ def feature_transform_regularizer(trans):
 
 def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     # here are some options to check how to form the fourier feature
-    with_frequency = False
+    with_frequency = True
     with_phase = False
     if with_frequency:
-        omega_0 = 30
+        omega_0 = 100
         if with_phase:
             Li = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
         else:
@@ -169,7 +169,7 @@ class PointNetFeat(nn.Module):
 class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=16, sp_points=2048, sp_ratio=4):
         super(SoftPoolFeat, self).__init__()
-        self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.conv1 = torch.nn.Conv1d(512, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
@@ -186,8 +186,8 @@ class SoftPoolFeat(nn.Module):
         self.softpool = sp.SoftPool(self.regions, cabins=8, sp_ratio=sp_ratio)
 
     def mlp(self, inputs):
-        # x = fourier_map(inputs, dim_input=3, dim_output=512)
-        x = F.relu(self.bn1(self.conv1(inputs)))
+        x = fourier_map(inputs, dim_input=3, dim_output=512)
+        x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         """
         x = fourier_map(x, dim_input=512, dim_output=256, is_first=False)
