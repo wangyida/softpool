@@ -50,11 +50,12 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
             sinside = torch.sin(Li(x) * omega_0)
             return sinside
         else:
+            """
             filters = torch.cat([torch.ones(1, dim_output//128), torch.zeros(1, dim_output//128*63)], 1).cuda()
-            filters = torch.zeros(1, dim_output//2).cuda()
             filters = torch.unsqueeze(filters, 2)
-            sinside = torch.sin(Li(x) * omega_0) * filters
-            cosside = torch.cos(Li(x) * omega_0) * filters
+            """
+            sinside = torch.sin(Li(x) * omega_0)
+            cosside = torch.cos(Li(x) * omega_0)
             return torch.cat([sinside, cosside], 1)
     else:
         Li = nn.Conv1d(dim_input, dim_output, 1).cuda()
@@ -227,7 +228,8 @@ class SoftPoolFeat(nn.Module):
 
         feature = feature.view(feature.shape[0], feature.shape[1], 1, self.regions*self.sp_points)
         sp_idx = sp_idx.view(sp_idx.shape[0], sp_idx.shape[1], 1, self.regions*self.sp_points)
-        return feature, cabins, sp_idx, trans
+        # return feature, cabins, sp_idx, trans
+        return sp_cube, cabins, sp_idx, trans
 
 
 class PointGenCon(nn.Module):
@@ -353,7 +355,7 @@ class Network(nn.Module):
                  n_regions=16,
                  dim_pn=256,
                  sp_points=1024,
-                 sp_ratio=16):
+                 sp_ratio=8):
         super(Network, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
@@ -372,7 +374,7 @@ class Network(nn.Module):
         # We merge regional informations in latent space
         self.pt_mapper1 = nn.Sequential(
             nn.Conv2d(
-                1 * dim_pn + n_regions + 3,
+                1 * dim_pn,
                 dim_pn,
                 kernel_size=(1, 7),
                 stride=(1, 2),
@@ -398,7 +400,7 @@ class Network(nn.Module):
         # input for embedding has 2048 / (ratio * regions) / 4 points = 256
 
         self.embedding = nn.Sequential(
-            nn.MaxPool2d(kernel_size=(1, 256//self.n_regions), stride=(1, 256//self.n_regions)),
+            nn.MaxPool2d(kernel_size=(1, 64//self.n_regions), stride=(1, 64//self.n_regions)),
             nn.MaxPool2d(kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
