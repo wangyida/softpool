@@ -50,7 +50,7 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
             sinside = torch.sin(Li(x) * omega_0)
             return sinside
         else:
-            filters = torch.cat([torch.ones(1, dim_output//4), torch.zeros(1, dim_output//4)], 1).cuda()
+            filters = torch.cat([torch.ones(1, dim_output//16), torch.zeros(1, dim_output//16*7)], 1).cuda()
             filters = torch.unsqueeze(filters, 2)
             sinside = torch.sin(Li(x) * omega_0) * filters
             cosside = torch.cos(Li(x) * omega_0) * filters
