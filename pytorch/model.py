@@ -32,7 +32,7 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
     with_frequency = True
     with_phase = False
     if with_frequency:
-        omega_0 = 100
+        omega_0 = 30
         if with_phase:
             Li = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
         else:
