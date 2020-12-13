@@ -549,7 +549,7 @@ class Network(nn.Module):
         out_fold = out_fold_trans.transpose(1, 2).contiguous()
 
         part_regions = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
-        part_regions = torch.gather(part, dim=2, index=sp_idx[:,:3,0,:].long())
+        part_regions = torch.gather(part, dim=2, index=sp_idx[:,:3,0,:].long()).transpose(1, 2)
 
 
         dist, _, mean_mst_dis = self.expansion(
