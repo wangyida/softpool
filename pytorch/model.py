@@ -36,7 +36,8 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
         if with_phase:
             Li = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
         else:
-            Li = nn.Conv1d(dim_input, dim_output//2, 1, bias=with_phase).cuda()
+            Li = nn.Conv1d(
+                dim_input, dim_output // 2, 1, bias=with_phase).cuda()
 
         # nn.init.normal_(B.weight, std=10.0)
         with torch.no_grad():
@@ -44,7 +45,7 @@ def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
                 Li.weight.uniform_(-1 / dim_input, 1 / dim_input)
             else:
                 Li.weight.uniform_(-np.sqrt(6 / dim_input) / omega_0,
-                        np.sqrt(6 / dim_input) / omega_0)
+                                   np.sqrt(6 / dim_input) / omega_0)
 
         if with_phase:
             sinside = torch.sin(Li(x) * omega_0)
@@ -171,9 +172,10 @@ class PointNetFeat(nn.Module):
 
 
 class SoftPoolFeat(nn.Module):
-    def __init__(self, num_points=8192, regions=16, sp_points=2048, sp_ratio=4):
+    def __init__(self, num_points=8192, regions=16, sp_points=2048,
+                 sp_ratio=4):
         super(SoftPoolFeat, self).__init__()
-        self.conv1 = torch.nn.Conv1d(512, 64, 1)
+        self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
@@ -190,8 +192,8 @@ class SoftPoolFeat(nn.Module):
         self.softpool = sp.SoftPool(self.regions, cabins=8, sp_ratio=sp_ratio)
 
     def mlp(self, inputs):
-        x = fourier_map(inputs, dim_input=3, dim_output=512)
-        x = F.relu(self.bn1(self.conv1(x)))
+        # x = fourier_map(inputs, dim_input=3, dim_output=512)
+        x = F.relu(self.bn1(self.conv1(inputs)))
         x = F.relu(self.bn2(self.conv2(x)))
         """
         x = fourier_map(x, dim_input=512, dim_output=256, is_first=False)
@@ -226,8 +228,10 @@ class SoftPoolFeat(nn.Module):
         point_wi_seg = torch.gather(point_wi_seg, dim=3, index=sp_idx.long())
         feature = torch.cat((sp_cube, point_wi_seg), 1).contiguous()
 
-        feature = feature.view(feature.shape[0], feature.shape[1], 1, self.regions*self.sp_points)
-        sp_idx = sp_idx.view(sp_idx.shape[0], sp_idx.shape[1], 1, self.regions*self.sp_points)
+        feature = feature.view(feature.shape[0], feature.shape[1], 1,
+                               self.regions * self.sp_points)
+        sp_idx = sp_idx.view(sp_idx.shape[0], sp_idx.shape[1], 1,
+                             self.regions * self.sp_points)
         # return feature, cabins, sp_idx, trans
         return sp_cube, cabins, sp_idx, trans
 
@@ -368,7 +372,10 @@ class Network(nn.Module):
             nn.BatchNorm1d(dim_pn), nn.ReLU())
 
         self.softpool_enc = SoftPoolFeat(
-            num_points, regions=self.n_regions, sp_points=2048, sp_ratio=sp_ratio)
+            num_points,
+            regions=self.n_regions,
+            sp_points=2048,
+            sp_ratio=sp_ratio)
 
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
@@ -398,7 +405,6 @@ class Network(nn.Module):
                 padding_mode='same'), nn.Tanh())
 
         # input for embedding has 2048 / (ratio * regions) / 4 points = 256
-
         """
             nn.MaxPool2d(kernel_size=(1, 64//self.n_regions), stride=(1, 64//self.n_regions)),
             nn.MaxPool2d(kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
@@ -476,7 +482,6 @@ class Network(nn.Module):
         sp_feat_conv3 = self.embedding(sp_feat_conv2)
         # sp_feat_conv3 = self.pt_mixing(self.pt_mapper3(sp_feat_conv2))
 
-
         sp_feat_deconv3 = self.pt_mapper3_rev(sp_feat_conv3)  # + sp_feat_conv2
         sp_feat_deconv2 = torch.cat((self.pt_mapper2_rev(sp_feat_deconv3),
                                      self.translate(sp_feat_conv1)),
@@ -493,10 +498,11 @@ class Network(nn.Module):
         rand_grid = fourier_map(rand_grid).cuda()
 
         mesh_y = 8
-        mesh_x = self.num_points // (8*self.n_regions*mesh_y)
-        mesh_grid_mini = torch.meshgrid(
-            [torch.linspace(0.0, 1.0, mesh_x),
-             torch.linspace(0.0, 1.0, mesh_y)])
+        mesh_x = self.num_points // (8 * self.n_regions * mesh_y)
+        mesh_grid_mini = torch.meshgrid([
+            torch.linspace(0.0, 1.0, mesh_x),
+            torch.linspace(0.0, 1.0, mesh_y)
+        ])
         mesh_grid_mini = torch.cat(
             (torch.reshape(mesh_grid_mini[0], (mesh_x * mesh_y, 1)),
              torch.reshape(mesh_grid_mini[1], (mesh_x * mesh_y, 1))),
@@ -548,9 +554,9 @@ class Network(nn.Module):
         out_fold_trans = self.decoder3(y)
         out_fold = out_fold_trans.transpose(1, 2).contiguous()
 
-        part_regions = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
-        part_regions = torch.gather(part, dim=2, index=sp_idx[:,:3,0,:].long()).transpose(1, 2)
-
+        input_chosen = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
+        input_chosen = torch.gather(
+            part, dim=2, index=sp_idx[:, :3, 0, :].long()).transpose(1, 2)
 
         dist, _, mean_mst_dis = self.expansion(
             out_softpool, self.num_points // self.n_regions // 8, 1.5)
@@ -579,4 +585,4 @@ class Network(nn.Module):
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
         return [out_softpool, out_ae], out_fusion, out_fold, [
             out_grnet_coar, out_grnet_fine
-        ], out_seg, part_regions, loss_trans, loss_mst
+        ], out_seg, input_chosen, loss_trans, loss_mst

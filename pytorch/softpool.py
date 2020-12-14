@@ -78,7 +78,7 @@ class SoftPool(nn.Module):
                 val_activa[:, region, :], dim=1, descending=True)
             index = x_idx[:, :self.pnt_per_sort].unsqueeze(1).repeat(
                 1, self.size_feat, 1)
-            
+
             sp_cube[:, :, region, :] = torch.gather(x, dim=2, index=index)
             sp_idx[:, :, region, :] = x_idx[:, :self.pnt_per_sort].unsqueeze(
                 1).repeat(1, self.regions + 3, 1)

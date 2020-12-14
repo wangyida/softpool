@@ -219,7 +219,7 @@ with torch.no_grad():
         subfold = model[:model.rfind('/')]
         part = torch.zeros((1, opt.num_points, 3), device='cuda')
         part_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
-        part_regions = torch.zeros((1, opt.num_points, 3), device='cuda')
+        input_chosen = torch.zeros((1, opt.num_points, 3), device='cuda')
         gt = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
         gt_seg = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
         gt_regions = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
@@ -289,7 +289,7 @@ with torch.no_grad():
                     resample_pcd(np.array(fh5['data']), opt.num_points))
                 """
 
-        output1, output2, output3, output4, out_seg, part_regions, _, _ = network(
+        output1, output2, output3, output4, out_seg, input_chosen, _, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
         output1 = output1[0]
         output4 = output4[0]
@@ -361,14 +361,14 @@ with torch.no_grad():
             pfile=model)
 
         # save selected points on input
-        pts_coord = part_regions[0].data.cpu()[:, 0:3]
+        pts_coord = input_chosen[0].data.cpu()[:, 0:3]
         """
-        dist, _, idx1, _ = CD.forward(input1=part_regions, input2=gt)
+        dist, _, idx1, _ = CD.forward(input1=input_chosen, input2=gt)
         pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
         """
         maxi = labels_inputs_points.max() // 2
         pts_color = matplotlib.cm.rainbow(
-            labels_inputs_points[0:part_regions.size(1)] / maxi)[:, 0:3]
+            labels_inputs_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
