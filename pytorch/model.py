@@ -27,41 +27,53 @@ def feature_transform_regularizer(trans):
     return loss
 
 
-def fourier_map(x, dim_input=2, dim_output=512, is_first=True):
-    # here are some options to check how to form the fourier feature
-    with_frequency = True
-    with_phase = False
-    if with_frequency:
-        omega_0 = 30
-        if with_phase:
-            Li = nn.Conv1d(dim_input, dim_output, 1, bias=with_phase).cuda()
-        else:
-            Li = nn.Conv1d(
-                dim_input, dim_output // 2, 1, bias=with_phase).cuda()
-
-        # nn.init.normal_(B.weight, std=10.0)
-        with torch.no_grad():
-            if is_first:
-                Li.weight.uniform_(-1 / dim_input, 1 / dim_input)
+class fourier_map(nn.Module):
+    def __init__(self, dim_input=2, dim_output=512, is_first=True):
+        super(fourier_map, self).__init__()
+        self.dim_input = dim_input
+        self.dim_output = dim_output
+        self.is_first = is_first
+        self.with_frequency = True
+        self.with_phase = True
+        self.omega_0 = 30
+        if self.with_frequency:
+            if self.with_phase:
+                self.Li = nn.Conv1d(
+                    self.dim_input, self.dim_output, 1,
+                    bias=self.with_phase).cuda()
             else:
-                Li.weight.uniform_(-np.sqrt(6 / dim_input) / omega_0,
-                                   np.sqrt(6 / dim_input) / omega_0)
-
-        if with_phase:
-            sinside = torch.sin(Li(x) * omega_0)
-            return sinside
+                self.Li = nn.Conv1d(
+                    self.dim_input, self.dim_output // 2, 1,
+                    bias=self.with_phase).cuda()
+            # nn.init.normal_(B.weight, std=10.0)
+            with torch.no_grad():
+                if self.is_first:
+                    self.Li.weight.uniform_(-1 / self.dim_input,
+                                            1 / self.dim_input)
+                else:
+                    self.Li.weight.uniform_(
+                        -np.sqrt(6 / self.dim_input) / omega_0,
+                        np.sqrt(6 / self.dim_input) / omega_0)
         else:
-            """
-            filters = torch.cat([torch.ones(1, dim_output//128), torch.zeros(1, dim_output//128*63)], 1).cuda()
-            filters = torch.unsqueeze(filters, 2)
-            """
-            sinside = torch.sin(Li(x) * omega_0)
-            cosside = torch.cos(Li(x) * omega_0)
-            return torch.cat([sinside, cosside], 1)
-    else:
-        Li = nn.Conv1d(dim_input, dim_output, 1).cuda()
-        BN = nn.BatchNorm1d(dim_output).cuda()
-        return F.relu(BN(Li(x)))
+            self.Li = nn.Conv1d(self.dim_input, self.dim_output, 1).cuda()
+            self.BN = nn.BatchNorm1d(self.dim_output).cuda()
+
+    def forward(self, x):
+        # here are some options to check how to form the fourier feature
+        if self.with_frequency:
+            if self.with_phase:
+                sinside = torch.sin(self.Li(x) * self.omega_0)
+                return sinside
+            else:
+                """
+                filters = torch.cat([torch.ones(1, dim_output//128), torch.zeros(1, dim_output//128*63)], 1).cuda()
+                filters = torch.unsqueeze(filters, 2)
+                """
+                sinside = torch.sin(self.Li(x) * self.omega_0)
+                cosside = torch.cos(self.Li(x) * self.omega_0)
+                return torch.cat([sinside, cosside], 1)
+        else:
+            return F.relu(self.BN(self.Li(x)))
 
 
 class STN3d(nn.Module):
@@ -170,17 +182,22 @@ class PointNetFeat(nn.Module):
         x = x.view(-1, self.dim_pn)
         return x
 
+
 class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=16, sp_points=2048,
                  sp_ratio=8):
         super(SoftPoolFeat, self).__init__()
-        self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.conv0 = torch.nn.Conv1d(3, 32, 1)
+        self.conv1 = torch.nn.Conv1d(32, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
+        self.bn0 = torch.nn.BatchNorm1d(32)
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
         self.bn3 = torch.nn.BatchNorm1d(256)
+
+        self.fourier_map = fourier_map(dim_input=3, dim_output=32)
 
         self.stn = STNkd(k=regions + 3)
 
@@ -191,8 +208,9 @@ class SoftPoolFeat(nn.Module):
         self.softpool = sp.SoftPool(self.regions, cabins=8, sp_ratio=sp_ratio)
 
     def mlp(self, inputs):
-        # x = fourier_map(inputs, dim_input=3, dim_output=512)
-        x = F.relu(self.bn1(self.conv1(inputs)))
+        x = self.fourier_map(inputs)
+        # x = F.relu(self.bn0(self.conv0(inputs)))
+        x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         """
         x = fourier_map(x, dim_input=512, dim_output=256, is_first=False)
@@ -229,7 +247,8 @@ class SoftPoolFeat(nn.Module):
 
         feature = feature.view(feature.shape[0], feature.shape[1], 1,
                                self.regions * self.sp_points)
-        sp_cube = sp_cube.view(sp_cube.shape[0], sp_cube.shape[1], 1, self.regions * self.sp_points)
+        sp_cube = sp_cube.view(sp_cube.shape[0], sp_cube.shape[1], 1,
+                               self.regions * self.sp_points)
         sp_idx = sp_idx.view(sp_idx.shape[0], sp_idx.shape[1], 1,
                              self.regions * self.sp_points)
         # return feature, cabins, sp_idx, trans
@@ -407,8 +426,10 @@ class Network(nn.Module):
         # input for embedding has 2048 / (ratio * regions) / 4 points = 256
         ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
         self.embedding = nn.Sequential(
-            nn.MaxPool2d(kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
-            nn.MaxPool2d(kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
+            nn.MaxPool2d(
+                kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
+            nn.MaxPool2d(
+                kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
@@ -505,7 +526,8 @@ class Network(nn.Module):
                 part.size(0), 2,
                 self.num_points // self.n_regions // 8)).cuda()
         rand_grid.data.uniform_(0, 1)
-        rand_grid = fourier_map(rand_grid).cuda()
+        fourier_map2 = fourier_map()
+        rand_grid = fourier_map2(rand_grid).cuda()
 
         mesh_y = 8
         mesh_x = self.num_points // (8 * self.n_regions * mesh_y)
@@ -533,7 +555,8 @@ class Network(nn.Module):
             dim=1)
         mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
             sp_feat_deconv1.shape[0], 1, 1).cuda()
-        mesh_grid = fourier_map(mesh_grid)
+        fourier_map3 = fourier_map()
+        mesh_grid = fourier_map3(mesh_grid)
         y = sp_feat_deconv1[:, :, 0, :]
         out_seg = y.transpose(1, 2).contiguous()
         sm = nn.Softmax(dim=2)
