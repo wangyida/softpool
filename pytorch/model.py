@@ -172,9 +172,9 @@ class PointNetFeat(nn.Module):
 
 class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=16, sp_points=2048,
-                 sp_ratio=1):
+                 sp_ratio=8):
         super(SoftPoolFeat, self).__init__()
-        self.conv1 = torch.nn.Conv1d(512, 64, 1)
+        self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
@@ -191,8 +191,8 @@ class SoftPoolFeat(nn.Module):
         self.softpool = sp.SoftPool(self.regions, cabins=8, sp_ratio=sp_ratio)
 
     def mlp(self, inputs):
-        x = fourier_map(inputs, dim_input=3, dim_output=512)
-        x = F.relu(self.bn1(self.conv1(x)))
+        # x = fourier_map(inputs, dim_input=3, dim_output=512)
+        x = F.relu(self.bn1(self.conv1(inputs)))
         x = F.relu(self.bn2(self.conv2(x)))
         """
         x = fourier_map(x, dim_input=512, dim_output=256, is_first=False)
@@ -229,6 +229,7 @@ class SoftPoolFeat(nn.Module):
 
         feature = feature.view(feature.shape[0], feature.shape[1], 1,
                                self.regions * self.sp_points)
+        sp_cube = sp_cube.view(sp_cube.shape[0], sp_cube.shape[1], 1, self.regions * self.sp_points)
         sp_idx = sp_idx.view(sp_idx.shape[0], sp_idx.shape[1], 1,
                              self.regions * self.sp_points)
         # return feature, cabins, sp_idx, trans
@@ -404,7 +405,7 @@ class Network(nn.Module):
                 padding_mode='same'), nn.Tanh())
 
         # input for embedding has 2048 / (ratio * regions) / 4 points = 256
-        ebd_pnt_reg = self.num_points // (self.sp_ratio * self.n_regions * 8)
+        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
         self.embedding = nn.Sequential(
             nn.MaxPool2d(kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
             nn.MaxPool2d(kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
@@ -488,8 +489,7 @@ class Network(nn.Module):
         sp_feat_conv1 = self.pt_mapper1(sp_feat)
         sp_feat_conv2 = self.pt_mapper2(sp_feat_conv1)
 
-        # sp_feat_conv3 = self.embedding(self.pt_mapper3(sp_feat_conv2))
-        sp_feat_conv3 = self.embedding(sp_feat_conv2)
+        sp_feat_conv3 = self.embedding(self.pt_mapper3(sp_feat_conv2))
         # sp_feat_conv3 = self.pt_mixing(self.pt_mapper3(sp_feat_conv2))
 
         sp_feat_deconv3 = self.pt_mapper3_rev(sp_feat_conv3)  # + sp_feat_conv2
