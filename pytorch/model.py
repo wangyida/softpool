@@ -27,9 +27,9 @@ def feature_transform_regularizer(trans):
     return loss
 
 
-class fourier_map(nn.Module):
+class Periodics(nn.Module):
     def __init__(self, dim_input=2, dim_output=512, is_first=True):
-        super(fourier_map, self).__init__()
+        super(Periodics, self).__init__()
         self.dim_input = dim_input
         self.dim_output = dim_output
         self.is_first = is_first
@@ -55,8 +55,8 @@ class fourier_map(nn.Module):
                                             1 / self.dim_input)
                 else:
                     self.Li.weight.uniform_(
-                        -np.sqrt(6 / self.dim_input) / omega_0,
-                        np.sqrt(6 / self.dim_input) / omega_0)
+                        -np.sqrt(6 / self.dim_input) / self.omega_0,
+                        np.sqrt(6 / self.dim_input) / self.omega_0)
         else:
             self.Li = nn.Conv1d(self.dim_input, self.dim_output, 1).cuda()
             self.BN = nn.BatchNorm1d(self.dim_output).cuda()
@@ -197,17 +197,17 @@ class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=16, sp_points=2048,
                  sp_ratio=8):
         super(SoftPoolFeat, self).__init__()
-        self.conv0 = torch.nn.Conv1d(3, 32, 1)
         self.conv1 = torch.nn.Conv1d(32, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
-        self.bn0 = torch.nn.BatchNorm1d(32)
         self.bn1 = torch.nn.BatchNorm1d(64)
         self.bn2 = torch.nn.BatchNorm1d(128)
         self.bn3 = torch.nn.BatchNorm1d(256)
 
-        self.fourier_map = fourier_map(dim_input=3, dim_output=32)
+        self.fourier_map1 = Periodics(dim_input=3, dim_output=32)
+        self.fourier_map2 = Periodics(dim_input=32, dim_output=128, is_first=False)
+        self.fourier_map3 = Periodics(dim_input=128, dim_output=128, is_first=False)
 
         self.stn = STNkd(k=regions + 3)
 
@@ -218,14 +218,13 @@ class SoftPoolFeat(nn.Module):
         self.softpool = sp.SoftPool(self.regions, cabins=8, sp_ratio=sp_ratio)
 
     def mlp(self, inputs):
-        x = self.fourier_map(inputs)
-        # x = F.relu(self.bn0(self.conv0(inputs)))
+        x = self.fourier_map1(inputs)
+        """
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         """
-        x = fourier_map(x, dim_input=512, dim_output=256, is_first=False)
-        x = fourier_map(x, dim_input=256, dim_output=256, is_first=False)
-        """
+        x = self.fourier_map2(x)
+        x = self.fourier_map3(x)
         x = self.bn3(self.conv3(x))
         return x
 
@@ -536,7 +535,7 @@ class Network(nn.Module):
                 part.size(0), 2,
                 self.num_points // self.n_regions // 8)).cuda()
         rand_grid.data.uniform_(0, 1)
-        fourier_map2 = fourier_map()
+        fourier_map2 = Periodics()
         rand_grid = fourier_map2(rand_grid).cuda()
 
         mesh_y = 8
@@ -565,7 +564,7 @@ class Network(nn.Module):
             dim=1)
         mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
             sp_feat_deconv1.shape[0], 1, 1).cuda()
-        fourier_map3 = fourier_map()
+        fourier_map3 = Periodics()
         mesh_grid = fourier_map3(mesh_grid)
         y = sp_feat_deconv1[:, :, 0, :]
         out_seg = y.transpose(1, 2).contiguous()
