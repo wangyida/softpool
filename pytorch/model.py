@@ -170,12 +170,11 @@ class PointNetFeat(nn.Module):
         x = x.view(-1, self.dim_pn)
         return x
 
-
 class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=16, sp_points=2048,
-                 sp_ratio=4):
+                 sp_ratio=1):
         super(SoftPoolFeat, self).__init__()
-        self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.conv1 = torch.nn.Conv1d(512, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
@@ -192,8 +191,8 @@ class SoftPoolFeat(nn.Module):
         self.softpool = sp.SoftPool(self.regions, cabins=8, sp_ratio=sp_ratio)
 
     def mlp(self, inputs):
-        # x = fourier_map(inputs, dim_input=3, dim_output=512)
-        x = F.relu(self.bn1(self.conv1(inputs)))
+        x = fourier_map(inputs, dim_input=3, dim_output=512)
+        x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         """
         x = fourier_map(x, dim_input=512, dim_output=256, is_first=False)
@@ -405,11 +404,22 @@ class Network(nn.Module):
                 padding_mode='same'), nn.Tanh())
 
         # input for embedding has 2048 / (ratio * regions) / 4 points = 256
-        """
-            nn.MaxPool2d(kernel_size=(1, 64//self.n_regions), stride=(1, 64//self.n_regions)),
-            nn.MaxPool2d(kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
-        """
+        ebd_pnt_reg = self.num_points // (self.sp_ratio * self.n_regions * 8)
         self.embedding = nn.Sequential(
+            nn.MaxPool2d(kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
+            nn.MaxPool2d(kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 4),
+                stride=(1, 4),
+                padding=(0, 0)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 4),
+                stride=(1, 4),
+                padding=(0, 0)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
