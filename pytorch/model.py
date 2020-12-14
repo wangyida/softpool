@@ -35,6 +35,7 @@ class fourier_map(nn.Module):
         self.is_first = is_first
         self.with_frequency = True
         self.with_phase = True
+        # Omega determines the upper frequencies
         self.omega_0 = 30
         if self.with_frequency:
             if self.with_phase:
@@ -43,7 +44,9 @@ class fourier_map(nn.Module):
                     bias=self.with_phase).cuda()
             else:
                 self.Li = nn.Conv1d(
-                    self.dim_input, self.dim_output // 2, 1,
+                    self.dim_input,
+                    self.dim_output // 2,
+                    1,
                     bias=self.with_phase).cuda()
             # nn.init.normal_(B.weight, std=10.0)
             with torch.no_grad():
@@ -58,6 +61,14 @@ class fourier_map(nn.Module):
             self.Li = nn.Conv1d(self.dim_input, self.dim_output, 1).cuda()
             self.BN = nn.BatchNorm1d(self.dim_output).cuda()
 
+    def filter(self, x):
+        filters = torch.cat([
+            torch.ones(1, dim_output // 128),
+            torch.zeros(1, dim_output // 128 * 63)
+        ], 1).cuda()
+        filters = torch.unsqueeze(filters, 2)
+        return filters
+
     def forward(self, x):
         # here are some options to check how to form the fourier feature
         if self.with_frequency:
@@ -66,8 +77,7 @@ class fourier_map(nn.Module):
                 return sinside
             else:
                 """
-                filters = torch.cat([torch.ones(1, dim_output//128), torch.zeros(1, dim_output//128*63)], 1).cuda()
-                filters = torch.unsqueeze(filters, 2)
+                here filter could be applied
                 """
                 sinside = torch.sin(self.Li(x) * self.omega_0)
                 cosside = torch.cos(self.Li(x) * self.omega_0)
