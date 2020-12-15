@@ -433,8 +433,6 @@ class Network(nn.Module):
                 padding_mode='same'), nn.Tanh())
 
         # input for embedding has 32 points now, then in total it is regions x 32 points
-        """
-        """
         ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
@@ -483,7 +481,7 @@ class Network(nn.Module):
                 padding_mode='same'),
             nn.UpsamplingBilinear2d(scale_factor=(1, 16)))
         """
-        self.pt_mixing = nn.Sequential(nn.Linear(256, 256))
+        self.pt_mixing = nn.Sequential(nn.Linear(256, 256), nn.Linear(256, 256), nn.Linear(256, 256), nn.Linear(256, 256))
 
         self.reg_conv4 = nn.Sequential(
             nn.Conv2d(
@@ -546,7 +544,7 @@ class Network(nn.Module):
         sp_feat_conv2 = self.reg_conv2(sp_feat_conv1) # 512 points
         sp_feat_conv3 = self.reg_conv3(sp_feat_conv2) # 256 points
 
-        sp_feat_unet = torch.cat((self.embedding(sp_feat_conv3),sp_feat_conv3), dim=-1) # 512 points
+        sp_feat_unet = torch.cat((self.pt_mixing(sp_feat_conv3),sp_feat_conv3), dim=-1) # 512 points
         # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
 
         sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet) # 1024 points
