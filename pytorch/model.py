@@ -547,8 +547,13 @@ class Network(nn.Module):
         # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
 
         sp_feat_deconv3 = self.reg_deconv3(sp_feat_conv3)  # + sp_feat_conv2
+        """
         sp_feat_deconv2 = torch.cat((self.reg_deconv2(sp_feat_deconv3),
                                      self.translate(sp_feat_conv1)),
+                                    dim=-1)
+        """
+        sp_feat_deconv2 = torch.cat((self.reg_deconv2(sp_feat_deconv3),
+                                     self.reg_deconv2(sp_feat_deconv3)),
                                     dim=-1)
         sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2)
 
@@ -634,11 +639,6 @@ class Network(nn.Module):
         fuse_observe = torch.cat((part, id1), 1)
         # fuse_observe = torch.cat((out_softpool_trans[:, :, :self.num_points // 2:], id1), 1)
         fuse_expand = torch.cat((out_softpool_trans, id2), 1)
-        """
-        id3 = torch.ones(out_fold_trans.shape[0], 1,
-                          out_fold_trans.shape[2]).cuda().contiguous()
-        out_fold_trans = torch.cat((out_fold_trans, id3), 1)
-        """
         fusion = torch.cat((fuse_observe, fuse_expand), 2)
         # fusion = torch.cat((fuse2, out_fold_trans, fuse1), 2)
 
