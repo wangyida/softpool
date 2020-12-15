@@ -510,8 +510,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
+                kernel_size=(1, 1),
+                stride=(1, 1),
                 padding=(0, 0)), nn.Tanh())
         self.translate = nn.Sequential(
             nn.Conv2d(dim_pn, dim_pn, kernel_size=(1, 1), stride=(1, 1)),
@@ -546,20 +546,14 @@ class Network(nn.Module):
         sp_feat_conv2 = self.reg_conv2(sp_feat_conv1) # 512 points
         sp_feat_conv3 = self.reg_conv3(sp_feat_conv2) # 256 points
 
-        sp_feat_conv3 = self.embedding(sp_feat_conv3) # 256 points
+        sp_feat_unet = torch.cat((self.embedding(sp_feat_conv3),sp_feat_conv3), dim=-1) # 512 points
         # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
 
-        sp_feat_deconv3 = self.reg_deconv3(sp_feat_conv3) # 512 points
-        """
-        sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3) * self.translate(sp_feat_conv1) # 1024 points
-        """
-        sp_feat_deconv2 = torch.cat((self.reg_deconv2(sp_feat_deconv3),
-                                     self.translate(sp_feat_conv1)),
-                                    dim=-1)
-        sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3)
-        sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2)
+        sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet) # 1024 points
+        sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3) # 2048 points
+        sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2) # 2048 points
 
-        sp_feat_ae = self.reg_deconv1(self.translate(sp_feat_conv1))
+        sp_feat_ae = self.reg_deconv1(self.reg_deconv2(self.reg_deconv3(sp_feat_conv3)))
 
         rand_grid = Variable(
             torch.FloatTensor(
