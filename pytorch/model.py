@@ -481,7 +481,7 @@ class Network(nn.Module):
                 padding_mode='same'),
             nn.UpsamplingBilinear2d(scale_factor=(1, 16)))
         """
-        self.pt_mixing = nn.Sequential(nn.Linear(256, 256), nn.Linear(256, 256), nn.Linear(256, 256), nn.Linear(256, 256))
+        self.pt_mixing = nn.Sequential(nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU())
 
         self.reg_conv4 = nn.Sequential(
             nn.Conv2d(
