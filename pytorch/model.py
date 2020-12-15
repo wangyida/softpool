@@ -432,7 +432,7 @@ class Network(nn.Module):
                 padding=(0, 2),
                 padding_mode='same'), nn.Tanh())
 
-        # input for embedding has 2048 / (ratio * regions) / 4 points = 256
+        # input for embedding has 32 points now, then in total it is regions x 32 points
         ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
         """
         self.embedding = nn.Sequential(
@@ -477,10 +477,10 @@ class Network(nn.Module):
                 2 * dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 5),
-                stride=(1, 2),
+                stride=(1, 1),
                 padding=(0, 2),
                 padding_mode='same'),
-            nn.UpsamplingBilinear2d(scale_factor=(1, 2)))
+            nn.UpsamplingBilinear2d(scale_factor=(1, 16)))
         self.pt_mixing = nn.Sequential(nn.Linear(256, 256))
 
         self.reg_conv4 = nn.Sequential(
@@ -508,8 +508,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
+                kernel_size=(1, 4),
+                stride=(1, 4),
                 padding=(0, 0)), nn.Tanh())
         self.translate = nn.Sequential(
             nn.Conv2d(dim_pn, dim_pn, kernel_size=(1, 1), stride=(1, 1)),
@@ -540,21 +540,20 @@ class Network(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
 
-        sp_feat_conv1 = self.reg_conv1(sp_feat)
-        sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)
+        sp_feat_conv1 = self.reg_conv1(sp_feat) # 1024 points
+        sp_feat_conv2 = self.reg_conv2(sp_feat_conv1) # 512 points
+        sp_feat_conv3 = self.reg_conv3(sp_feat_conv2) # 256 points
 
-        sp_feat_conv3 = self.embedding(self.reg_conv3(sp_feat_conv2))
+        sp_feat_conv3 = self.embedding(sp_feat_conv3) # 256 points
         # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
 
-        sp_feat_deconv3 = self.reg_deconv3(sp_feat_conv3)  # + sp_feat_conv2
+        sp_feat_deconv3 = self.reg_deconv3(sp_feat_conv3) # 512 points
+        sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3) * self.translate(sp_feat_conv1) # 1024 points
         """
         sp_feat_deconv2 = torch.cat((self.reg_deconv2(sp_feat_deconv3),
                                      self.translate(sp_feat_conv1)),
                                     dim=-1)
         """
-        sp_feat_deconv2 = torch.cat((self.reg_deconv2(sp_feat_deconv3),
-                                     self.reg_deconv2(sp_feat_deconv3)),
-                                    dim=-1)
         sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2)
 
         sp_feat_ae = self.reg_deconv1(self.translate(sp_feat_conv1))
