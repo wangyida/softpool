@@ -462,8 +462,10 @@ class Network(nn.Module):
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
                 kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
-            nn.MaxPool2d(
-                kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
+            nn.Conv2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, self.n_regions)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
