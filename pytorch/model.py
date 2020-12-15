@@ -510,8 +510,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 1),
-                stride=(1, 1),
+                kernel_size=(1, 2),
+                stride=(1, 2),
                 padding=(0, 0)), nn.Tanh())
         self.translate = nn.Sequential(
             nn.Conv2d(dim_pn, dim_pn, kernel_size=(1, 1), stride=(1, 1)),
@@ -556,6 +556,7 @@ class Network(nn.Module):
         sp_feat_deconv2 = torch.cat((self.reg_deconv2(sp_feat_deconv3),
                                      self.translate(sp_feat_conv1)),
                                     dim=-1)
+        sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3)
         sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2)
 
         sp_feat_ae = self.reg_deconv1(self.translate(sp_feat_conv1))
