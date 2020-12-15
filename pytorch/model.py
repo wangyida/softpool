@@ -407,7 +407,7 @@ class Network(nn.Module):
 
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
-        self.pt_mapper1 = nn.Sequential(
+        self.reg_conv1 = nn.Sequential(
             nn.Conv2d(
                 1 * dim_pn,
                 dim_pn,
@@ -415,7 +415,7 @@ class Network(nn.Module):
                 stride=(1, 2),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh())
-        self.pt_mapper2 = nn.Sequential(
+        self.reg_conv2 = nn.Sequential(
             nn.Conv2d(
                 dim_pn,
                 2 * dim_pn,
@@ -423,7 +423,7 @@ class Network(nn.Module):
                 stride=(1, 2),
                 padding=(0, 3),
                 padding_mode='same'), nn.Tanh())
-        self.pt_mapper3 = nn.Sequential(
+        self.reg_conv3 = nn.Sequential(
             nn.Conv2d(
                 2 * dim_pn,
                 2 * dim_pn,
@@ -434,6 +434,7 @@ class Network(nn.Module):
 
         # input for embedding has 2048 / (ratio * regions) / 4 points = 256
         ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
+        """
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
                 kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
@@ -457,30 +458,51 @@ class Network(nn.Module):
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)))
+        """
+        self.embedding = nn.Sequential(
+            nn.MaxPool2d(
+                kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
+            nn.MaxPool2d(
+                kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
+            nn.ConvTranspose2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 4),
+                stride=(1, 4),
+                padding=(0, 0)),
+            nn.UpsamplingBilinear2d(scale_factor=(1, 4)),
+            nn.Conv2d(
+                2 * dim_pn,
+                2 * dim_pn,
+                kernel_size=(1, 5),
+                stride=(1, 2),
+                padding=(0, 2),
+                padding_mode='same'),
+            nn.UpsamplingBilinear2d(scale_factor=(1, 2)))
         self.pt_mixing = nn.Sequential(nn.Linear(256, 256))
 
-        self.pt_mapper4 = nn.Sequential(
+        self.reg_conv4 = nn.Sequential(
             nn.Conv2d(
                 4 * dim_pn,
                 4 * dim_pn,
                 kernel_size=(self.n_regions, 1),
                 stride=(1, 1)))
 
-        self.pt_mapper3_rev = nn.Sequential(
+        self.reg_deconv3 = nn.Sequential(
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh())
-        self.pt_mapper2_rev = nn.Sequential(
+        self.reg_deconv2 = nn.Sequential(
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 dim_pn,
                 kernel_size=(1, 2),
                 stride=(1, 2),
                 padding=(0, 0)), nn.Tanh())
-        self.pt_mapper1_rev = nn.Sequential(
+        self.reg_deconv1 = nn.Sequential(
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
@@ -516,19 +538,19 @@ class Network(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
 
-        sp_feat_conv1 = self.pt_mapper1(sp_feat)
-        sp_feat_conv2 = self.pt_mapper2(sp_feat_conv1)
+        sp_feat_conv1 = self.reg_conv1(sp_feat)
+        sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)
 
-        sp_feat_conv3 = self.embedding(self.pt_mapper3(sp_feat_conv2))
-        # sp_feat_conv3 = self.pt_mixing(self.pt_mapper3(sp_feat_conv2))
+        sp_feat_conv3 = self.embedding(self.reg_conv3(sp_feat_conv2))
+        # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
 
-        sp_feat_deconv3 = self.pt_mapper3_rev(sp_feat_conv3)  # + sp_feat_conv2
-        sp_feat_deconv2 = torch.cat((self.pt_mapper2_rev(sp_feat_deconv3),
+        sp_feat_deconv3 = self.reg_deconv3(sp_feat_conv3)  # + sp_feat_conv2
+        sp_feat_deconv2 = torch.cat((self.reg_deconv2(sp_feat_deconv3),
                                      self.translate(sp_feat_conv1)),
                                     dim=-1)
-        sp_feat_deconv1 = self.pt_mapper1_rev(sp_feat_deconv2)
+        sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2)
 
-        sp_feat_ae = self.pt_mapper1_rev(self.translate(sp_feat_conv1))
+        sp_feat_ae = self.reg_deconv1(self.translate(sp_feat_conv1))
 
         rand_grid = Variable(
             torch.FloatTensor(
