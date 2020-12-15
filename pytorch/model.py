@@ -433,13 +433,14 @@ class Network(nn.Module):
                 padding_mode='same'), nn.Tanh())
 
         # input for embedding has 32 points now, then in total it is regions x 32 points
-        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
         """
+            nn.MaxPool2d(
+                kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
+        """
+        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
                 kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
-            nn.MaxPool2d(
-                kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
@@ -481,6 +482,7 @@ class Network(nn.Module):
                 padding=(0, 2),
                 padding_mode='same'),
             nn.UpsamplingBilinear2d(scale_factor=(1, 16)))
+        """
         self.pt_mixing = nn.Sequential(nn.Linear(256, 256))
 
         self.reg_conv4 = nn.Sequential(
@@ -508,8 +510,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 dim_pn,
                 dim_pn,
-                kernel_size=(1, 4),
-                stride=(1, 4),
+                kernel_size=(1, 2),
+                stride=(1, 2),
                 padding=(0, 0)), nn.Tanh())
         self.translate = nn.Sequential(
             nn.Conv2d(dim_pn, dim_pn, kernel_size=(1, 1), stride=(1, 1)),
