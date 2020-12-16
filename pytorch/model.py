@@ -442,8 +442,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 4),
-                stride=(1, 4),
+                kernel_size=(1, 32),
+                stride=(1, 32),
                 padding=(0, 0)),
             nn.ConvTranspose2d(
                 2 * dim_pn,
@@ -454,8 +454,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 16),
-                stride=(1, 16),
+                kernel_size=(1, 2),
+                stride=(1, 2),
                 padding=(0, 0)))
         """
         self.embedding = nn.Sequential(
@@ -544,7 +544,7 @@ class Network(nn.Module):
         sp_feat_conv2 = self.reg_conv2(sp_feat_conv1) # 512 points
         sp_feat_conv3 = self.reg_conv3(sp_feat_conv2) # 256 points
 
-        sp_feat_unet = torch.cat((self.pt_mixing(sp_feat_conv3),sp_feat_conv3), dim=-1) # 512 points
+        sp_feat_unet = torch.cat((self.embedding(sp_feat_conv3), sp_feat_conv3), dim=-1) # 512 points
         # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
 
         sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet) # 1024 points
