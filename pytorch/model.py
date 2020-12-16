@@ -442,20 +442,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 32),
-                stride=(1, 32),
-                padding=(0, 0)),
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 4),
-                stride=(1, 4),
-                padding=(0, 0)),
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
+                kernel_size=(1, 256),
+                stride=(1, 256),
                 padding=(0, 0)))
         """
         self.embedding = nn.Sequential(
