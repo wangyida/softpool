@@ -50,3 +50,8 @@ Suppose that GPU 0 is supposed to get used for training
 cd pytorch
 CUDA_VISIBLE_DEVICES=0 python3 val.py --n_regions 8 --num_points 2048 --model log/wo-unet_shapenet/network.pth  --dataset shapenet
 ```
+
+## Benchmarks
+Listed approaches (*until ECCV 2020*) are reported in [complete3d](https://completion3d.stanford.edu/) dataset where you can reproduce our results with scripts in 'benchmark' folder. 
+
+![benchmarks](imgs/complete3d_benchmark.png)
