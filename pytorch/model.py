@@ -203,7 +203,7 @@ class PointNetFeat(nn.Module):
 
 class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=16, sp_points=2048,
-                 sp_ratio=2):
+                 sp_ratio=8):
         super(SoftPoolFeat, self).__init__()
         self.conv1 = torch.nn.Conv1d(32, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
@@ -395,7 +395,7 @@ class Network(nn.Module):
                  n_regions=16,
                  dim_pn=256,
                  sp_points=1024,
-                 sp_ratio=8):
+                 sp_ratio=2):
         super(Network, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
