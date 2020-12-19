@@ -395,7 +395,7 @@ class Network(nn.Module):
                  n_regions=16,
                  dim_pn=256,
                  sp_points=1024,
-                 sp_ratio=2):
+                 sp_ratio=8):
         super(Network, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
@@ -540,11 +540,12 @@ class Network(nn.Module):
         sp_feat_conv2 = self.reg_conv2(sp_feat_conv1) # 512 points
         sp_feat_conv3 = self.reg_conv3(sp_feat_conv2) # 256 points
         
-        unet = True
+        unet = False
         if unet:
             sp_feat_unet = torch.cat((self.embedding(sp_feat_conv3), sp_feat_conv3), dim=-1) # 512 points
         else:
-            sp_feat_unet = self.embedding(sp_feat_conv3)
+            # sp_feat_unet = self.embedding(sp_feat_conv3)
+            sp_feat_unet = torch.cat((self.embedding(sp_feat_conv3), sp_feat_conv3), dim=-1) # 512 points
         # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
 
         sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet) # 1024 points
