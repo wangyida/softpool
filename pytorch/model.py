@@ -182,8 +182,10 @@ class PointNetFeat(nn.Module):
         self.bn3 = torch.nn.BatchNorm1d(dim_pn)
 
         self.fourier_map1 = Periodics(dim_input=3, dim_output=32)
-        self.fourier_map2 = Periodics(dim_input=32, dim_output=128, is_first=False)
-        self.fourier_map3 = Periodics(dim_input=128, dim_output=128, is_first=False)
+        self.fourier_map2 = Periodics(
+            dim_input=32, dim_output=128, is_first=False)
+        self.fourier_map3 = Periodics(
+            dim_input=128, dim_output=128, is_first=False)
 
         self.num_points = num_points
 
@@ -214,8 +216,10 @@ class SoftPoolFeat(nn.Module):
         self.bn3 = torch.nn.BatchNorm1d(256)
 
         self.fourier_map1 = Periodics(dim_input=3, dim_output=32)
-        self.fourier_map2 = Periodics(dim_input=32, dim_output=128, is_first=False)
-        self.fourier_map3 = Periodics(dim_input=128, dim_output=128, is_first=False)
+        self.fourier_map2 = Periodics(
+            dim_input=32, dim_output=128, is_first=False)
+        self.fourier_map3 = Periodics(
+            dim_input=128, dim_output=128, is_first=False)
 
         self.stn = STNkd(k=regions + 3)
 
@@ -419,9 +423,9 @@ class Network(nn.Module):
             nn.Conv2d(
                 1 * dim_pn,
                 dim_pn,
-                kernel_size=(1, 9),
-                stride=(1, 4),
-                padding=(0, 4),
+                kernel_size=(1, 7),
+                stride=(1, 2),
+                padding=(0, 3),
                 padding_mode='same'), nn.Tanh())
         self.reg_conv2 = nn.Sequential(
             nn.Conv2d(
@@ -441,8 +445,8 @@ class Network(nn.Module):
                 padding_mode='same'), nn.Tanh())
 
         # input for embedding has 32 points now, then in total it is regions x 32 points
-        # down-sampled by 2*2*4=16
-        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 16)
+        # down-sampled by 2*2*2=8
+        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
                 kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
@@ -478,7 +482,9 @@ class Network(nn.Module):
                 padding_mode='same'),
             nn.UpsamplingBilinear2d(scale_factor=(1, 16)))
         """
-        self.pt_mixing = nn.Sequential(nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU())
+        self.pt_mixing = nn.Sequential(
+            nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU(),
+            nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU())
 
         self.reg_conv4 = nn.Sequential(
             nn.Conv2d(
@@ -542,22 +548,25 @@ class Network(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
 
-        sp_feat_conv1 = self.reg_conv1(sp_feat) # 1024 points
-        sp_feat_conv2 = self.reg_conv2(sp_feat_conv1) # 512 points
-        sp_feat_conv3 = self.reg_conv3(sp_feat_conv2) # 256 points
-        
+        sp_feat_conv1 = self.reg_conv1(sp_feat)  # 1024 points
+        sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)  # 512 points
+        sp_feat_conv3 = self.reg_conv3(sp_feat_conv2)  # 256 points
+
         unet = True
         if unet:
-            sp_feat_unet = torch.cat((self.embedding(sp_feat_conv3), sp_feat_conv3), dim=-1) # 512 points
+            sp_feat_unet = torch.cat(
+                (self.embedding(sp_feat_conv3), sp_feat_conv3),
+                dim=-1)  # 512 points
         else:
             sp_feat_unet = self.embedding(sp_feat_conv3)
         # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
 
-        sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet) # 1024 points
-        sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3) # 2048 points
-        sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2) # 2048 points
+        sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet)  # 1024 points
+        sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3)  # 2048 points
+        sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2)  # 2048 points
 
-        sp_feat_ae = self.reg_deconv1(self.reg_deconv2(self.reg_deconv3(sp_feat_conv3)))
+        sp_feat_ae = self.reg_deconv1(
+            self.reg_deconv2(self.reg_deconv3(sp_feat_conv3)))
 
         rand_grid = Variable(
             torch.FloatTensor(
@@ -622,7 +631,8 @@ class Network(nn.Module):
         out3 = out_sp_global.transpose(1, 2).contiguous()
 
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-        y = torch.cat((input_chosen.transpose(1, 2).cuda(), pn_feat), 1).contiguous()
+        y = torch.cat((input_chosen.transpose(1, 2).cuda(), pn_feat),
+                      1).contiguous()
         out_fold_trans = self.decoder3(y)
         out_fold = out_fold_trans.transpose(1, 2).contiguous()
 
