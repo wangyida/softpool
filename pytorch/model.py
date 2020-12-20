@@ -395,7 +395,7 @@ class Network(nn.Module):
                  n_regions=16,
                  dim_pn=256,
                  sp_points=1024,
-                 sp_ratio=8):
+                 sp_ratio=4):
         super(Network, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
@@ -419,9 +419,9 @@ class Network(nn.Module):
             nn.Conv2d(
                 1 * dim_pn,
                 dim_pn,
-                kernel_size=(1, 7),
-                stride=(1, 2),
-                padding=(0, 3),
+                kernel_size=(1, 9),
+                stride=(1, 4),
+                padding=(0, 4),
                 padding_mode='same'), nn.Tanh())
         self.reg_conv2 = nn.Sequential(
             nn.Conv2d(
@@ -441,7 +441,8 @@ class Network(nn.Module):
                 padding_mode='same'), nn.Tanh())
 
         # input for embedding has 32 points now, then in total it is regions x 32 points
-        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
+        # down-sampled by 2*2*4=16
+        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 16)
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
                 kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
@@ -513,7 +514,7 @@ class Network(nn.Module):
 
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
         self.decoder2 = PointGenCon(bottleneck_size=2 + self.dim_pn)
-        self.decoder3 = PointGenCon(bottleneck_size=2 * 256 + self.dim_pn)
+        self.decoder3 = PointGenCon(bottleneck_size=3 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
         self.grnet = grnet.GRNet()
@@ -531,6 +532,11 @@ class Network(nn.Module):
         else:
             sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(
                 x=part, x_seg=None)
+
+        input_chosen = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
+        input_chosen = torch.gather(
+            part, dim=2, index=sp_idx[:, :3, 0, :].long()).transpose(1, 2)
+
         loss_trans = feature_transform_regularizer(trans[-3:, -3:])
         pn_feat = self.pn_enc(part)
         pn_feat = pn_feat.unsqueeze(2).expand(
@@ -588,7 +594,7 @@ class Network(nn.Module):
         mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
             sp_feat_deconv1.shape[0], 1, 1).cuda()
         fourier_map3 = Periodics()
-        mesh_grid = fourier_map3(mesh_grid)
+        # mesh_grid = fourier_map3(mesh_grid)
         y = sp_feat_deconv1[:, :, 0, :]
         out_seg = y.transpose(1, 2).contiguous()
         sm = nn.Softmax(dim=2)
@@ -615,13 +621,10 @@ class Network(nn.Module):
         out_sp_global = self.decoder2(y)
         out3 = out_sp_global.transpose(1, 2).contiguous()
 
-        y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+        # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+        y = torch.cat((input_chosen.transpose(1, 2).cuda(), pn_feat), 1).contiguous()
         out_fold_trans = self.decoder3(y)
         out_fold = out_fold_trans.transpose(1, 2).contiguous()
-
-        input_chosen = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
-        input_chosen = torch.gather(
-            part, dim=2, index=sp_idx[:, :3, 0, :].long()).transpose(1, 2)
 
         dist, _, mean_mst_dis = self.expansion(
             out_softpool, self.num_points // self.n_regions // 8, 1.5)
