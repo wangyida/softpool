@@ -540,7 +540,7 @@ class Network(nn.Module):
         sp_feat_conv2 = self.reg_conv2(sp_feat_conv1) # 512 points
         sp_feat_conv3 = self.reg_conv3(sp_feat_conv2) # 256 points
         
-        unet = True
+        unet = False
         if unet:
             sp_feat_unet = torch.cat((self.embedding(sp_feat_conv3), sp_feat_conv3), dim=-1) # 512 points
         else:
