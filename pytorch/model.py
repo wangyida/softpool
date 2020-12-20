@@ -398,14 +398,13 @@ class Network(nn.Module):
                  num_points=8192,
                  n_regions=16,
                  dim_pn=256,
-                 sp_points=1024,
-                 sp_ratio=4):
+                 sp_points=1024):
         super(Network, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
         self.n_regions = n_regions
         self.sp_points = sp_points
-        self.sp_ratio = sp_ratio
+        self.sp_ratio = n_regions
 
         self.pn_enc = nn.Sequential(
             PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),
@@ -415,7 +414,7 @@ class Network(nn.Module):
             num_points,
             regions=self.n_regions,
             sp_points=2048,
-            sp_ratio=sp_ratio)
+            sp_ratio=self.sp_ratio)
 
         # Firstly we do not merge information among regions
         # We merge regional informations in latent space
