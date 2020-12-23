@@ -95,8 +95,8 @@ class FullModel(nn.Module):
 
         dist1, dist2, _, _ = self.CD(output4[0], gt)
         emd4 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        grid_loss = gridding_loss(output4[0], gt)
-        emd4 += grid_loss
+        # grid_loss = gridding_loss(output4[0], gt)
+        # emd4 += grid_loss
 
         dist1, dist2, _, _ = self.CD(output4[1], gt)
         emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
