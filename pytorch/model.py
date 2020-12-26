@@ -519,7 +519,7 @@ class Network(nn.Module):
 
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
         self.decoder2 = PointGenCon(bottleneck_size=2 + self.dim_pn)
-        self.decoder3 = PointGenCon(bottleneck_size=3 + self.dim_pn)
+        self.decoder3 = PointGenCon(bottleneck_size=512 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
         self.grnet = grnet.GRNet()
@@ -630,7 +630,9 @@ class Network(nn.Module):
         out3 = out_sp_global.transpose(1, 2).contiguous()
 
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-        y = torch.cat((input_chosen.transpose(1, 2).cuda(), pn_feat),
+        fourier_map5 = Periodics(dim_input=3)
+        rand_grid = fourier_map5(input_chosen.transpose(1, 2).cuda()).cuda()
+        y = torch.cat((rand_grid, pn_feat),
                       1).contiguous()
         out_fold_trans = self.decoder3(y)
         out_fold = out_fold_trans.transpose(1, 2).contiguous()
