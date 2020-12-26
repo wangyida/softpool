@@ -292,7 +292,7 @@ with torch.no_grad():
         output1, output2, output3, output4, out_seg, input_chosen, _, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
         output1 = output1[0]
-        output4 = output4[0]
+        output4 = output4[1]
         """
         _, _, _, _, _, _, gt_regions, _ = network(
             gt.transpose(2, 1).contiguous())
@@ -324,6 +324,8 @@ with torch.no_grad():
             cd3 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd3'] += cd3
 
+            
+            # output4[0, :, :], _ = resample_pcd(output4[0, :, :], opt.num_points)
             dist, _, _, _ = CD.forward(input1=output4, input2=gt)
             cd4 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd4'] += cd4
