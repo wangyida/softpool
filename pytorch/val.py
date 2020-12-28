@@ -200,12 +200,18 @@ elif opt.dataset == 'shapenet':
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
-labels_generated_points = torch.Tensor(
-    range(1,
-          (opt.n_regions + 1) * (opt.num_points // opt.n_regions) + 1)).view(
-              opt.num_points // opt.n_regions, (opt.n_regions + 1)).transpose(
-                  0, 1)
+labels_generated_points = torch.Tensor(range(1,
+          (opt.n_regions + 1) * (opt.num_points // opt.n_regions) + 1))
+labels_generated_points = labels_generated_points.view(
+          opt.num_points // opt.n_regions, (opt.n_regions + 1)).transpose(0, 1)
 labels_generated_points = (labels_generated_points) % (opt.n_regions + 1)
+labels_generated_points = labels_generated_points.contiguous().view(-1)
+
+labels_generated_points = torch.Tensor(range(1,
+          (2 + 1) * (opt.num_points // 2) + 1))
+labels_generated_points = labels_generated_points.view(
+          opt.num_points // 2, (2 + 1)).transpose(0, 1)
+labels_generated_points = (labels_generated_points) % (2 + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
 labels_inputs_points = torch.Tensor(range(0, opt.num_points)).view(
