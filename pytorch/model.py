@@ -644,7 +644,8 @@ class Network(nn.Module):
         id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
         id2 = torch.zeros(out_softpool_trans.shape[0], 1,
                           out_softpool_trans.shape[2]).cuda().contiguous()
-        fuse_observe = torch.cat((part, id1), 1)
+        # fuse_observe = torch.cat((part, id1), 1)
+        fuse_observe = torch.cat((out_grnet_coar.transpose(1, 2), id1), 1)
         # fuse_observe = torch.cat((out_softpool_trans[:, :, :self.num_points // 2:], id1), 1)
         fuse_expand = torch.cat((out_softpool_trans, id2), 1)
         fusion = torch.cat((fuse_observe, fuse_expand), 2)
