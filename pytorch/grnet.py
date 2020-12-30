@@ -158,8 +158,11 @@ class GRNet(torch.nn.Module):
         # print(point_features.size())    # torch.Size([batch_size, 2048, 112])
         point_offset = self.fc14(point_features).view(-1, 16384, 3)
         # print(point_features.size())    # torch.Size([batch_size, 16384, 3])
+        """
         dense_cloud = sparse_cloud.unsqueeze(dim=2).repeat(1, 1, 8, 1).view(
             -1, 16384, 3) + point_offset
+        """
+        dense_cloud = point_offset
         # print(dense_cloud.size())       # torch.Size([batch_size, 16384, 3])
 
         return sparse_cloud, dense_cloud
