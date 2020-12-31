@@ -200,17 +200,18 @@ elif opt.dataset == 'shapenet':
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
-labels_generated_points = torch.Tensor(range(1,
-          (opt.n_regions + 1) * (opt.num_points // opt.n_regions) + 1))
+labels_generated_points = torch.Tensor(
+    range(1, (opt.n_regions + 1) * (opt.num_points // opt.n_regions) + 1))
 labels_generated_points = labels_generated_points.view(
-          opt.num_points // opt.n_regions, (opt.n_regions + 1)).transpose(0, 1)
+    opt.num_points // opt.n_regions, (opt.n_regions + 1)).transpose(0, 1)
 labels_generated_points = (labels_generated_points) % (opt.n_regions + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
-labels_generated_points = torch.Tensor(range(1,
-          (2 + 1) * (opt.num_points // 2) + 1))
-labels_generated_points = labels_generated_points.view(
-          opt.num_points // 2, (2 + 1)).transpose(0, 1)
+labels_generated_points = torch.Tensor(
+    range(1, (2 + 1) * (opt.num_points // 2) + 1))
+labels_generated_points = labels_generated_points.view(opt.num_points // 2,
+                                                       (2 + 1)).transpose(
+                                                           0, 1)
 labels_generated_points = (labels_generated_points) % (2 + 1)
 labels_generated_points = labels_generated_points.contiguous().view(-1)
 
@@ -330,7 +331,6 @@ with torch.no_grad():
             cd3 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd3'] += cd3
 
-            
             # output4[0, :, :], _ = resample_pcd(output4[0, :, :], opt.num_points)
             dist, _, _, _ = CD.forward(input1=output4, input2=gt)
             cd4 = dist.mean() * 1e4

@@ -632,8 +632,7 @@ class Network(nn.Module):
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
         fourier_map5 = Periodics(dim_input=3)
         rand_grid = fourier_map5(input_chosen.transpose(1, 2).cuda()).cuda()
-        y = torch.cat((rand_grid, pn_feat),
-                      1).contiguous()
+        y = torch.cat((rand_grid, pn_feat), 1).contiguous()
         out_fold_trans = self.decoder3(y)
         out_fold = out_fold_trans.transpose(1, 2).contiguous()
 
@@ -641,11 +640,13 @@ class Network(nn.Module):
             out_softpool, self.num_points // self.n_regions // 8, 1.5)
         loss_mst = torch.mean(dist)
 
-        id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
+        id1 = torch.ones(
+            out_grnet_fine.transpose(1, 2).shape[0], 1,
+            out_grnet_fine.transpose(1, 2).shape[2]).cuda().contiguous()
         id2 = torch.zeros(out_softpool_trans.shape[0], 1,
                           out_softpool_trans.shape[2]).cuda().contiguous()
         # fuse_observe = torch.cat((part, id1), 1)
-        fuse_observe = torch.cat((out_grnet_coar.transpose(1, 2), id1), 1)
+        fuse_observe = torch.cat((out_grnet_fine.transpose(1, 2), id1), 1)
         # fuse_observe = torch.cat((out_softpool_trans[:, :, :self.num_points // 2:], id1), 1)
         fuse_expand = torch.cat((out_softpool_trans, id2), 1)
         fusion = torch.cat((fuse_observe, fuse_expand), 2)
