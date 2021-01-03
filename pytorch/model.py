@@ -712,4 +712,4 @@ class Network(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return [out_softpool, out_ae, out_fusion], [out_fold, out_msn1, out_msn2], out_fold, [out_grnet_coar, out_grnet_fine], out_seg, input_chosen, loss_trans, loss_mst
+        return [out_softpool, out_ae, out_fusion], [out_msn1, out_msn2], out_fold, [out_grnet_coar, out_grnet_fine], out_seg, input_chosen, loss_trans, loss_mst

@@ -51,9 +51,6 @@ class FullModel(nn.Module):
         self.CD = cd.chamferDist()
 
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
-        """
-        _, _, _, _, _, _, gt_regions, _ = self.model(gt.transpose(2, 1))
-        """
         output1, output2, output3, output4, out_seg, input_chosen, loss_trans, expansion_penalty = self.model(
             parts, part_seg)
         """
@@ -68,39 +65,18 @@ class FullModel(nn.Module):
         emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
         dist1, dist2, _, _ = self.CD(output1[2], gt)
         emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        # dist1, dist2, _, _ = self.CD(output1[:,1024:,:], part)
-        # emd1 += 0.00001/(torch.mean(dist1, 1) + torch.mean(dist2, 1) + 0.0001)
-        # grid_loss = gridding_loss(output1, gt)
-        # dist, indexes = self.EMD(output1, gt, eps, iters)
-        # emd1 += torch.sqrt(dist).mean(1)
-        # sqrt_mean = torch.mean(torch.sqrt(torch.mean((output1[i]-gt_regions[i])**2, 2)))
-        """
-        dist, indexes = self.EMD(output1[i][:,:1024,:], gt_regions[i], eps, iters)
-        emd1 += torch.sqrt(dist).mean(1)
-        """
 
         dist1, dist2, _, _ = self.CD(output2[0], gt)
         emd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
         dist1, dist2, _, _ = self.CD(output2[1], gt)
         emd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        dist1, dist2, _, _ = self.CD(output2[2], gt)
-        emd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        # dist, _ = self.EMD(output2, gt, eps, iters)
-        # emd2 += torch.sqrt(dist).mean(1)
-        # emd2 += loss_trans
 
         dist1, dist2, _, _ = self.CD(output3, gt)
         emd3 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        # dist, _ = self.EMD(output3, gt, eps, iters)
-        # emd3 += torch.sqrt(dist).mean(1)
-        # emd3 += loss_trans
-
-        # emd1 /= opt.n_regions
-
-        # emd3 /= opt.n_regions
 
         dist1, dist2, _, _ = self.CD(output4[0], gt)
         emd4 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+
         grid_loss = gridding_loss(output4[0], gt)
         emd4 += grid_loss
 
