@@ -63,8 +63,8 @@ class Periodics(nn.Module):
 
     def filter(self):
         filters = torch.cat([
-            torch.ones(1, self.dim_output // 32 * 16),
-            torch.zeros(1, self.dim_output // 32 * 16)
+            torch.ones(1, self.dim_output // 32 * 32),
+            torch.zeros(1, self.dim_output // 32 * 0)
         ], 1).cuda()
         filters = torch.unsqueeze(filters, 2)
         return filters
@@ -74,7 +74,8 @@ class Periodics(nn.Module):
         lp_filter = self.filter()
         if self.with_frequency:
             if self.with_phase:
-                sinside = torch.sin(self.Li(x) * self.omega_0) * lp_filter
+                # import ipdb; ipdb.set_trace()
+                sinside = torch.sin(self.Li(x) * self.omega_0)
                 return sinside
             else:
                 """
@@ -303,6 +304,56 @@ class PointGenCon(nn.Module):
         return x
 
 
+class MSN(nn.Module):
+    def __init__(self, num_points=2048, bottleneck_size=256, n_primitives=16):
+        super(MSN, self).__init__()
+        self.num_points = num_points
+        self.bottleneck_size = bottleneck_size
+        self.n_primitives = n_primitives
+        self.decoder = nn.ModuleList([
+            PointGenCon(bottleneck_size=2 + self.bottleneck_size)
+            for i in range(0, self.n_primitives)
+        ])
+        self.res = PointNetRes()
+        self.expansion = expansion.expansionPenaltyModule()
+
+    def forward(self, partial, feat):
+        x = feat
+        outs = []
+        for i in range(0, self.n_primitives):
+            rand_grid = Variable(
+                torch.cuda.FloatTensor(
+                    x.size(0), 2, self.num_points // self.n_primitives))
+            rand_grid.data.uniform_(0, 1)
+            y = x.unsqueeze(2).expand(x.size(0), x.size(1),
+                                      rand_grid.size(2)).contiguous()
+            y = torch.cat((rand_grid, y), 1).contiguous()
+            outs.append(self.decoder[i](y))
+
+        outs = torch.cat(outs, 2).contiguous()
+        out1 = outs.transpose(1, 2).contiguous()
+
+        dist, _, mean_mst_dis = self.expansion(
+            out1, self.num_points // self.n_primitives, 1.5)
+        loss_mst = torch.mean(dist)
+
+        id0 = torch.zeros(outs.shape[0], 1, outs.shape[2]).cuda().contiguous()
+        outs = torch.cat((outs, id0), 1)
+        id1 = torch.ones(partial.shape[0], 1,
+                         partial.shape[2]).cuda().contiguous()
+        partial = torch.cat((partial, id1), 1)
+        xx = torch.cat((outs, partial), 2)
+
+        resampled_idx = MDS_module.minimum_density_sample(
+            xx[:, 0:3, :].transpose(1, 2).contiguous(), out1.shape[1],
+            mean_mst_dis)
+        xx = MDS_module.gather_operation(xx, resampled_idx)
+        delta = self.res(xx)
+        xx = xx[:, 0:3, :]
+        out2 = (xx + delta).transpose(2, 1).contiguous()
+        return [out1, out2, loss_mst, mean_mst_dis]
+
+
 class PointGenCon2D(nn.Module):
     def __init__(self, bottleneck_size=8192):
         self.bottleneck_size = bottleneck_size
@@ -520,10 +571,11 @@ class Network(nn.Module):
 
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
         self.decoder2 = PointGenCon(bottleneck_size=2 + self.dim_pn)
-        self.decoder3 = PointGenCon(bottleneck_size=512 + self.dim_pn)
+        self.decoder_fold = PointGenCon(bottleneck_size=2 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
         self.grnet = grnet.GRNet()
+        self.msn = MSN()
 
     def forward(self, part, part_seg):
 
@@ -545,6 +597,7 @@ class Network(nn.Module):
 
         loss_trans = feature_transform_regularizer(trans[-3:, -3:])
         pn_feat = self.pn_enc(part)
+        [out_msn1, out_msn2, loss_mst, mean_mst_dis] = self.msn(part, pn_feat)
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
 
@@ -632,15 +685,14 @@ class Network(nn.Module):
 
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
         fourier_map5 = Periodics(dim_input=3)
-        rand_grid = fourier_map5(input_chosen.transpose(1, 2).cuda()).cuda()
-        y = torch.cat((rand_grid, pn_feat), 1).contiguous()
-        out_fold_trans = self.decoder3(y)
+        y = torch.cat((mesh_grid, pn_feat), 1).contiguous()
+        out_fold_trans = self.decoder_fold(y)
         out_fold = out_fold_trans.transpose(1, 2).contiguous()
-
+        """
         dist, _, mean_mst_dis = self.expansion(
             out_softpool, self.num_points // self.n_regions // 8, 1.5)
         loss_mst = torch.mean(dist)
-
+        """
         id1 = torch.ones(
             out_grnet_fine.transpose(1, 2).shape[0], 1,
             out_grnet_fine.transpose(1, 2).shape[2]).cuda().contiguous()
@@ -660,6 +712,4 @@ class Network(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return [out_softpool, out_ae], out_fusion, out_fold, [
-            out_grnet_coar, out_grnet_fine
-        ], out_seg, input_chosen, loss_trans, loss_mst
+        return [out_softpool, out_ae, out_fusion], [out_fold, out_msn1, out_msn2], out_fold, [out_grnet_coar, out_grnet_fine], out_seg, input_chosen, loss_trans, loss_mst

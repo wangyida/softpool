@@ -66,6 +66,8 @@ class FullModel(nn.Module):
         emd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
         dist1, dist2, _, _ = self.CD(output1[1], part)
         emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+        dist1, dist2, _, _ = self.CD(output1[2], gt)
+        emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
         # dist1, dist2, _, _ = self.CD(output1[:,1024:,:], part)
         # emd1 += 0.00001/(torch.mean(dist1, 1) + torch.mean(dist2, 1) + 0.0001)
         # grid_loss = gridding_loss(output1, gt)
@@ -77,8 +79,12 @@ class FullModel(nn.Module):
         emd1 += torch.sqrt(dist).mean(1)
         """
 
-        dist1, dist2, _, _ = self.CD(output2, gt)
+        dist1, dist2, _, _ = self.CD(output2[0], gt)
         emd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+        dist1, dist2, _, _ = self.CD(output2[1], gt)
+        emd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+        dist1, dist2, _, _ = self.CD(output2[2], gt)
+        emd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
         # dist, _ = self.EMD(output2, gt, eps, iters)
         # emd2 += torch.sqrt(dist).mean(1)
         # emd2 += loss_trans
