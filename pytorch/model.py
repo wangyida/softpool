@@ -61,19 +61,20 @@ class Periodics(nn.Module):
             self.Li = nn.Conv1d(self.dim_input, self.dim_output, 1).cuda()
             self.BN = nn.BatchNorm1d(self.dim_output).cuda()
 
-    def filter(self, x):
+    def filter(self):
         filters = torch.cat([
-            torch.ones(1, dim_output // 128),
-            torch.zeros(1, dim_output // 128 * 63)
+            torch.ones(1, self.dim_output // 32 * 16),
+            torch.zeros(1, self.dim_output // 32 * 16)
         ], 1).cuda()
         filters = torch.unsqueeze(filters, 2)
         return filters
 
     def forward(self, x):
         # here are some options to check how to form the fourier feature
+        lp_filter = self.filter()
         if self.with_frequency:
             if self.with_phase:
-                sinside = torch.sin(self.Li(x) * self.omega_0)
+                sinside = torch.sin(self.Li(x) * self.omega_0) * lp_filter
                 return sinside
             else:
                 """
