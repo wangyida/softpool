@@ -6,6 +6,7 @@ tensorflow/pc_distance/__pycache__
 tensorflow/models/__pycache__
 pytorch/*.pyc
 pytorch/log
+pytorch/benchmark/log
 pytorch/trained_model
 pytorch/__pycache__
 pytorch/pc_distance/__pycache__

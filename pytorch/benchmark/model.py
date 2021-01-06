@@ -9,10 +9,11 @@ import numpy as np
 import torch.nn.functional as F
 import sys
 import softpool as sp
-sys.path.append("./expansion_penalty/")
+sys.path.append("../expansion_penalty/")
 import expansion_penalty_module as expansion
-sys.path.append("./MDS/")
+sys.path.append("../MDS/")
 import MDS_module
+sys.path.append("../")
 import grnet
 
 

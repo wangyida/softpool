@@ -13,10 +13,11 @@ import json
 import time, datetime
 import visdom
 from time import time
-sys.path.append("./emd/")
+sys.path.append("../emd/")
 import emd_module as emd
-sys.path.append("./chamfer/")
+sys.path.append("../chamfer/")
 import dist_chamfer as cd
+sys.path.append("../")
 from extensions.gridding_loss import GriddingLoss
 gridding_loss = GriddingLoss(scales=[32, 128], alphas=[0.5, 0.1])
 

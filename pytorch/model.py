@@ -570,7 +570,7 @@ class Network(nn.Module):
             nn.Tanh())
 
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
-        self.decoder2 = PointGenCon(bottleneck_size=2 + self.dim_pn)
+        self.decoder2 = PointGenCon(bottleneck_size=512 + 3)
         self.decoder_fold = PointGenCon(bottleneck_size=2 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
@@ -629,8 +629,8 @@ class Network(nn.Module):
         fourier_map2 = Periodics()
         rand_grid = fourier_map2(rand_grid).cuda()
 
-        mesh_y = 8
-        mesh_x = self.num_points // (8 * self.n_regions * mesh_y)
+        mesh_y = 4
+        mesh_x = 2
         mesh_grid_mini = torch.meshgrid([
             torch.linspace(0.0, 1.0, mesh_x),
             torch.linspace(0.0, 1.0, mesh_y)
@@ -641,7 +641,7 @@ class Network(nn.Module):
             dim=1)
         mesh_grid_mini = torch.transpose(mesh_grid_mini, 0,
                                          1).unsqueeze(0).repeat(
-                                             sp_feat_deconv1.shape[0], 1, 1)
+                                             sp_feat_deconv1.shape[0], 1, 1).cuda()
         # mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
         # here self.num_points // self.n_regions = 8*4
 
@@ -672,19 +672,18 @@ class Network(nn.Module):
         out_ae = out_sp_ae.transpose(1, 2).contiguous()
 
         # here 8 is the number of cabins
+        fourier_map5 = Periodics(dim_input=2)
+        mesh_grid_mini = fourier_map5(mesh_grid_mini)
         y = torch.cat(
-            (mesh_grid_mini.repeat(1, 1, 8 * self.n_regions).cuda(),
+            (mesh_grid_mini.repeat(1, 1, 2048).cuda(),
              torch.repeat_interleave(
-                 torch.reshape(sp_cabins,
-                               (sp_cabins.shape[0], sp_cabins.shape[1],
-                                sp_cabins.shape[2] * sp_cabins.shape[3])),
-                 repeats=self.num_points // 8 // self.n_regions,
+                 out_softpool_trans,
+                 repeats= 8 ,
                  dim=2)), 1).contiguous()
-        out_sp_global = self.decoder2(y)
-        out3 = out_sp_global.transpose(1, 2).contiguous()
+        out_fine = self.decoder2(y)
+        out_fine = out_fine.transpose(1, 2).contiguous()
 
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-        fourier_map5 = Periodics(dim_input=3)
         y = torch.cat((mesh_grid, pn_feat), 1).contiguous()
         out_fold_trans = self.decoder_fold(y)
         out_fold = out_fold_trans.transpose(1, 2).contiguous()
@@ -712,4 +711,4 @@ class Network(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         out_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return [out_softpool, out_ae, out_fusion], [out_msn1, out_msn2], out_fold, [out_grnet_coar, out_grnet_fine], out_seg, input_chosen, loss_trans, loss_mst
+        return [out_softpool, out_ae, out_fine, out_fusion], [out_msn1, out_msn2], out_fold, [out_grnet_coar, out_grnet_fine], out_seg, input_chosen, loss_trans, loss_mst
