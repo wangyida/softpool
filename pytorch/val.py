@@ -415,6 +415,7 @@ with torch.no_grad():
                 root='pcds/output1',
                 child=subfold,
                 pfile=model + '-' + str(stage))
+
         # Submission
         if opt.dataset == 'shapenet' and complete3d_benchmark == True:
             os.makedirs('benchmark', exist_ok=True)

@@ -74,7 +74,6 @@ class Periodics(nn.Module):
         lp_filter = self.filter()
         if self.with_frequency:
             if self.with_phase:
-                # import ipdb; ipdb.set_trace()
                 sinside = torch.sin(self.Li(x) * self.omega_0)
                 return sinside
             else:
@@ -570,7 +569,7 @@ class Network(nn.Module):
             nn.Tanh())
 
         self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
-        self.decoder2 = PointGenCon(bottleneck_size=512 + 3)
+        self.decoder2 = PointGenCon(bottleneck_size=self.dim_pn + 3 + 2)
         self.decoder_fold = PointGenCon(bottleneck_size=2 + self.dim_pn)
         self.res = PointNetRes()
         self.expansion = expansion.expansionPenaltyModule()
@@ -672,10 +671,11 @@ class Network(nn.Module):
         out_ae = out_sp_ae.transpose(1, 2).contiguous()
 
         # here 8 is the number of cabins
-        fourier_map5 = Periodics(dim_input=2)
-        mesh_grid_mini = fourier_map5(mesh_grid_mini)
+        # fourier_map5 = Periodics(dim_input=2)
+        # mesh_grid_mini = fourier_map5(mesh_grid_mini)
         y = torch.cat(
-            (mesh_grid_mini.repeat(1, 1, 2048).cuda(),
+            (pn_feat.repeat(1, 1, 8),
+             mesh_grid_mini.repeat(1, 1, 2048).cuda(),
              torch.repeat_interleave(
                  out_softpool_trans,
                  repeats= 8 ,
