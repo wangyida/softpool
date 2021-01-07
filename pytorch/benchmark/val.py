@@ -11,9 +11,9 @@ import torch
 import h5py
 import os
 import visdom
-sys.path.append("./emd/")
+sys.path.append("../emd/")
 import emd_module as emd
-sys.path.append("./chamfer/")
+sys.path.append("../chamfer/")
 import dist_chamfer as cd
 from dataset import resample_pcd, read_points
 EMD = emd.emdModule()
@@ -186,7 +186,7 @@ elif opt.dataset == 'shapenet':
             'cnt': 0
         }
     }
-    complete3d_benchmark = True
+    complete3d_benchmark = False
     if complete3d_benchmark == True:
         with open(os.path.join('./data/test_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]

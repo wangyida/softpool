@@ -408,7 +408,8 @@ with torch.no_grad():
             pts_coord = output1[stage][0].data.cpu()[:, 0:3]
             maxi = labels_generated_points.max()
             pts_color = matplotlib.cm.rainbow(
-                labels_generated_points[0:output1[stage].size(1)] / maxi)[:, 0:3]
+                labels_generated_points[0:output1[stage].size(1)] /
+                maxi)[:, 0:3]
             points_save(
                 points=pts_coord,
                 colors=pts_color,
