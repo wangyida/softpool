@@ -459,7 +459,7 @@ with torch.no_grad():
 
             dist, _, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
             if stage == 0:
-                pts_color = matplotlib.cm.copper(output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                pts_color = matplotlib.cm.copper(output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             else:
                 pts_color = matplotlib.cm.rainbow(
                     gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
