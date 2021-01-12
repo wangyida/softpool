@@ -677,12 +677,12 @@ class Network(nn.Module):
         pcd_fold = pcd_fold_trans.transpose(1, 2).contiguous()
 
         id1 = torch.ones(
-            pcd_grnet_fine.transpose(1, 2).shape[0], 1,
-            pcd_grnet_fine.transpose(1, 2).shape[2]).cuda().contiguous()
+            pcd_grnet_coar.transpose(1, 2).shape[0], 1,
+            pcd_grnet_coar.transpose(1, 2).shape[2]).cuda().contiguous()
         id2 = torch.zeros(pcd_softpool_trans.shape[0], 1,
                           pcd_softpool_trans.shape[2]).cuda().contiguous()
         # fuse_observe = torch.cat((part, id1), 1)
-        fuse_observe = torch.cat((pcd_grnet_fine.transpose(1, 2), id1), 1)
+        fuse_observe = torch.cat((pcd_grnet_coar.transpose(1, 2), id1), 1)
         # fuse_observe = torch.cat((pcd_softpool_trans[:, :, :self.num_points // 2:], id1), 1)
         fuse_expand = torch.cat((pcd_softpool_trans, id2), 1)
         fusion = torch.cat((fuse_observe, fuse_expand), 2)
@@ -698,14 +698,16 @@ class Network(nn.Module):
         pcd_fusion_trans = fusion + delta
         pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
 
+        """
         y = torch.cat(
             (pn_feat.repeat(1, 1, 8), mesh_grid_mini.repeat(1, 1, 2048).cuda(),
              torch.repeat_interleave(pcd_fusion_trans, repeats=8, dim=2)),
             1).contiguous()
         pcd_fine = self.decoder2(y)
         pcd_fine = pcd_fine.transpose(1, 2).contiguous()
+        """
 
-        return [pcd_softpool, pcd_ae, pcd_fine,
+        return [pcd_softpool, pcd_ae, 
                 pcd_fusion], [pcd_msn1, pcd_msn2], pcd_fold, [
                     pcd_grnet_coar, pcd_grnet_fine
                 ], pcd_seg, input_chosen, loss_trans, loss_mst

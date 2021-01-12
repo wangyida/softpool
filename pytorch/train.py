@@ -65,8 +65,6 @@ class FullModel(nn.Module):
         emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
         dist1, dist2, _, _ = self.CD(output1[2], gt)
         emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        dist1, dist2, _, _ = self.CD(output1[3], gt)
-        emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
 
         dist1, dist2, _, _ = self.CD(output2[0], gt)
         emd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
