@@ -350,7 +350,7 @@ with torch.no_grad():
         # save input
         pts_coord = part[0].data.cpu()[:, 0:3]
         mini = part[0].min()
-        pts_color = matplotlib.cm.copper(part[0].data.cpu()[:, 1])[:, 0:3]
+        pts_color = matplotlib.cm.copper(part[0].data.cpu()[:, 1] + 1)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -412,7 +412,7 @@ with torch.no_grad():
                     labels_generated_points[0:output1[stage].size(1)] /
                     maxi)[:, 0:3]
             else:
-                pts_color = matplotlib.cm.copper(output1[stage][0].data.cpu()[:, 1])[:, 0:3]
+                pts_color = matplotlib.cm.copper(output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             points_save(
                 points=pts_coord,
                 colors=pts_color,
@@ -431,7 +431,7 @@ with torch.no_grad():
         for stage in range(len(output2)):
             pts_coord = output2[stage][0].data.cpu()[:, 0:3]
             mini = output2[stage][0].min()
-            pts_color = matplotlib.cm.copper(output2[stage][0].data.cpu()[:, 1])[:, 0:3]
+            pts_color = matplotlib.cm.copper(output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             points_save(
                 points=pts_coord,
                 colors=pts_color,
@@ -444,7 +444,7 @@ with torch.no_grad():
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output3.size(1)] / maxi)[:, 0:3]
-        pts_color = matplotlib.cm.copper(output3[0].data.cpu()[:, 1])[:, 0:3]
+        pts_color = matplotlib.cm.copper(output3[0].data.cpu()[:, 1] + 1)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -459,7 +459,7 @@ with torch.no_grad():
 
             dist, _, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
             if stage == 0:
-                pts_color = matplotlib.cm.copper(output2[stage][0].data.cpu()[:, 1])[:, 0:3]
+                pts_color = matplotlib.cm.copper(output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             else:
                 pts_color = matplotlib.cm.rainbow(
                     gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
