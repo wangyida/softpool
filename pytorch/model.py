@@ -174,7 +174,7 @@ class PointNetFeat(nn.Module):
     def __init__(self, num_points=8192, dim_pn=1024):
         super(PointNetFeat, self).__init__()
         self.dim_pn = dim_pn
-        self.conv1 = torch.nn.Conv1d(32, 64, 1)
+        self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, dim_pn, 1)
 
@@ -191,13 +191,13 @@ class PointNetFeat(nn.Module):
         self.num_points = num_points
 
     def forward(self, inputs):
+        """
         x = self.fourier_map1(inputs)
         x = self.fourier_map2(x)
         x = self.fourier_map3(x)
         """
         x = F.relu(self.bn1(self.conv1(inputs)))
         x = F.relu(self.bn2(self.conv2(x)))
-        """
         x = self.bn3(self.conv3(x))
         x, _ = torch.max(x, 2)
         x = x.view(-1, self.dim_pn)
@@ -208,7 +208,7 @@ class SoftPoolFeat(nn.Module):
     def __init__(self, num_points=8192, regions=16, sp_points=2048,
                  sp_ratio=8):
         super(SoftPoolFeat, self).__init__()
-        self.conv1 = torch.nn.Conv1d(32, 64, 1)
+        self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 256, 1)
 
@@ -231,13 +231,13 @@ class SoftPoolFeat(nn.Module):
         self.softpool = sp.SoftPool(self.regions, cabins=8, sp_ratio=sp_ratio)
 
     def mlp(self, inputs):
+        """
         x = self.fourier_map1(inputs)
         x = self.fourier_map2(x)
         x = self.fourier_map3(x)
         """
-        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn1(self.conv1(inputs)))
         x = F.relu(self.bn2(self.conv2(x)))
-        """
         x = self.bn3(self.conv3(x))
         return x
 
