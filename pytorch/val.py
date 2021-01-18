@@ -296,7 +296,7 @@ with torch.no_grad():
                     resample_pcd(np.array(fh5['data']), opt.num_points))
                 """
 
-        output1, output2, output3, output4, out_seg, input_chosen, _, _ = network(
+        output1, output2, output3, output4, out_seg, grnet_seg, input_chosen, _, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
         """
         output1 = output1[2]
@@ -466,7 +466,7 @@ with torch.no_grad():
                     gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
                 """
                 pts_color = matplotlib.cm.rainbow(
-                        torch.argmax(output4[stage][0][:, 3:].cpu(), dim=-1).float() / 11)[:, 0:3]
+                        torch.argmax(grnet_seg[0][:, :].cpu(), dim=-1).float() / 11)[:, 0:3]
             cd4 = dist.mean()
             """
             pts_color = matplotlib.cm.rainbow(

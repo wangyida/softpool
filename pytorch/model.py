@@ -665,7 +665,7 @@ class Network(nn.Module):
         pcd_softpool_trans = self.decoder1(y)
         pcd_softpool = pcd_softpool_trans.transpose(1, 2).contiguous()
 
-        [pcd_grnet_coar, pcd_grnet_fine] = self.grnet(part.transpose(1, 2))
+        [pcd_grnet_coar, pcd_grnet_fine, grnet_seg] = self.grnet(part.transpose(1, 2))
 
         y = sp_feat_ae[:, :, 0, :]
         pcd_sp_ae = self.decoder1(y)
@@ -710,4 +710,4 @@ class Network(nn.Module):
         return [pcd_softpool, pcd_ae, 
                 pcd_fusion], [pcd_msn1, pcd_msn2], pcd_fold, [
                     pcd_grnet_coar, pcd_grnet_fine
-                ], pcd_seg, input_chosen, loss_trans, loss_mst
+                ], pcd_seg, grnet_seg, input_chosen, loss_trans, loss_mst

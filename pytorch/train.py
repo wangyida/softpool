@@ -51,7 +51,7 @@ class FullModel(nn.Module):
         self.CD = cd.chamferDist()
 
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
-        output1, output2, output3, output4, out_seg, input_chosen, loss_trans, expansion_penalty = self.model(
+        output1, output2, output3, output4, out_seg, grnet_seg, input_chosen, loss_trans, expansion_penalty = self.model(
             parts, part_seg)
         """
         for i in range(16):
@@ -85,7 +85,8 @@ class FullModel(nn.Module):
 
         SM = torch.nn.Softmax(dim=-1)
         for i in range(np.shape(gt)[0]):
-            sem_feat = SM(output4[1][i, :, 3:]).float()
+            # sem_feat = SM(output4[1][i, :, 3:]).float()
+            sem_feat = SM(grnet_seg[i, :, :]).float()
             sem_gt = torch.nn.functional.one_hot(gt_seg[i, :, 0][idx1[i].long()].to(torch.int64), 12).float()
             loss_sem_coarse = torch.mean(-torch.sum(
                 0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
