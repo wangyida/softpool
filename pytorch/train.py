@@ -82,6 +82,7 @@ class FullModel(nn.Module):
 
         dist1, dist2, idx1, _ = self.CD(output4[1][:,:,:3], gt)
         emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+
         SM = torch.nn.Softmax(dim=-1)
         for i in range(np.shape(gt)[0]):
             sem_feat = SM(output4[1][i, :, 3:]).float()
@@ -89,7 +90,7 @@ class FullModel(nn.Module):
             loss_sem_coarse = torch.mean(-torch.sum(
                 0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
                 (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat), 1))
-            emd4 += 0.01 * loss_sem_coarse
+            emd4 += loss_sem_coarse
         """
         gt_seg = gt_seg[:,:,0]
         size = list(gt_seg.size())
