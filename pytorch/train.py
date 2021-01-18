@@ -91,7 +91,7 @@ class FullModel(nn.Module):
             loss_sem_coarse = torch.mean(-torch.sum(
                 0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
                 (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat), 1))
-            emd4 += loss_sem_coarse
+            emd4 += 0.01 * loss_sem_coarse
         """
         gt_seg = gt_seg[:,:,0]
         size = list(gt_seg.size())
