@@ -85,7 +85,8 @@ class GRNet(torch.nn.Module):
             torch.nn.Linear(1792, 448), torch.nn.ReLU())
         self.fc13 = torch.nn.Sequential(
             torch.nn.Linear(448, 112), torch.nn.ReLU())
-        self.fc14 = torch.nn.Linear(112, 24)
+        # self.fc14 = torch.nn.Linear(112, 24)
+        self.fc14 = torch.nn.Linear(112, (3+12)*8)
         self.unet = True
 
     def forward(self, data):
@@ -156,7 +157,8 @@ class GRNet(torch.nn.Module):
         # print(point_features.size())    # torch.Size([batch_size, 2048, 448])
         point_features = self.fc13(point_features)
         # print(point_features.size())    # torch.Size([batch_size, 2048, 112])
-        point_offset = self.fc14(point_features).view(-1, 16384, 3)
+        # point_offset = self.fc14(point_features).view(-1, 16384, 3)
+        point_offset = self.fc14(point_features).view(-1, 16384, 3+12)
         # print(point_features.size())    # torch.Size([batch_size, 16384, 3])
         """
         dense_cloud = sparse_cloud.unsqueeze(dim=2).repeat(1, 1, 8, 1).view(

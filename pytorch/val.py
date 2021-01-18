@@ -408,7 +408,7 @@ with torch.no_grad():
             pts_coord = output1[stage][0].data.cpu()[:, 0:3]
             maxi = labels_generated_points.max()
             if stage == 0:
-                pts_color = matplotlib.cm.winter(
+                pts_color = matplotlib.cm.rainbow(
                     labels_generated_points[0:output1[stage].size(1)] /
                     maxi)[:, 0:3]
             else:
@@ -461,8 +461,12 @@ with torch.no_grad():
             if stage == 0:
                 pts_color = matplotlib.cm.copper(output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             else:
+                """
                 pts_color = matplotlib.cm.rainbow(
                     gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
+                """
+                pts_color = matplotlib.cm.rainbow(
+                        torch.argmax(output4[stage][0][:, 3:].cpu(), dim=-1).float() / 11)[:, 0:3]
             cd4 = dist.mean()
             """
             pts_color = matplotlib.cm.rainbow(
