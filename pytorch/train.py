@@ -83,6 +83,8 @@ class FullModel(nn.Module):
         dist1, dist2, idx1, _ = self.CD(output4[1][:,:,:3], gt)
         emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
 
+        import ipdb; ipdb.set_trace()
+        """
         SM = torch.nn.Softmax(dim=-1)
         sem_feat = SM(grnet_seg[:, :, :]).float()
         labels_gt = torch.gather(gt_seg[:, :, 0], dim=1, index=idx1.long())
@@ -91,6 +93,7 @@ class FullModel(nn.Module):
             0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
             (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat), dim=-1))
         emd4 += 0.01 * loss_sem_coarse
+        """
         """
         gt_seg = gt_seg[:,:,0]
         size = list(gt_seg.size())

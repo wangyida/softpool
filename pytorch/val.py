@@ -257,25 +257,6 @@ with torch.no_grad():
                 gt[j, :, :], idx_sampled = resample_pcd(
                     gt1, opt.num_points * 2)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
-                # Yida!!!
-                """
-                pcd = o3d.read_point_cloud(
-                    os.path.join(part_dir, model + '.pcd'))
-                part_sampled, idx_sampled = resample_pcd(
-                    np.array(pcd.points), opt.num_points)
-                part_seg_sampled = np.round(
-                    np.array(pcd.colors)[idx_sampled] * 11)
-                part[j, :, :] = torch.from_numpy(part_sampled)
-                part_seg[j, :, :] = torch.from_numpy(part_seg_sampled)
-
-                pcd = o3d.read_point_cloud(
-                    os.path.join(gt_dir, model + '.pcd'))
-                gt_sampled, idx_sampled = resample_pcd(
-                    np.array(pcd.points), opt.num_points)
-                gt_seg_sampled = np.round(
-                    np.array(pcd.colors)[idx_sampled] * 11)
-                gt[j, :, :] = torch.from_numpy(gt_sampled)
-                """
             elif opt.dataset == 'shapenet':
                 part1, part_color = read_points(
                     os.path.join(part_dir, model + '.h5'), opt.dataset)
@@ -287,40 +268,10 @@ with torch.no_grad():
                 gt[j, :, :], idx_sampled = resample_pcd(
                     gt1, opt.num_points * 2)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
-                """
-                fh5 = h5py.File(os.path.join(part_dir, model + '.h5'), 'r')
-                part[j, :, :], _ = torch.from_numpy(
-                    resample_pcd(np.array(fh5['data']), opt.num_points))
-                fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
-                gt[j, :, :], _ = torch.from_numpy(
-                    resample_pcd(np.array(fh5['data']), opt.num_points))
-                """
 
         output1, output2, output3, output4, out_seg, grnet_seg, input_chosen, _, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
-        """
-        output1 = output1[2]
-        output2 = output2[1]
-        output4 = output4[1]
-        """
-        """
-        _, _, _, _, _, _, gt_regions, _ = network(
-            gt.transpose(2, 1).contiguous())
-        """
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
-            """
-            dist, _ = EMD(output1, gt, 0.002, 10000)
-            emd1 = torch.sqrt(dist).mean()
-            hash_tab[str(subfold)]['emd1'] += emd1
-
-            dist, _ = EMD(output2, gt, 0.002, 10000)
-            emd2 = torch.sqrt(dist).mean()
-            hash_tab[str(subfold)]['emd2'] += emd2
-
-            dist, _ = EMD(output3, gt, 0.002, 10000)
-            emd3 = torch.sqrt(dist).mean()
-            hash_tab[str(subfold)]['emd3'] += emd3
-            """
 
             dist, _, _, _ = CD.forward(input1=output1[2], input2=gt)
             cd1 = dist.mean() * 1e4
