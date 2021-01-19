@@ -698,14 +698,6 @@ class Network(nn.Module):
         pcd_fusion_trans = fusion + delta
         pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
 
-        """
-        y = torch.cat(
-            (pn_feat.repeat(1, 1, 8), mesh_grid_mini.repeat(1, 1, 2048).cuda(),
-             torch.repeat_interleave(pcd_fusion_trans, repeats=8, dim=2)),
-            1).contiguous()
-        pcd_fine = self.decoder2(y)
-        pcd_fine = pcd_fine.transpose(1, 2).contiguous()
-        """
 
         return [pcd_softpool, pcd_ae, 
                 pcd_fusion], [pcd_msn1, pcd_msn2], pcd_fold, [
