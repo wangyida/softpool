@@ -170,8 +170,7 @@ class GRNet(torch.nn.Module):
         """
         dense_cloud = point_offset
         out_if = self.gridding_if(dense_cloud).view(-1, 1, 256, 256, 256)
-        smoothed_sphere = mcubes.smooth(np.array(out_if[0,0,:,:,:].cpu()))
-        vertices, triangles = mcubes.marching_cubes(smoothed_sphere, 0)
+        vertices, triangles = mcubes.marching_cubes(np.array(out_if[0,0,:,:,:].cpu()), 0.5)
         mcubes.export_obj(vertices, triangles, 'sphere.obj')
         # print(dense_cloud.size())       # torch.Size([batch_size, 16384, 3])
 
