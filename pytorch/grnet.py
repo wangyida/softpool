@@ -6,6 +6,8 @@
 # @Email:  cshzxie@gmail.com
 
 import torch
+import mcubes
+import numpy as np
 
 from extensions.gridding import Gridding, GriddingReverse
 from extensions.cubic_feature_sampling import CubicFeatureSampling
@@ -117,8 +119,10 @@ class GRNet(torch.nn.Module):
             pt_features_64_r = self.dconv10(
                 pt_features_32_r) + pt_features_64_l
             # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
-            import ipdb; ipdb.set_trace()
             sparse_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
+            smoothed_sphere = mcubes.smooth(np.array(pt_features_64_r[0,0,:,:,:].cpu()))
+            vertices, triangles = mcubes.marching_cubes(smoothed_sphere, 0)
+            mcubes.export_obj(vertices, triangles, 'sphere.obj')
             # print(sparse_cloud.size())      # torch.Size([batch_size, 262144, 3])
             sparse_cloud = self.point_sampling(sparse_cloud, partial_cloud)
             # print(sparse_cloud.size())      # torch.Size([batch_size, 2048, 3])
