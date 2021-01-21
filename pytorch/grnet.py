@@ -42,6 +42,7 @@ class GRNet(torch.nn.Module):
     def __init__(self):
         super(GRNet, self).__init__()
         self.gridding = Gridding(scale=64)
+        self.gridding_if = Gridding(scale=256)
         self.conv1 = torch.nn.Sequential(
             torch.nn.Conv3d(1, 32, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(32), torch.nn.LeakyReLU(0.2),
@@ -120,9 +121,6 @@ class GRNet(torch.nn.Module):
                 pt_features_32_r) + pt_features_64_l
             # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
             sparse_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
-            smoothed_sphere = mcubes.smooth(np.array(pt_features_64_r[0,0,:,:,:].cpu()))
-            vertices, triangles = mcubes.marching_cubes(smoothed_sphere, 0)
-            mcubes.export_obj(vertices, triangles, 'sphere.obj')
             # print(sparse_cloud.size())      # torch.Size([batch_size, 262144, 3])
             sparse_cloud = self.point_sampling(sparse_cloud, partial_cloud)
             # print(sparse_cloud.size())      # torch.Size([batch_size, 2048, 3])
@@ -171,6 +169,10 @@ class GRNet(torch.nn.Module):
             -1, 16384, 3) + point_offset
         """
         dense_cloud = point_offset
+        out_if = self.gridding_if(dense_cloud).view(-1, 1, 256, 256, 256)
+        smoothed_sphere = mcubes.smooth(np.array(out_if[0,0,:,:,:].cpu()))
+        vertices, triangles = mcubes.marching_cubes(smoothed_sphere, 0)
+        mcubes.export_obj(vertices, triangles, 'sphere.obj')
         # print(dense_cloud.size())       # torch.Size([batch_size, 16384, 3])
 
         return sparse_cloud, dense_cloud, point_segs
