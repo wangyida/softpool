@@ -105,10 +105,17 @@ class GriddingLoss(torch.nn.Module):
             alpha = self.alphas[i]
             gdist = self.gridding_dists[i]
             pred_grid, gt_grid = gdist(pred_cloud, gt_cloud)
+            pred_grid, gt_grid = torch.clamp(pred_grid, min=0.0, max=1.0), torch.clamp(gt_grid, min=0.0, max=1.0)
 
             if gridding_loss is None:
-                gridding_loss = alpha * self.l1_loss(pred_grid, gt_grid)
+                # gridding_loss = alpha * self.l1_loss(pred_grid, gt_grid)
+                gridding_loss = torch.mean(-torch.sum(
+                    0.97 * gt_grid * torch.log(1e-6 + pred_grid) +
+                    (1 - 0.97) * (1 - gt_grid) * torch.log(1e-6 + 1 - pred_grid), dim=-1))
             else:
-                gridding_loss += alpha * self.l1_loss(pred_grid, gt_grid)
+                # gridding_loss += alpha * self.l1_loss(pred_grid, gt_grid)
+                gridding_loss += torch.mean(-torch.sum(
+                    0.97 * gt_grid * torch.log(1e-6 + pred_grid) +
+                    (1 - 0.97) * (1 - gt_grid) * torch.log(1e-6 + 1 - pred_grid), dim=-1))
 
         return gridding_loss
