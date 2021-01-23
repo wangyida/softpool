@@ -117,10 +117,8 @@ class GRNet(torch.nn.Module):
             # print(pt_features_32_r.size())  # torch.Size([batch_size, 32, 32, 32, 32])
             pt_features_64_r = self.dconv10(
                 pt_features_32_r) + pt_features_64_l
-            """
             vertices, triangles = mcubes.marching_cubes(np.array(pt_features_64_r[0,0,:,:,:].cpu()), 0.5)
             mcubes.export_obj(vertices, triangles, 'sphere_coarse.obj')
-            """
             # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 128, 128, 128])
             sparse_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
             # print(sparse_cloud.size())      # torch.Size([batch_size, 262144, 3])
@@ -171,11 +169,9 @@ class GRNet(torch.nn.Module):
             -1, 16384, 3) + point_offset
         """
         dense_cloud = point_offset
-        """
         out_if = self.gridding(dense_cloud).view(-1, 1, 128, 128, 128)
         vertices, triangles = mcubes.marching_cubes(np.array(out_if[0,0,:,:,:].cpu()), 0.5)
         mcubes.export_obj(vertices, triangles, 'sphere_fine.obj')
-        """
         # print(dense_cloud.size())       # torch.Size([batch_size, 16384, 3])
 
         return sparse_cloud, dense_cloud, point_segs
