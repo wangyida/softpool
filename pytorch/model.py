@@ -665,7 +665,7 @@ class Network(nn.Module):
         pcd_softpool_trans = self.decoder1(y)
         pcd_softpool = pcd_softpool_trans.transpose(1, 2).contiguous()
 
-        [pcd_grnet_coar, pcd_grnet_fine, grnet_seg] = self.grnet(part.transpose(1, 2))
+        [pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar, grnet_seg_fine, grnet_seg_coar] = self.grnet(part.transpose(1, 2))
 
         y = sp_feat_ae[:, :, 0, :]
         pcd_sp_ae = self.decoder1(y)
@@ -677,12 +677,12 @@ class Network(nn.Module):
         pcd_fold = pcd_fold_trans.transpose(1, 2).contiguous()
 
         id1 = torch.ones(
-            pcd_grnet_coar.transpose(1, 2).shape[0], 1,
-            pcd_grnet_coar.transpose(1, 2).shape[2]).cuda().contiguous()
+            pcd_grnet_voxel.transpose(1, 2).shape[0], 1,
+            pcd_grnet_voxel.transpose(1, 2).shape[2]).cuda().contiguous()
         id2 = torch.zeros(pcd_softpool_trans.shape[0], 1,
                           pcd_softpool_trans.shape[2]).cuda().contiguous()
         # fuse_observe = torch.cat((part, id1), 1)
-        fuse_observe = torch.cat((pcd_grnet_coar.transpose(1, 2), id1), 1)
+        fuse_observe = torch.cat((pcd_grnet_voxel.transpose(1, 2), id1), 1)
         # fuse_observe = torch.cat((pcd_softpool_trans[:, :, :self.num_points // 2:], id1), 1)
         fuse_expand = torch.cat((pcd_softpool_trans, id2), 1)
         fusion = torch.cat((fuse_observe, fuse_expand), 2)
@@ -697,20 +697,7 @@ class Network(nn.Module):
         pcd_fusion_trans = fusion + delta
         pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
 
-        resampled_gr_idx = MDS_module.minimum_density_sample(
-            pcd_grnet_fine[:, 0:3, :].contiguous(),
-            pcd_softpool.shape[1], mean_mst_dis)
-
-        idx3 = torch.zeros(pcd_grnet_fine.shape[0], 1,
-                          pcd_grnet_fine.shape[1]).cuda().contiguous()
-        sampled_gr = MDS_module.gather_operation(torch.cat((pcd_grnet_fine.transpose(2, 1), idx3), 1), resampled_gr_idx)
-        delta = self.res(sampled_gr)
-        sampled_gr = sampled_gr[:, 0:3, :]
-        sampled_gr_trans = sampled_gr + delta
-        sampled_gr = sampled_gr_trans.transpose(2, 1).contiguous()
-
-
         return [pcd_softpool, pcd_ae, 
                 pcd_fusion], [pcd_msn1, pcd_msn2], pcd_fold, [
-                    pcd_grnet_coar, pcd_grnet_fine, sampled_gr
-                ], pcd_seg, grnet_seg, input_chosen, loss_trans, loss_mst
+                    pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar
+                ], pcd_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, loss_mst

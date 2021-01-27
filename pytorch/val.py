@@ -269,11 +269,11 @@ with torch.no_grad():
                     gt1, opt.num_points * 2)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
 
-        output1, output2, output3, output4, out_seg, grnet_seg, input_chosen, _, _ = network(
+        output1, output2, output3, output4, out_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, _, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
 
-            dist, _, _, _ = CD.forward(input1=output1[2], input2=gt)
+            dist, _, _, _ = CD.forward(input1=output1[0], input2=gt)
             cd1 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd1'] += cd1
 
@@ -285,8 +285,7 @@ with torch.no_grad():
             cd3 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd3'] += cd3
 
-            # output4[0, :, :], _ = resample_pcd(output4[0, :, :], opt.num_points)
-            dist, _, _, _ = CD.forward(input1=output4[1], input2=gt)
+            dist, _, _, _ = CD.forward(input1=output4[2], input2=gt)
             cd4 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd4'] += cd4
 
@@ -301,7 +300,7 @@ with torch.no_grad():
         # save input
         pts_coord = part[0].data.cpu()[:, 0:3]
         mini = part[0].min()
-        pts_color = matplotlib.cm.copper(part[0].data.cpu()[:, 1] + 1)[:, 0:3]
+        pts_color = matplotlib.cm.cool(part[0].data.cpu()[:, 1] + 1)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -314,7 +313,7 @@ with torch.no_grad():
         mini = gt[0].min()
         pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0].cpu() / 11)[:, :3]
 
-        # pts_color = matplotlib.cm.copper(gt[0].data.cpu()[:, 1] - mini)[:, 0:3]
+        # pts_color = matplotlib.cm.cool(gt[0].data.cpu()[:, 1] - mini)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -363,7 +362,7 @@ with torch.no_grad():
                     labels_generated_points[0:output1[stage].size(1)] /
                     maxi)[:, 0:3]
             else:
-                pts_color = matplotlib.cm.copper(output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                pts_color = matplotlib.cm.cool(output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             points_save(
                 points=pts_coord,
                 colors=pts_color,
@@ -382,7 +381,7 @@ with torch.no_grad():
         for stage in range(len(output2)):
             pts_coord = output2[stage][0].data.cpu()[:, 0:3]
             mini = output2[stage][0].min()
-            pts_color = matplotlib.cm.copper(output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+            pts_color = matplotlib.cm.cool(output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             points_save(
                 points=pts_coord,
                 colors=pts_color,
@@ -395,7 +394,7 @@ with torch.no_grad():
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output3.size(1)] / maxi)[:, 0:3]
-        pts_color = matplotlib.cm.copper(output3[0].data.cpu()[:, 1] + 1)[:, 0:3]
+        pts_color = matplotlib.cm.cool(output3[0].data.cpu()[:, 1] + 1)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -410,14 +409,13 @@ with torch.no_grad():
 
             dist, _, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
             if stage == 0:
-                pts_color = matplotlib.cm.copper(output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                pts_color = matplotlib.cm.cool(output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+            elif stage == 1:
+                pts_color = matplotlib.cm.rainbow(
+                        torch.argmax(grnet_seg_fine[0][:, :].cpu(), dim=-1).float() / 11)[:, 0:3]
             else:
-                """
                 pts_color = matplotlib.cm.rainbow(
-                    gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
-                """
-                pts_color = matplotlib.cm.rainbow(
-                        torch.argmax(grnet_seg[0][:, :].cpu(), dim=-1).float() / 11)[:, 0:3]
+                        torch.argmax(grnet_seg_coar[0][:, :].cpu(), dim=-1).float() / 11)[:, 0:3]
             cd4 = dist.mean()
             """
             pts_color = matplotlib.cm.rainbow(

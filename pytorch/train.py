@@ -18,7 +18,7 @@ import emd_module as emd
 sys.path.append("./chamfer/")
 import dist_chamfer as cd
 from extensions.gridding_loss import GriddingLoss
-gridding_loss = GriddingLoss(scales=[64, 128], alphas=[0.1, 0.5])
+gridding_loss = GriddingLoss(scales=[64, 128], alphas=[0.5, 0.1])
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -51,7 +51,7 @@ class FullModel(nn.Module):
         self.CD = cd.chamferDist()
 
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
-        output1, output2, output3, output4, out_seg, grnet_seg, input_chosen, loss_trans, expansion_penalty = self.model(
+        output1, output2, output3, output4, out_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, expansion_penalty = self.model(
             parts, part_seg)
         """
         for i in range(16):
@@ -80,17 +80,27 @@ class FullModel(nn.Module):
         grid_loss = gridding_loss(output4[0], gt)
         emd4 += grid_loss
 
-        dist1, dist2, idx1, _ = self.CD(output4[1][:,:,:3], gt)
+        dist1, dist2, idx1, _ = self.CD(output4[1], gt)
         emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
 
         SM = torch.nn.Softmax(dim=-1)
-        sem_feat = SM(grnet_seg[:, :, :]).float()
+        sem_feat = SM(grnet_seg_fine[:, :, :]).float()
         labels_gt = torch.gather(gt_seg[:, :, 0], dim=1, index=idx1.long())
         sem_gt = torch.nn.functional.one_hot(labels_gt.to(torch.int64), 12).float()
-        loss_sem_coarse = torch.mean(-torch.sum(
+        loss_sem_fine = torch.mean(-torch.sum(
             0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
             (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat), dim=-1))
-        emd4 += 0.01 * loss_sem_coarse
+        emd4 += 0.01 * loss_sem_fine
+
+        dist1, dist2, idx1, _ = self.CD(output4[2], gt)
+        emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+        sem_feat = SM(grnet_seg_coar[:, :, :]).float()
+        labels_gt = torch.gather(gt_seg[:, :, 0], dim=1, index=idx1.long())
+        sem_gt = torch.nn.functional.one_hot(labels_gt.to(torch.int64), 12).float()
+        loss_sem_coar = torch.mean(-torch.sum(
+            0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
+            (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat), dim=-1))
+        emd4 += 0.01 * loss_sem_coar
 
         return output1, output2, output3, output4, input_chosen, emd1, emd2, emd3, emd4, loss_trans, expansion_penalty
 
