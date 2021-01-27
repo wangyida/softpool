@@ -404,7 +404,7 @@ with torch.no_grad():
             pfile=model)
 
         # save output4
-        for stage in range(len(output2)):
+        for stage in range(len(output4)):
             pts_coord = output4[stage][0].data.cpu()[:, 0:3]
             maxi = labels_generated_points.max()
 
