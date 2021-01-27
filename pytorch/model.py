@@ -691,15 +691,26 @@ class Network(nn.Module):
         resampled_idx = MDS_module.minimum_density_sample(
             fusion[:, 0:3, :].transpose(1, 2).contiguous(),
             pcd_softpool.shape[1], mean_mst_dis)
-
         fusion = MDS_module.gather_operation(fusion, resampled_idx)
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         pcd_fusion_trans = fusion + delta
         pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
 
+        resampled_gr_idx = MDS_module.minimum_density_sample(
+            pcd_grnet_fine[:, 0:3, :].contiguous(),
+            pcd_softpool.shape[1], mean_mst_dis)
+
+        idx3 = torch.zeros(pcd_grnet_fine.shape[0], 1,
+                          pcd_grnet_fine.shape[1]).cuda().contiguous()
+        sampled_gr = MDS_module.gather_operation(torch.cat((pcd_grnet_fine.transpose(2, 1), idx3), 1), resampled_gr_idx)
+        delta = self.res(sampled_gr)
+        sampled_gr = sampled_gr[:, 0:3, :]
+        sampled_gr_trans = sampled_gr + delta
+        sampled_gr = sampled_gr_trans.transpose(2, 1).contiguous()
+
 
         return [pcd_softpool, pcd_ae, 
                 pcd_fusion], [pcd_msn1, pcd_msn2], pcd_fold, [
-                    pcd_grnet_coar, pcd_grnet_fine
+                    pcd_grnet_coar, pcd_grnet_fine, sampled_gr
                 ], pcd_seg, grnet_seg, input_chosen, loss_trans, loss_mst
