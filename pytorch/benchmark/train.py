@@ -55,7 +55,7 @@ class FullModel(nn.Module):
         """
         _, _, _, _, _, _, gt_regions, _ = self.model(gt.transpose(2, 1))
         """
-        output1, output2, output3, output4, out_seg, input_chosen, loss_trans, expansion_penalty = self.model(
+        output1, output2, out_seg, input_chosen, loss_trans, expansion_penalty = self.model(
             parts, part_seg)
         """
         for i in range(16):
@@ -84,8 +84,10 @@ class FullModel(nn.Module):
         # emd2 += torch.sqrt(dist).mean(1)
         # emd2 += loss_trans
 
+        """
         dist1, dist2, _, _ = self.CD(output3, gt)
         emd3 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+        """
         # dist, _ = self.EMD(output3, gt, eps, iters)
         # emd3 += torch.sqrt(dist).mean(1)
         # emd3 += loss_trans
@@ -94,28 +96,17 @@ class FullModel(nn.Module):
 
         # emd3 /= opt.n_regions
 
+        """
         dist1, dist2, _, _ = self.CD(output4[0], gt)
         emd4 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-        """
         grid_loss = gridding_loss(output4[0], gt)
-        emd4 += 10 * grid_loss
-        """
+        emd4 += 0.1 * grid_loss
 
         dist1, dist2, _, _ = self.CD(output4[1], gt)
         emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
         """
-        gt_seg = gt_seg[:,:,0]
-        size = list(gt_seg.size())
-        gt_seg = torch.gather(gt_seg, dim=1, index=indexes.long()).view(-1)
-        ones = torch.sparse.torch.eye(16).cuda()
-        gt_seg = ones.index_select(0, gt_seg.long())
-        size.append(16)
-        gt_seg = gt_seg.view(*size)
-        enp = -torch.mean(torch.sum((gt_seg) * torch.log(out_seg+0.01), dim=2))-torch.mean(torch.sum((1-gt_seg) * torch.log(1-out_seg+0.01), dim=2))
-        emd1 += enp
-        """
 
-        return output1, output2, output3, output4, input_chosen, emd1, emd2, emd3, emd4, loss_trans, expansion_penalty
+        return output1, output2, input_chosen, emd1, emd2, loss_trans, expansion_penalty
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -205,18 +196,17 @@ for epoch in range(opt.nepoch):
         part_seg = part_seg.float().cuda()
         gt = gt.float().cuda()
         gt_seg = gt_seg.float().cuda()
-        output1, output2, output3, output4, input_chosen, emd1, emd2, emd3, emd4, l_trans, expansion_penalty = network(
+        output1, output2, input_chosen, emd1, emd2, l_trans, expansion_penalty = network(
             part.transpose(2, 1), gt, part_seg, gt_seg, 0.005, 50)
         """
-        output1, output2, output3, output4, input_chosen, emd1, emd2, emd3, emd4, expansion_penalty = network(
+        output1, output2, input_chosen, emd1, emd2, expansion_penalty = network(
             part, full_regions, seg.contiguous(), 0.005, 50)
         """
         """
         loss_net = emd1.mean() + expansion_penalty.mean() * 0.1 + emd2.mean(
         ) + emd3.mean() + emd4.mean()
         """
-        loss_net = emd1.mean() + emd2.mean() + emd3.mean() + emd4.mean(
-        ) + expansion_penalty.mean() * 0.1
+        loss_net = emd1.mean() + emd2.mean() + expansion_penalty.mean() * 0.1
 
         loss_net.backward()
         train_loss.update(emd2.mean().item())
@@ -230,9 +220,9 @@ for epoch in range(opt.nepoch):
                        '%s/network.pth' % (dir_name))
 
         print(opt.env +
-              ' train [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f' %
+              ' train [%d: %d/%d]  emd1: %f emd2: %f' %
               (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
-               emd2.mean().item(), emd3.mean().item(), emd4.mean().item()))
+               emd2.mean().item()))
     train_curve.append(train_loss.avg)
 
     # VALIDATION
@@ -246,15 +236,15 @@ for epoch in range(opt.nepoch):
                 part_seg = part_seg.float().cuda()
                 gt = gt.float().cuda()
                 gt_seg = gt_seg.float().cuda()
-                output1, output2, output3, output4, input_chosen, emd1, emd2, emd3, emd4, l_trans = network(
+                output1, output2, input_chosen, emd1, emd2, l_trans = network(
                     part.transpose(2, 1), gt, part_seg, gt_seg, 0.004, 3000)
                 val_loss.update(emd2.mean().item())
                 idx = random.randint(0, part.size()[0] - 1)
                 print(opt.env +
-                      ' val [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f' %
+                      ' val [%d: %d/%d]  emd1: %f emd2: %f' %
                       (epoch, i, len_dataset / opt.batchSize,
                        emd1.mean().item(), emd2.mean().item(),
-                       emd3.mean().item(), emd4.mean().item()))
+                       ))
 
     val_curve.append(val_loss.avg)
 

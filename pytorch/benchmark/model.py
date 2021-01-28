@@ -419,29 +419,29 @@ class Network(nn.Module):
             nn.Conv2d(
                 1 * dim_pn,
                 dim_pn,
-                kernel_size=(1, 7),
-                stride=(1, 2),
-                padding=(0, 3),
+                kernel_size=(1, 1),
+                stride=(1, 1),
+                padding=(0, 0),
                 padding_mode='same'), nn.Tanh())
         self.reg_conv2 = nn.Sequential(
             nn.Conv2d(
                 dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 7),
-                stride=(1, 2),
-                padding=(0, 3),
+                kernel_size=(1, 1),
+                stride=(1, 1),
+                padding=(0, 0),
                 padding_mode='same'), nn.Tanh())
         self.reg_conv3 = nn.Sequential(
             nn.Conv2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 5),
-                stride=(1, 2),
-                padding=(0, 2),
+                kernel_size=(1, 1),
+                stride=(1, 1),
+                padding=(0, 0),
                 padding_mode='same'), nn.Tanh())
 
         # input for embedding has 32 points now, then in total it is regions x 32 points
-        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
+        ebd_pnt_reg = self.num_points // self.sp_ratio
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
                 kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
@@ -526,10 +526,10 @@ class Network(nn.Module):
             part_seg = torch.nn.functional.one_hot(
                 part_seg.to(torch.int64), self.n_regions).transpose(1, 2)
 
-            sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(
+            sp_feat, _, sp_idx, trans = self.softpool_enc(
                 x=part, x_seg=part_seg)
         else:
-            sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(
+            sp_feat, _, sp_idx, trans = self.softpool_enc(
                 x=part, x_seg=None)
         loss_trans = feature_transform_regularizer(trans[-3:, -3:])
         pn_feat = self.pn_enc(part)
@@ -597,34 +597,27 @@ class Network(nn.Module):
         pcd_softpool_trans = self.decoder1(y)
         pcd_softpool = pcd_softpool_trans.transpose(1, 2).contiguous()
 
+        """
         [pcd_grnet_coar, pcd_grnet_fine] = self.grnet(part.transpose(1, 2))
+        """
 
         y = sp_feat_ae[:, :, 0, :]
         pcd_sp_ae = self.decoder1(y)
         pcd_ae = pcd_sp_ae.transpose(1, 2).contiguous()
 
-        # here 8 is the number of cabins
-        y = torch.cat(
-            (mesh_grid_mini.repeat(1, 1, 8 * self.n_regions).cuda(),
-             torch.repeat_interleave(
-                 torch.reshape(sp_cabins,
-                               (sp_cabins.shape[0], sp_cabins.shape[1],
-                                sp_cabins.shape[2] * sp_cabins.shape[3])),
-                 repeats=self.num_points // 8 // self.n_regions,
-                 dim=2)), 1).contiguous()
-        pcd_sp_global = self.decoder2(y)
-        out3 = pcd_sp_global.transpose(1, 2).contiguous()
 
+        """
         y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
         pcd_fold_trans = self.decoder3(y)
         pcd_fold = pcd_fold_trans.transpose(1, 2).contiguous()
+        """
 
         input_chosen = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
         input_chosen = torch.gather(
             part, dim=2, index=sp_idx[:, :3, 0, :].long()).transpose(1, 2)
 
         dist, _, mean_mst_dis = self.expansion(
-            pcd_softpool, self.num_points // self.n_regions // 8, 1.5)
+            pcd_softpool, self.num_points // self.n_regions, 1.5)
         loss_mst = torch.mean(dist)
 
         id1 = torch.ones(part.shape[0], 1, part.shape[2]).cuda().contiguous()
@@ -643,6 +636,4 @@ class Network(nn.Module):
         delta = self.res(fusion)
         fusion = fusion[:, 0:3, :]
         pcd_fusion = (fusion + delta).transpose(2, 1).contiguous()
-        return [pcd_softpool, pcd_ae], pcd_fusion, pcd_fold, [
-            pcd_grnet_coar, pcd_grnet_fine
-        ], pcd_seg, input_chosen, loss_trans, loss_mst
+        return [pcd_softpool, pcd_ae], pcd_fusion, pcd_seg, input_chosen, loss_trans, loss_mst

@@ -82,7 +82,6 @@ elif opt.dataset == 'shapenet':
             'label': 100,
             'emd1': 0.0,
             'emd2': 0.0,
-            'emd3': 0.0,
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
@@ -94,7 +93,6 @@ elif opt.dataset == 'shapenet':
             'label': 1,
             'emd1': 0.0,
             'emd2': 0.0,
-            'emd3': 0.0,
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
@@ -106,7 +104,6 @@ elif opt.dataset == 'shapenet':
             'label': 2,
             'emd1': 0.0,
             'emd2': 0.0,
-            'emd3': 0.0,
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
@@ -118,7 +115,6 @@ elif opt.dataset == 'shapenet':
             'label': 3,
             'emd1': 0.0,
             'emd2': 0.0,
-            'emd3': 0.0,
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
@@ -130,7 +126,6 @@ elif opt.dataset == 'shapenet':
             'label': 4,
             'emd1': 0.0,
             'emd2': 0.0,
-            'emd3': 0.0,
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
@@ -142,7 +137,6 @@ elif opt.dataset == 'shapenet':
             'label': 5,
             'emd1': 0.0,
             'emd2': 0.0,
-            'emd3': 0.0,
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
@@ -154,7 +148,6 @@ elif opt.dataset == 'shapenet':
             'label': 6,
             'emd1': 0.0,
             'emd2': 0.0,
-            'emd3': 0.0,
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
@@ -166,7 +159,6 @@ elif opt.dataset == 'shapenet':
             'label': 7,
             'emd1': 0.0,
             'emd2': 0.0,
-            'emd3': 0.0,
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
@@ -178,7 +170,6 @@ elif opt.dataset == 'shapenet':
             'label': 8,
             'emd1': 0.0,
             'emd2': 0.0,
-            'emd3': 0.0,
             'cd1': 0.0,
             'cd2': 0.0,
             'cd3': 0.0,
@@ -289,10 +280,9 @@ with torch.no_grad():
                     resample_pcd(np.array(fh5['data']), opt.num_points))
                 """
 
-        output1, output2, output3, output4, out_seg, input_chosen, _, _ = network(
+        output1, output2, out_seg, input_chosen, _, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
         output1 = output1[0]
-        output4 = output4[0]
         """
         _, _, _, _, _, _, gt_regions, _ = network(
             gt.transpose(2, 1).contiguous())
@@ -320,6 +310,7 @@ with torch.no_grad():
             cd2 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd2'] += cd2
 
+            """
             dist, _, _, _ = CD.forward(input1=output3, input2=gt)
             cd3 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd3'] += cd3
@@ -327,12 +318,13 @@ with torch.no_grad():
             dist, _, _, _ = CD.forward(input1=output4, input2=gt)
             cd4 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd4'] += cd4
+            """
 
             hash_tab[str(subfold)]['cnt'] += 1
             idx = random.randint(0, 0)
             print(opt.env +
-                  ' val [%d/%d]  cd1: %f cd2: %f cd3: %f mean cd2 so far: %f' %
-                  (i + 1, len(model_list), cd1.item(), cd2.item(), cd3.item(),
+                  ' val [%d/%d]  cd1: %f cd2: %f mean cd2 so far: %f' %
+                  (i + 1, len(model_list), cd1.item(), cd2.item(),
                    hash_tab[str(subfold)]['cd2'] /
                    hash_tab[str(subfold)]['cnt']))
 
@@ -423,6 +415,7 @@ with torch.no_grad():
                 f.create_dataset("data", data=np.float32(pts_coord))
 
         # save output3
+        """
         pts_coord = output3[0].data.cpu()[:, 0:3]
         maxi = labels_generated_points.max()
         pts_color = matplotlib.cm.rainbow(
@@ -442,16 +435,15 @@ with torch.no_grad():
         pts_color = matplotlib.cm.rainbow(
             gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
         cd4 = dist.mean()
-        """
         pts_color = matplotlib.cm.rainbow(
             labels_generated_points[0:output4.size(1)] / maxi)[:, 0:3]
-        """
         points_save(
             points=pts_coord,
             colors=pts_color,
             root='pcds/output4',
             child=subfold,
             pfile=model)
+        """
 
     if opt.dataset == 'shapenet' and complete3d_benchmark == False:
         for i in [
@@ -459,7 +451,6 @@ with torch.no_grad():
                 '03001627', '04256520', '03636649'
         ]:
             print(
-                '%s cd1: %f cd2: %f cd3: %f cd4: %f' %
+                '%s cd1: %f cd2: %f' %
                 (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'],
-                 hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] /
-                 hash_tab[i]['cnt'], hash_tab[i]['cd4'] / hash_tab[i]['cnt']))
+                 hash_tab[i]['cd2'] / hash_tab[i]['cnt']))
