@@ -22,15 +22,15 @@ xml_head = \
         <float name="farClip" value="100"/>
         <float name="nearClip" value="0.1"/>
         <transform name="toWorld">
-            <lookat origin="3,3,3" target="0,0,0" up="0,0,1"/>
+            <lookat origin="2,2,2" target="0,0,0" up="0,0,1"/>
         </transform>
         <float name="fov" value="25"/>
         <sampler type="independent">
             <integer name="sampleCount" value="256"/>
         </sampler>
         <film type="hdrfilm">
-            <integer name="width" value="920"/>
-            <integer name="height" value="920"/>
+            <integer name="width" value="1200"/>
+            <integer name="height" value="1200"/>
             <rfilter type="gaussian"/>
         </film>
     </sensor>
@@ -48,14 +48,22 @@ xml_head = \
 xml_ball_segment = \
     """
     <shape type="sphere">
-        <float name="radius" value="0.015"/>
+        <float name="radius" value="0.01"/>
         <transform name="toWorld">
             <translate x="{}" y="{}" z="{}"/>
         </transform>
+	<bsdf type="roughconductor">
+	    <string name="material" value="Ag"/>
+	    <string name="distribution" value="beckmann"/>
+	    <float name="alpha" value="0.3"/>
+            <rgb name="specular_reflectance" value="{},{},{}"/>
+	</bsdf>
+</shape>
+"""
+"""
         <bsdf type="diffuse">
             <rgb name="reflectance" value="{},{},{}"/>
         </bsdf>
-    </shape>
 """
 
 xml_tail = \

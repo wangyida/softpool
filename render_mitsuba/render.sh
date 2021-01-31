@@ -1,30 +1,24 @@
-
-root="../pytorch/pcds"
-for outputx in $(ls $root)
+while getopts f: flag
 do
-	for categories in $(ls $root/gt)
+	case "${flag}" in
+		f) folder_pcds=${OPTARG};;
+	esac
+done
+
+for outputx in $(ls $folder_pcds)
+do
+	for categories in $(ls $folder_pcds/gt)
 	do
-		echo $root/$outputx/$categories
-		ls $root/$outputx/$categories/*.pcd > results.list
+		echo $folder_pcds/$outputx/$categories
+		ls $folder_pcds/$outputx/$categories/*.pcd > results.list
 		python3 render_mitsuba2_pc.py results.list 
 		rm -rf results.list
-		rm -rf $root/$outputx/$catebories/*.exr
-		rm -rf $root/$outputx/$catebories/*.xml
+		rm -rf $folder_pcds/$outputx/$categories/*.exr
+		rm -rf $folder_pcds/$outputx/$categories/*.xml
+		rm -rf $folder_pcds/$outputx/$categories/*.pcd
 	done
 done
 
 : '
 root="../pytorch/benchmark/pcds"
-for outputx in $(ls $root)
-do
-	for categories in $(ls $root/gt)
-	do
-		echo $root/$outputx/$categories
-		ls $root/$outputx/$categories/*.pcd > results.list
-		python3 render_mitsuba2_pc.py results.list
-		rm -rf results.list
-		rm -rf $root/$outputx/$catebories/*.exr
-		rm -rf $root/$outputx/$catebories/*.xml
-	done
-done
 '
