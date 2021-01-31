@@ -40,14 +40,14 @@ parser.add_argument(
     default='./trained_model/network.pth',
     help='optional reload model path')
 parser.add_argument(
-    '--num_points', type=int, default=8192, help='number of points')
+    '--num_points', type=int, default=2048, help='number of points')
 parser.add_argument(
     '--n_regions',
     type=int,
     default=16,
     help='number of primitives in the atlas')
 parser.add_argument(
-    '--env', type=str, default="Softpool_VAL", help='visdom environment')
+    '--env', type=str, default="SoftPool_VAL", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 
@@ -228,9 +228,9 @@ with torch.no_grad():
         part = torch.zeros((1, opt.num_points, 3), device='cuda')
         part_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
         input_chosen = torch.zeros((1, opt.num_points, 3), device='cuda')
-        gt = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
-        gt_seg = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
-        gt_regions = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
+        gt = torch.zeros((1, opt.num_points * 8, 3), device='cuda')
+        gt_seg = torch.zeros((1, opt.num_points * 8, 3), device='cuda')
+        gt_regions = torch.zeros((1, opt.num_points * 8, 3), device='cuda')
         """
         def read_points(filename, dataset=self.dataset):
             if self.dataset == 'suncg':
@@ -256,7 +256,7 @@ with torch.no_grad():
                     part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
                 gt[j, :, :], idx_sampled = resample_pcd(
-                    gt1, opt.num_points * 2)
+                    gt1, opt.num_points * 8)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
             elif opt.dataset == 'shapenet':
                 part1, part_color = read_points(
@@ -267,7 +267,7 @@ with torch.no_grad():
                     part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
                 gt[j, :, :], idx_sampled = resample_pcd(
-                    gt1, opt.num_points * 2)
+                    gt1, opt.num_points * 8)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
 
         output1, output2, output3, output4, out_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, _, _ = network(

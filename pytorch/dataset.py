@@ -190,7 +190,7 @@ class ShapeNet(data.Dataset):
                         '%s.h5' % model_id), self.dataset)
                 comp, comp_color = read_points(
                     os.path.join(
-                        "/media/wangyida/HDD/database/shapenet/train/gt/",
+                        "/media/wangyida/HDD/database/shapenet16384/train/gt/",
                         '%s.h5' % model_id), self.dataset)
                 """
                 part, part_color = read_points(
@@ -199,7 +199,7 @@ class ShapeNet(data.Dataset):
                         '%s.h5' % model_id), self.dataset)
                 comp, comp_color = read_points(
                     os.path.join(
-                        "/media/wangyida/HDD/database/shapenet/train/gt/",
+                        "/media/wangyida/HDD/database/shapenet16384/train/gt/",
                         '%s.h5' % model_id), self.dataset)
                 """
         else:
@@ -228,12 +228,12 @@ class ShapeNet(data.Dataset):
                         '%s.h5' % model_id), self.dataset)
                 comp, comp_color = read_points(
                     os.path.join(
-                        "/media/wangyida/HDD/database/shapenet/val/gt/",
+                        "/media/wangyida/HDD/database/shapenet16384/val/gt/",
                         '%s.h5' % model_id), self.dataset)
         part_sampled, idx_sampled = resample_pcd(part, self.npoints)
         part_seg = np.round(part_color[idx_sampled] * 11)
         if self.dataset == 'shapenet':
-            comp_sampled, idx_sampled = resample_pcd(comp, self.npoints)
+            comp_sampled, idx_sampled = resample_pcd(comp, self.npoints * 8)
         elif self.dataset == 'fusion' or self.dataset == 'suncg':
             comp_sampled, idx_sampled = resample_pcd(comp, self.npoints * 8)
         comp_seg = np.round(comp_color[idx_sampled] * 11)

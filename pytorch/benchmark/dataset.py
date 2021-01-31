@@ -136,7 +136,7 @@ def resample_pcd(pcd, n):
 
 
 class ShapeNet(data.Dataset):
-    def __init__(self, train=True, npoints=8192, dataset_name='shapenet'):
+    def __init__(self, train=True, npoints=2048, dataset_name='shapenet'):
         self.dataset = dataset_name
         if train:
             if self.dataset == 'suncg':
@@ -190,18 +190,8 @@ class ShapeNet(data.Dataset):
                         '%s.h5' % model_id), self.dataset)
                 comp, comp_color = read_points(
                     os.path.join(
-                        "/media/wangyida/HDD/database/shapenet/train/gt/",
+                        "/media/wangyida/HDD/database/shapenet16384/train/gt/",
                         '%s.h5' % model_id), self.dataset)
-                """
-                part, part_color = read_points(
-                    os.path.join(
-                        "/media/wangyida/HDD/database/shapenet/train/gt/",
-                        '%s.h5' % model_id), self.dataset)
-                comp, comp_color = read_points(
-                    os.path.join(
-                        "/media/wangyida/HDD/database/shapenet/train/gt/",
-                        '%s.h5' % model_id), self.dataset)
-                """
         else:
             if self.dataset == 'suncg':
                 part, part_color = read_points(
@@ -228,11 +218,11 @@ class ShapeNet(data.Dataset):
                         '%s.h5' % model_id), self.dataset)
                 comp, comp_color = read_points(
                     os.path.join(
-                        "/media/wangyida/HDD/database/shapenet/val/gt/",
+                        "/media/wangyida/HDD/database/shapenet16384/val/gt/",
                         '%s.h5' % model_id), self.dataset)
         part_sampled, idx_sampled = resample_pcd(part, self.npoints)
         part_seg = np.round(part_color[idx_sampled] * 11)
-        comp_sampled, idx_sampled = resample_pcd(comp, self.npoints)
+        comp_sampled, idx_sampled = resample_pcd(comp, self.npoints * 8)
         comp_seg = np.round(comp_color[idx_sampled] * 11)
         """
         comp_seg = []

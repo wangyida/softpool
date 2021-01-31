@@ -188,7 +188,7 @@ elif opt.dataset == 'shapenet':
         with open(os.path.join('../data/visual_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
         part_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
-        gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
+        gt_dir = "/media/wangyida/HDD/database/shapenet16384/val/gt/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
@@ -212,9 +212,9 @@ with torch.no_grad():
         part = torch.zeros((1, opt.num_points, 3), device='cuda')
         part_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
         input_chosen = torch.zeros((1, opt.num_points, 3), device='cuda')
-        gt = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
-        gt_seg = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
-        gt_regions = torch.zeros((1, opt.num_points * 2, 3), device='cuda')
+        gt = torch.zeros((1, opt.num_points * 8, 3), device='cuda')
+        gt_seg = torch.zeros((1, opt.num_points * 8, 3), device='cuda')
+        gt_regions = torch.zeros((1, opt.num_points * 8, 3), device='cuda')
         """
         def read_points(filename, dataset=self.dataset):
             if self.dataset == 'suncg':
@@ -240,7 +240,7 @@ with torch.no_grad():
                     part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
                 gt[j, :, :], idx_sampled = resample_pcd(
-                    gt1, opt.num_points * 2)
+                    gt1, opt.num_points * 8)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
                 # Yida!!!
                 """
@@ -270,7 +270,7 @@ with torch.no_grad():
                     part1, opt.num_points)
                 part_seg[j, :, :] = np.round(part_color[idx_sampled] * 11)
                 gt[j, :, :], idx_sampled = resample_pcd(
-                    gt1, opt.num_points * 2)
+                    gt1, opt.num_points * 8)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
                 """
                 fh5 = h5py.File(os.path.join(part_dir, model + '.h5'), 'r')

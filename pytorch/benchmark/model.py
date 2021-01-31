@@ -442,6 +442,11 @@ class Network(nn.Module):
 
         # input for embedding has 32 points now, then in total it is regions x 32 points
         ebd_pnt_reg = self.num_points // (self.sp_ratio*8)
+        if self.n_regions == 1:
+            ebd_pnt_out = 256
+        elif self.n_regions > 1:
+            ebd_pnt_out = 512
+
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
                 kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
@@ -450,8 +455,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 256),
-                stride=(1, 256),
+                kernel_size=(1, ebd_pnt_out),
+                stride=(1, ebd_pnt_out),
                 padding=(0, 0)))
         """
         self.embedding = nn.Sequential(
@@ -540,12 +545,10 @@ class Network(nn.Module):
         sp_feat_conv2 = self.reg_conv2(sp_feat_conv1) # 256 points
         sp_feat_conv3 = self.reg_conv3(sp_feat_conv2) # 256 points
         
-        unet = True
-        if unet:
+        if self.n_regions == 1:
             sp_feat_unet = torch.cat((self.embedding(sp_feat_conv3), sp_feat_conv3), dim=-1) # 512 points
-        else:
-            sp_feat_unet = self.embedding(sp_feat_conv3)
-        # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
+        elif self.n_regions > 1:
+            sp_feat_unet = self.embedding(sp_feat_conv3) # 512 points
 
         sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet) # 1024 points
         sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3) # 2048 points
