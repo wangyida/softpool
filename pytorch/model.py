@@ -473,30 +473,30 @@ class Network(nn.Module):
             nn.Conv2d(
                 1 * dim_pn,
                 dim_pn,
-                kernel_size=(1, 1),
-                stride=(1, 1),
-                padding=(0, 0),
+                kernel_size=(1, 3),
+                stride=(1, 2),
+                padding=(0, 1),
                 padding_mode='same'), nn.Tanh())
         self.reg_conv2 = nn.Sequential(
             nn.Conv2d(
                 dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 1),
-                stride=(1, 1),
-                padding=(0, 0),
+                kernel_size=(1, 3),
+                stride=(1, 2),
+                padding=(0, 1),
                 padding_mode='same'), nn.Tanh())
         self.reg_conv3 = nn.Sequential(
             nn.Conv2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 1),
-                stride=(1, 1),
-                padding=(0, 0),
+                kernel_size=(1, 3),
+                stride=(1, 2),
+                padding=(0, 1),
                 padding_mode='same'), nn.Tanh())
 
         # input for embedding has 32 points now, then in total it is regions x 32 points
         # down-sampled by 2*2*2=8
-        ebd_pnt_reg = (self.num_points) // (self.sp_ratio)
+        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
                 kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
@@ -600,8 +600,8 @@ class Network(nn.Module):
         pn_feat = pn_feat.unsqueeze(2).expand(
             part.size(0), self.dim_pn, self.num_points).contiguous()
 
-        sp_feat_conv1 = self.reg_conv1(sp_feat)  # 1024 points
-        sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)  # 512 points
+        sp_feat_conv1 = self.reg_conv1(sp_feat)  # 256 points
+        sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)  # 256 points
         sp_feat_conv3 = self.reg_conv3(sp_feat_conv2)  # 256 points
 
         unet = True
