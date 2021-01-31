@@ -29,8 +29,8 @@ xml_head = \
             <integer name="sampleCount" value="256"/>
         </sampler>
         <film type="hdrfilm">
-            <integer name="width" value="1920"/>
-            <integer name="height" value="1080"/>
+            <integer name="width" value="920"/>
+            <integer name="height" value="920"/>
             <rfilter type="gaussian"/>
         </film>
     </sensor>
@@ -169,10 +169,10 @@ def main(argv):
         sys.path.append("../pytorch/")
         from dataset import read_points
         with open(pathToFile) as file:
-            model_list = [line.strip().replace('/', '/') for line in file]
+            model_list = [line.strip().replace('.pcd', '') for line in file]
             for j in range(len(model_list)):
                 pclTime, pclTime_color = read_points(
-                    os.path.join("/home/wangyida/Documents/gitfarm/softpool/pytorch/pcds/output4/scene0011_00/", model_list[j]), 'suncg')
+                    os.path.join('%s.pcd' % model_list[j]), 'suncg')
 
                 pclTime = np.array(pclTime)
                 pclTime_color = np.array(pclTime_color)
@@ -198,20 +198,20 @@ def main(argv):
 
                 xml_content = str.join('', xml_segments)
 
-                xmlFile = ("%s/%s.xml" % (folder, model_list[j]))
+                xmlFile = ("%s.xml" % (model_list[j]))
 
                 with open(xmlFile, 'w') as f:
                     f.write(xml_content)
                 f.close()
 
-                exrFile = ("%s/%s.exr" % (folder, model_list[j]))
+                exrFile = ("%s.exr" % (model_list[j]))
                 if (not os.path.exists(exrFile)):
                     print(['Running Mitsuba, writing to: ', xmlFile])
                     subprocess.run([PATH_TO_MITSUBA2, xmlFile])
                 else:
                     print('skipping rendering because the EXR file already exists')
 
-                png = ("%s/%s.jpg" % (folder, model_list[j]))
+                png = ("%s.jpg" % (model_list[j]))
 
                 print(['Converting EXR to JPG...'])
                 ConvertEXRToJPG(exrFile, png)
