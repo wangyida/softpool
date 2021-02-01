@@ -52,9 +52,6 @@ class FullModel(nn.Module):
         self.CD = cd.chamferDist()
 
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
-        """
-        _, _, _, _, _, _, gt_regions, _ = self.model(gt.transpose(2, 1))
-        """
         output1, output2, out_seg, input_chosen, loss_trans, expansion_penalty = self.model(
             parts, part_seg)
         """
@@ -83,7 +80,6 @@ class FullModel(nn.Module):
         # dist, _ = self.EMD(output2, gt, eps, iters)
         # emd2 += torch.sqrt(dist).mean(1)
         # emd2 += loss_trans
-
         """
         dist1, dist2, _, _ = self.CD(output3, gt)
         emd3 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
@@ -95,7 +91,6 @@ class FullModel(nn.Module):
         # emd1 /= opt.n_regions
 
         # emd3 /= opt.n_regions
-
         """
         dist1, dist2, _, _ = self.CD(output4[0], gt)
         emd4 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
@@ -219,8 +214,7 @@ for epoch in range(opt.nepoch):
             torch.save(network.module.model.state_dict(),
                        '%s/network.pth' % (dir_name))
 
-        print(opt.env +
-              ' train [%d: %d/%d]  emd1: %f emd2: %f' %
+        print(opt.env + ' train [%d: %d/%d]  emd1: %f emd2: %f' %
               (epoch, i, len_dataset / opt.batchSize, emd1.mean().item(),
                emd2.mean().item()))
     train_curve.append(train_loss.avg)
@@ -240,11 +234,13 @@ for epoch in range(opt.nepoch):
                     part.transpose(2, 1), gt, part_seg, gt_seg, 0.004, 3000)
                 val_loss.update(emd2.mean().item())
                 idx = random.randint(0, part.size()[0] - 1)
-                print(opt.env +
-                      ' val [%d: %d/%d]  emd1: %f emd2: %f' %
-                      (epoch, i, len_dataset / opt.batchSize,
-                       emd1.mean().item(), emd2.mean().item(),
-                       ))
+                print(opt.env + ' val [%d: %d/%d]  emd1: %f emd2: %f' % (
+                    epoch,
+                    i,
+                    len_dataset / opt.batchSize,
+                    emd1.mean().item(),
+                    emd2.mean().item(),
+                ))
 
     val_curve.append(val_loss.avg)
 

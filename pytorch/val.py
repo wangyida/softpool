@@ -197,7 +197,7 @@ elif opt.dataset == 'shapenet':
         with open(os.path.join('./data/visual_shapenet.list')) as file:
             model_list = [line.strip().replace('/', '/') for line in file]
         part_dir = "/media/wangyida/HDD/database/shapenet/val/partial/"
-        gt_dir = "/media/wangyida/HDD/database/shapenet/val/gt/"
+        gt_dir = "/media/wangyida/HDD/database/shapenet16384/val/gt/"
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
 
@@ -363,7 +363,8 @@ with torch.no_grad():
                     labels_generated_points[0:output1[stage].size(1)] /
                     maxi)[:, 0:3]
             else:
-                pts_color = matplotlib.cm.cool(output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                pts_color = matplotlib.cm.cool(
+                    output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             points_save(
                 points=pts_coord,
                 colors=pts_color,
@@ -382,7 +383,8 @@ with torch.no_grad():
         for stage in range(len(output2)):
             pts_coord = output2[stage][0].data.cpu()[:, 0:3]
             mini = output2[stage][0].min()
-            pts_color = matplotlib.cm.cool(output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+            pts_color = matplotlib.cm.cool(output2[stage][0].data.cpu()[:, 1] +
+                                           1)[:, 0:3]
             points_save(
                 points=pts_coord,
                 colors=pts_color,
@@ -410,13 +412,16 @@ with torch.no_grad():
 
             dist, _, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
             if stage == 0:
-                pts_color = matplotlib.cm.cool(output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                pts_color = matplotlib.cm.cool(
+                    output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             elif stage == 1:
                 pts_color = matplotlib.cm.rainbow(
-                        torch.argmax(grnet_seg_fine[0][:, :].cpu(), dim=-1).float() / 11)[:, 0:3]
+                    torch.argmax(grnet_seg_fine[0][:, :].cpu(),
+                                 dim=-1).float() / 11)[:, 0:3]
             else:
                 pts_color = matplotlib.cm.rainbow(
-                        torch.argmax(grnet_seg_coar[0][:, :].cpu(), dim=-1).float() / 11)[:, 0:3]
+                    torch.argmax(grnet_seg_coar[0][:, :].cpu(),
+                                 dim=-1).float() / 11)[:, 0:3]
             cd4 = dist.mean()
             """
             pts_color = matplotlib.cm.rainbow(

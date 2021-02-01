@@ -40,14 +40,14 @@ parser.add_argument(
     default='./trained_model/network.pth',
     help='optional reload model path')
 parser.add_argument(
-    '--num_points', type=int, default=8192, help='number of points')
+    '--num_points', type=int, default=2048, help='number of points')
 parser.add_argument(
     '--n_regions',
     type=int,
     default=16,
     help='number of primitives in the atlas')
 parser.add_argument(
-    '--env', type=str, default="Softpool_VAL", help='visdom environment')
+    '--env', type=str, default="SoftPool_VAL", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 
@@ -242,25 +242,6 @@ with torch.no_grad():
                 gt[j, :, :], idx_sampled = resample_pcd(
                     gt1, opt.num_points * 8)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
-                # Yida!!!
-                """
-                pcd = o3d.read_point_cloud(
-                    os.path.join(part_dir, model + '.pcd'))
-                part_sampled, idx_sampled = resample_pcd(
-                    np.array(pcd.points), opt.num_points)
-                part_seg_sampled = np.round(
-                    np.array(pcd.colors)[idx_sampled] * 11)
-                part[j, :, :] = torch.from_numpy(part_sampled)
-                part_seg[j, :, :] = torch.from_numpy(part_seg_sampled)
-
-                pcd = o3d.read_point_cloud(
-                    os.path.join(gt_dir, model + '.pcd'))
-                gt_sampled, idx_sampled = resample_pcd(
-                    np.array(pcd.points), opt.num_points)
-                gt_seg_sampled = np.round(
-                    np.array(pcd.colors)[idx_sampled] * 11)
-                gt[j, :, :] = torch.from_numpy(gt_sampled)
-                """
             elif opt.dataset == 'shapenet':
                 part1, part_color = read_points(
                     os.path.join(part_dir, model + '.h5'), opt.dataset)
@@ -272,45 +253,18 @@ with torch.no_grad():
                 gt[j, :, :], idx_sampled = resample_pcd(
                     gt1, opt.num_points * 8)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
-                """
-                fh5 = h5py.File(os.path.join(part_dir, model + '.h5'), 'r')
-                part[j, :, :], _ = torch.from_numpy(
-                    resample_pcd(np.array(fh5['data']), opt.num_points))
-                fh5 = h5py.File(os.path.join(gt_dir, model + '.h5'), 'r')
-                gt[j, :, :], _ = torch.from_numpy(
-                    resample_pcd(np.array(fh5['data']), opt.num_points))
-                """
 
         output1, output2, out_seg, input_chosen, _, _ = network(
             part.transpose(2, 1).contiguous(), part_seg)
-        output1 = output1[0]
-        """
-        _, _, _, _, _, _, gt_regions, _ = network(
-            gt.transpose(2, 1).contiguous())
-        """
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
-            """
-            dist, _ = EMD(output1, gt, 0.002, 10000)
-            emd1 = torch.sqrt(dist).mean()
-            hash_tab[str(subfold)]['emd1'] += emd1
 
-            dist, _ = EMD(output2, gt, 0.002, 10000)
-            emd2 = torch.sqrt(dist).mean()
-            hash_tab[str(subfold)]['emd2'] += emd2
-
-            dist, _ = EMD(output3, gt, 0.002, 10000)
-            emd3 = torch.sqrt(dist).mean()
-            hash_tab[str(subfold)]['emd3'] += emd3
-            """
-
-            dist, _, _, _ = CD.forward(input1=output1, input2=gt)
+            dist, _, _, _ = CD.forward(input1=output1[0], input2=gt)
             cd1 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd1'] += cd1
 
             dist, _, _, _ = CD.forward(input1=output2, input2=gt)
             cd2 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd2'] += cd2
-
             """
             dist, _, _, _ = CD.forward(input1=output3, input2=gt)
             cd3 = dist.mean() * 1e4
@@ -323,11 +277,11 @@ with torch.no_grad():
 
             hash_tab[str(subfold)]['cnt'] += 1
             idx = random.randint(0, 0)
-            print(opt.env +
-                  ' val [%d/%d]  cd1: %f cd2: %f mean cd2 so far: %f' %
-                  (i + 1, len(model_list), cd1.item(), cd2.item(),
-                   hash_tab[str(subfold)]['cd2'] /
-                   hash_tab[str(subfold)]['cnt']))
+            print(
+                opt.env + ' val [%d/%d]  cd1: %f cd2: %f mean cd2 so far: %f' %
+                (i + 1, len(model_list), cd1.item(), cd2.item(),
+                 hash_tab[str(subfold)]['cd2'] / hash_tab[str(subfold)]['cnt'])
+            )
 
         # save input
         pts_coord = part[0].data.cpu()[:, 0:3]
@@ -386,16 +340,22 @@ with torch.no_grad():
         """
 
         # save output1
-        pts_coord = output1[0].data.cpu()[:, 0:3]
-        maxi = labels_generated_points.max()
-        pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output1.size(1)] / maxi)[:, 0:3]
-        points_save(
-            points=pts_coord,
-            colors=pts_color,
-            root='pcds/output1',
-            child=subfold,
-            pfile=model)
+        for stage in range(len(output1)):
+            pts_coord = output1[stage][0].data.cpu()[:, 0:3]
+            maxi = labels_generated_points.max()
+            if stage == 0:
+                pts_color = matplotlib.cm.rainbow(
+                    labels_generated_points[0:output1[stage].size(1)] /
+                    maxi)[:, 0:3]
+            else:
+                pts_color = matplotlib.cm.cool(
+                    output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+            points_save(
+                points=pts_coord,
+                colors=pts_color,
+                root='pcds/output1',
+                child=subfold,
+                pfile=model + '-' + str(stage))
 
         # save output2
         pts_coord = output2[0].data.cpu()[:, 0:3]

@@ -86,20 +86,24 @@ class FullModel(nn.Module):
         SM = torch.nn.Softmax(dim=-1)
         sem_feat = SM(grnet_seg_fine[:, :, :]).float()
         labels_gt = torch.gather(gt_seg[:, :, 0], dim=1, index=idx1.long())
-        sem_gt = torch.nn.functional.one_hot(labels_gt.to(torch.int64), 12).float()
+        sem_gt = torch.nn.functional.one_hot(labels_gt.to(torch.int64),
+                                             12).float()
         loss_sem_fine = torch.mean(-torch.sum(
             0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
-            (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat), dim=-1))
+            (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat),
+            dim=-1))
         emd4 += 0.01 * loss_sem_fine
 
         dist1, dist2, idx1, _ = self.CD(output4[2], gt)
         emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
         sem_feat = SM(grnet_seg_coar[:, :, :]).float()
         labels_gt = torch.gather(gt_seg[:, :, 0], dim=1, index=idx1.long())
-        sem_gt = torch.nn.functional.one_hot(labels_gt.to(torch.int64), 12).float()
+        sem_gt = torch.nn.functional.one_hot(labels_gt.to(torch.int64),
+                                             12).float()
         loss_sem_coar = torch.mean(-torch.sum(
             0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
-            (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat), dim=-1))
+            (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat),
+            dim=-1))
         emd4 += 0.01 * loss_sem_coar
 
         return output1, output2, output3, output4, input_chosen, emd1, emd2, emd3, emd4, loss_trans, expansion_penalty

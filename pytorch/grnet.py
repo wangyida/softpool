@@ -87,8 +87,8 @@ class GRNet(torch.nn.Module):
             torch.nn.Linear(1792, 448), torch.nn.ReLU())
         self.fc13 = torch.nn.Sequential(
             torch.nn.Linear(448, 112), torch.nn.ReLU())
-        self.fc14 = torch.nn.Linear(112, 3*8)
-        self.fc14_seg = torch.nn.Linear(112, 12*8)
+        self.fc14 = torch.nn.Linear(112, 3 * 8)
+        self.fc14_seg = torch.nn.Linear(112, 12 * 8)
         self.fc15 = torch.nn.Linear(112, 3)
         self.fc15_seg = torch.nn.Linear(112, 12)
         self.unet = True
@@ -109,7 +109,8 @@ class GRNet(torch.nn.Module):
         features = self.fc5(pt_features_4_l.view(-1, 16384))
         # print(features.size())          # torch.Size([batch_size, 2048])
         if self.unet:
-            pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4, 4) + pt_features_4_l
+            pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4,
+                                                      4) + pt_features_4_l
             # print(pt_features_4_r.size())   # torch.Size([batch_size, 256, 4, 4, 4])
             pt_features_8_r = self.dconv7(pt_features_4_r) + pt_features_8_l
             # print(pt_features_8_r.size())   # torch.Size([batch_size, 124, 4, 4, 8])

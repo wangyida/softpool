@@ -497,6 +497,11 @@ class Network(nn.Module):
         # input for embedding has 32 points now, then in total it is regions x 32 points
         # down-sampled by 2*2*2=8
         ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
+        if self.n_regions == 1:
+            ebd_pnt_out = 256
+        elif self.n_regions > 1:
+            ebd_pnt_out = 512
+
         self.embedding = nn.Sequential(
             nn.MaxPool2d(
                 kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
@@ -505,8 +510,8 @@ class Network(nn.Module):
             nn.ConvTranspose2d(
                 2 * dim_pn,
                 2 * dim_pn,
-                kernel_size=(1, 256),
-                stride=(1, 256),
+                kernel_size=(1, ebd_pnt_out),
+                stride=(1, ebd_pnt_out),
                 padding=(0, 0)))
         """
         self.embedding = nn.Sequential(
@@ -584,11 +589,10 @@ class Network(nn.Module):
             part_seg = torch.nn.functional.one_hot(
                 part_seg.to(torch.int64), self.n_regions).transpose(1, 2)
 
-            sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(
+            sp_feat, _, sp_idx, trans = self.softpool_enc(
                 x=part, x_seg=part_seg)
         else:
-            sp_feat, sp_cabins, sp_idx, trans = self.softpool_enc(
-                x=part, x_seg=None)
+            sp_feat, _, sp_idx, trans = self.softpool_enc(x=part, x_seg=None)
 
         input_chosen = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
         input_chosen = torch.gather(
@@ -604,14 +608,12 @@ class Network(nn.Module):
         sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)  # 256 points
         sp_feat_conv3 = self.reg_conv3(sp_feat_conv2)  # 256 points
 
-        unet = True
-        if unet:
+        if self.n_regions == 1:
             sp_feat_unet = torch.cat(
                 (self.embedding(sp_feat_conv3), sp_feat_conv3),
                 dim=-1)  # 512 points
-        else:
-            sp_feat_unet = self.embedding(sp_feat_conv3)
-        # sp_feat_conv3 = self.pt_mixing(self.reg_conv3(sp_feat_conv2))
+        elif self.n_regions > 1:
+            sp_feat_unet = self.embedding(sp_feat_conv3)  # 512 points
 
         sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet)  # 1024 points
         sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3)  # 2048 points
@@ -665,7 +667,10 @@ class Network(nn.Module):
         pcd_softpool_trans = self.decoder1(y)
         pcd_softpool = pcd_softpool_trans.transpose(1, 2).contiguous()
 
-        [pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar, grnet_seg_fine, grnet_seg_coar] = self.grnet(part.transpose(1, 2))
+        [
+            pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar, grnet_seg_fine,
+            grnet_seg_coar
+        ] = self.grnet(part.transpose(1, 2))
 
         y = sp_feat_ae[:, :, 0, :]
         pcd_sp_ae = self.decoder1(y)
@@ -697,7 +702,8 @@ class Network(nn.Module):
         pcd_fusion_trans = fusion + delta
         pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
 
-        return [pcd_softpool, pcd_ae, 
-                pcd_fusion], [pcd_msn1, pcd_msn2], pcd_fold, [
-                    pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar
-                ], pcd_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, loss_mst
+        return [
+            pcd_softpool, pcd_ae, pcd_fusion
+        ], [pcd_msn1, pcd_msn2], pcd_fold, [
+            pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar
+        ], pcd_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, loss_mst

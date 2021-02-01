@@ -136,7 +136,7 @@ def resample_pcd(pcd, n):
 
 
 class ShapeNet(data.Dataset):
-    def __init__(self, train=True, npoints=8192, dataset_name='shapenet'):
+    def __init__(self, train=True, npoints=2048, dataset_name='shapenet'):
         self.dataset = dataset_name
         if train:
             if self.dataset == 'suncg':
@@ -192,16 +192,6 @@ class ShapeNet(data.Dataset):
                     os.path.join(
                         "/media/wangyida/HDD/database/shapenet16384/train/gt/",
                         '%s.h5' % model_id), self.dataset)
-                """
-                part, part_color = read_points(
-                    os.path.join(
-                        "/media/wangyida/HDD/database/shapenet/train/gt/",
-                        '%s.h5' % model_id), self.dataset)
-                comp, comp_color = read_points(
-                    os.path.join(
-                        "/media/wangyida/HDD/database/shapenet16384/train/gt/",
-                        '%s.h5' % model_id), self.dataset)
-                """
         else:
             if self.dataset == 'suncg':
                 part, part_color = read_points(
