@@ -52,18 +52,42 @@ xml_ball_segment = \
         <transform name="toWorld">
             <translate x="{}" y="{}" z="{}"/>
         </transform>
+	<bsdf type="roughdielectric">
+	    <string name="distribution" value="beckmann"/>
+	    <float name="alpha" value="0.1"/>
+	    <string name="int_ior" value="bk7"/>
+	    <string name="ext_ior" value="air"/>
+            <rgb name="specular_reflectance" value="{},{},{}"/>
+	</bsdf>
+</shape>
+"""
+
+# material for plastic
+"""
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="{},{},{}"/>
+        </bsdf>
+"""
+
+# material for dielectric 
+"""
+	<bsdf type="roughdielectric">
+	    <string name="distribution" value="beckmann"/>
+	    <float name="alpha" value="0.1"/>
+	    <string name="int_ior" value="bk7"/>
+	    <string name="ext_ior" value="air"/>
+            <rgb name="specular_reflectance" value="{},{},{}"/>
+	</bsdf>
+"""
+
+# material for metal
+"""
 	<bsdf type="roughconductor">
 	    <string name="material" value="Ag"/>
 	    <string name="distribution" value="beckmann"/>
 	    <float name="alpha" value="0.4"/>
             <rgb name="specular_reflectance" value="{},{},{}"/>
 	</bsdf>
-</shape>
-"""
-"""
-        <bsdf type="diffuse">
-            <rgb name="reflectance" value="{},{},{}"/>
-        </bsdf>
 """
 
 xml_tail = \
@@ -202,7 +226,7 @@ def main(argv):
                     color = colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125)
                     # xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
                     xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *pcl_color[i]))
-                xml_segments.append(xml_tail.format(np.min(pcl[:, 2])-0.125))
+                xml_segments.append(xml_tail.format(np.min(pcl[:, 2])-0.025))
 
                 xml_content = str.join('', xml_segments)
 
