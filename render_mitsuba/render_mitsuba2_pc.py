@@ -22,15 +22,15 @@ xml_head = \
         <float name="farClip" value="100"/>
         <float name="nearClip" value="0.1"/>
         <transform name="toWorld">
-            <lookat origin="2,2,2" target="0,0,0" up="0,0,1"/>
+            <lookat origin="3,3,3" target="0,0,0" up="0,0,1"/>
         </transform>
         <float name="fov" value="25"/>
         <sampler type="independent">
             <integer name="sampleCount" value="256"/>
         </sampler>
         <film type="hdrfilm">
-            <integer name="width" value="1200"/>
-            <integer name="height" value="1200"/>
+            <integer name="width" value="512"/>
+            <integer name="height" value="512"/>
             <rfilter type="gaussian"/>
         </film>
     </sensor>
@@ -48,14 +48,14 @@ xml_head = \
 xml_ball_segment = \
     """
     <shape type="sphere">
-        <float name="radius" value="0.01"/>
+        <float name="radius" value="0.015"/>
         <transform name="toWorld">
             <translate x="{}" y="{}" z="{}"/>
         </transform>
 	<bsdf type="roughconductor">
 	    <string name="material" value="Ag"/>
 	    <string name="distribution" value="beckmann"/>
-	    <float name="alpha" value="0.3"/>
+	    <float name="alpha" value="0.4"/>
             <rgb name="specular_reflectance" value="{},{},{}"/>
 	</bsdf>
 </shape>
@@ -72,7 +72,7 @@ xml_tail = \
         <ref name="bsdf" id="surfaceMaterial"/>
         <transform name="toWorld">
             <scale x="10" y="10" z="1"/>
-            <translate x="0" y="0" z="-0.5"/>
+            <translate x="0" y="0" z="{}"/>
         </transform>
     </shape>
     
@@ -202,7 +202,7 @@ def main(argv):
                     color = colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125)
                     # xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
                     xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *pcl_color[i]))
-                xml_segments.append(xml_tail)
+                xml_segments.append(xml_tail.format(np.min(pcl[:, 2])-0.125))
 
                 xml_content = str.join('', xml_segments)
 
