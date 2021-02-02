@@ -252,10 +252,12 @@ def main(argv):
 
                     print(['Converting EXR to JPG...'])
                     ConvertEXRToJPG(exrFile, png)
-            if tempname[-5:-1] == '.obj':
+            elif tempname[-5:-1] == '.obj':
                 model_list = [line.strip().replace('.obj', '') for line in file]
                 for j in range(len(model_list)):
-                    xml_segments = [obj_mesh.format(os.path.join('%s.obj' % model_list[j]))]
+                    xml_segments = [xml_head]
+                    xml_segments.append(obj_mesh.format(os.path.join('%s.obj' % model_list[j])))
+                    xml_segments.append(xml_tail.format(-0.225))
 
                     xml_content = str.join('', xml_segments)
 

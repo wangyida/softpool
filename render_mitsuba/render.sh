@@ -10,7 +10,7 @@ do
 	for categories in $(ls $folder_pcds/gt)
 	do
 		echo $folder_pcds/$outputx/$categories
-		ls $folder_pcds/$outputx/$categories/*.pcd > results.list
+		ls $folder_pcds/$outputx/$categories/* > results.list
 		python3 render_mitsuba2_pc.py results.list 
 		rm -rf results.list
 		rm -rf $folder_pcds/$outputx/$categories/*.exr
