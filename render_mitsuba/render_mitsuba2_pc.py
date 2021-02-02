@@ -58,6 +58,7 @@ xml_ball_segment = \
 	    <string name="int_ior" value="bk7"/>
 	    <string name="ext_ior" value="air"/>
             <rgb name="specular_reflectance" value="{},{},{}"/>
+            <rgb name="specular_transmittance" value="{},{},{}"/>
 	</bsdf>
 </shape>
 """
@@ -225,7 +226,7 @@ def main(argv):
                 for i in range(pcl.shape[0]):
                     color = colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125)
                     # xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
-                    xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *pcl_color[i]))
+                    xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *pcl_color[i], *pcl_color[i]))
                 xml_segments.append(xml_tail.format(np.min(pcl[:, 2])-0.025))
 
                 xml_content = str.join('', xml_segments)
