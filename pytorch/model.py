@@ -669,7 +669,7 @@ class Network(nn.Module):
 
         [
             pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar, grnet_seg_fine,
-            grnet_seg_coar
+            grnet_seg_coar, voxels
         ] = self.grnet(part.transpose(1, 2))
 
         y = sp_feat_ae[:, :, 0, :]
@@ -706,4 +706,4 @@ class Network(nn.Module):
             pcd_softpool, pcd_ae, pcd_fusion
         ], [pcd_msn1, pcd_msn2], pcd_fold, [
             pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar
-        ], pcd_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, loss_mst
+        ], pcd_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, loss_mst, voxels

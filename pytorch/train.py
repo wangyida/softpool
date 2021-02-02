@@ -51,7 +51,7 @@ class FullModel(nn.Module):
         self.CD = cd.chamferDist()
 
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
-        output1, output2, output3, output4, out_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, expansion_penalty = self.model(
+        output1, output2, output3, output4, out_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, expansion_penalty, voxels = self.model(
             parts, part_seg)
         """
         for i in range(16):

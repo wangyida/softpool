@@ -166,4 +166,4 @@ class GRNet(torch.nn.Module):
         """
         # print(dense_cloud.size())       # torch.Size([batch_size, 16384, 3])
 
-        return sparse_cloud, dense_cloud, coarse_cloud, point_f_segs, point_c_segs
+        return sparse_cloud, dense_cloud, coarse_cloud, point_f_segs, point_c_segs, pt_features_64_r

@@ -55,8 +55,8 @@ xml_ball_segment = \
         <bsdf type="diffuse">
             <rgb name="reflectance" value="{},{},{}"/>
         </bsdf>
-</shape>
-"""
+    </shape>
+    """
 
 # material for plastic
 """
@@ -85,6 +85,12 @@ xml_ball_segment = \
             <rgb name="specular_reflectance" value="{},{},{}"/>
 	</bsdf>
 """
+obj_mesh = \
+    """
+    <shape type="obj">
+	<string name="filename" value="{}"/>
+    </shape>
+    """
 
 xml_tail = \
     """
@@ -197,52 +203,79 @@ def main(argv):
         sys.path.append("../pytorch/")
         from dataset import read_points
         with open(pathToFile) as file:
-            model_list = [line.strip().replace('.pcd', '') for line in file]
-            for j in range(len(model_list)):
-                pclTime, pclTime_color = read_points(
-                    os.path.join('%s.pcd' % model_list[j]), 'suncg')
+            tempname = file.readline()
+            # if model_list[0][-4:] == '.pcd':
+            if tempname[-5:-1] == '.pcd':
+                model_list = [line.strip().replace('.pcd', '') for line in file]
+                for j in range(len(model_list)):
+                    pclTime, pclTime_color = read_points(
+                        os.path.join('%s.pcd' % model_list[j]), 'suncg')
 
-                pclTime = np.array(pclTime)
-                pclTime_color = np.array(pclTime_color)
+                    pclTime = np.array(pclTime)
+                    pclTime_color = np.array(pclTime_color)
 
-                pclTimeSize = [1, np.shape(pclTime)[0], np.shape(pclTime)[1]]
-                pclTime.resize(pclTimeSize)
-                pclTime_color.resize(pclTimeSize)
+                    pclTimeSize = [1, np.shape(pclTime)[0], np.shape(pclTime)[1]]
+                    pclTime.resize(pclTimeSize)
+                    pclTime_color.resize(pclTimeSize)
 
-                pcl = pclTime[0, :, :]
-                pcl_color = pclTime_color[0, :, :]
+                    pcl = pclTime[0, :, :]
+                    pcl_color = pclTime_color[0, :, :]
 
-                # pcl = standardize_bbox(pcl, 2048)
-                pcl = pcl[:, [2, 0, 1]]
-                pcl[:, 0] *= -1
-                pcl[:, 2] += 0.0125
+                    # pcl = standardize_bbox(pcl, 2048)
+                    pcl = pcl[:, [2, 0, 1]]
+                    pcl[:, 0] *= -1
+                    pcl[:, 2] += 0.0125
 
-                xml_segments = [xml_head]
-                for i in range(pcl.shape[0]):
-                    color = colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125)
-                    # xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
-                    xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *pcl_color[i]))
-                xml_segments.append(xml_tail.format(np.min(pcl[:, 2])-0.025))
+                    xml_segments = [xml_head]
+                    for i in range(pcl.shape[0]):
+                        color = colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125)
+                        # xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
+                        xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *pcl_color[i]))
+                    xml_segments.append(xml_tail.format(np.min(pcl[:, 2])-0.025))
 
-                xml_content = str.join('', xml_segments)
+                    xml_content = str.join('', xml_segments)
 
-                xmlFile = ("%s.xml" % (model_list[j]))
+                    xmlFile = ("%s.xml" % (model_list[j]))
 
-                with open(xmlFile, 'w') as f:
-                    f.write(xml_content)
-                f.close()
+                    with open(xmlFile, 'w') as f:
+                        f.write(xml_content)
+                    f.close()
 
-                exrFile = ("%s.exr" % (model_list[j]))
-                if (not os.path.exists(exrFile)):
-                    print(['Running Mitsuba, writing to: ', xmlFile])
-                    subprocess.run([PATH_TO_MITSUBA2, xmlFile])
-                else:
-                    print('skipping rendering because the EXR file already exists')
+                    exrFile = ("%s.exr" % (model_list[j]))
+                    if (not os.path.exists(exrFile)):
+                        print(['Running Mitsuba, writing to: ', xmlFile])
+                        subprocess.run([PATH_TO_MITSUBA2, xmlFile])
+                    else:
+                        print('skipping rendering because the EXR file already exists')
 
-                png = ("%s.jpg" % (model_list[j]))
+                    png = ("%s.jpg" % (model_list[j]))
 
-                print(['Converting EXR to JPG...'])
-                ConvertEXRToJPG(exrFile, png)
+                    print(['Converting EXR to JPG...'])
+                    ConvertEXRToJPG(exrFile, png)
+            if tempname[-5:-1] == '.obj':
+                model_list = [line.strip().replace('.obj', '') for line in file]
+                for j in range(len(model_list)):
+                    xml_segments = [obj_mesh.format(os.path.join('%s.obj' % model_list[j]))]
+
+                    xml_content = str.join('', xml_segments)
+
+                    xmlFile = ("%s.xml" % (model_list[j]))
+
+                    with open(xmlFile, 'w') as f:
+                        f.write(xml_content)
+                    f.close()
+
+                    exrFile = ("%s.exr" % (model_list[j]))
+                    if (not os.path.exists(exrFile)):
+                        print(['Running Mitsuba, writing to: ', xmlFile])
+                        subprocess.run([PATH_TO_MITSUBA2, xmlFile])
+                    else:
+                        print('skipping rendering because the EXR file already exists')
+
+                    png = ("%s.jpg" % (model_list[j]))
+
+                    print(['Converting EXR to JPG...'])
+                    ConvertEXRToJPG(exrFile, png)
     else:
         print('unsupported file format.')
         return

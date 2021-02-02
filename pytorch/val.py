@@ -270,7 +270,7 @@ with torch.no_grad():
                     gt1, opt.num_points * 8)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
 
-        output1, output2, output3, output4, out_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, _, _ = network(
+        output1, output2, output3, output4, out_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, _, _, voxels = network(
             part.transpose(2, 1).contiguous(), part_seg)
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
 
@@ -433,6 +433,12 @@ with torch.no_grad():
                 root='pcds/output4',
                 child=subfold,
                 pfile=model + '-' + str(stage))
+
+        # save mesh from voxels
+        os.makedirs('pcds/mesh/%s' % subfold, exist_ok=True)
+        import mcubes
+        vertices, triangles = mcubes.marching_cubes(np.array(voxels[0,0,:,:,:].cpu()), 0)
+        mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
 
     if opt.dataset == 'shapenet' and complete3d_benchmark == False:
         for i in [
