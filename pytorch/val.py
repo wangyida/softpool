@@ -438,7 +438,7 @@ with torch.no_grad():
         os.makedirs('pcds/mesh/%s' % subfold, exist_ok=True)
         import mcubes
         vertices, triangles = mcubes.marching_cubes(np.array(voxels[0,0,:,:,:].cpu()), 0)
-        mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
+        mcubes.export_obj(vertices / 64.0, triangles, 'pcds/mesh/%s.obj' % model)
 
     if opt.dataset == 'shapenet' and complete3d_benchmark == False:
         for i in [
