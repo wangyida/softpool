@@ -41,11 +41,12 @@ class RandomPointSampling(torch.nn.Module):
 class GRNet(torch.nn.Module):
     def __init__(self):
         super(GRNet, self).__init__()
-        self.gridding = Gridding(scale=64)
+        self.scale=128
+        self.gridding = Gridding(scale=self.scale)
         self.conv1 = torch.nn.Sequential(
             torch.nn.Conv3d(1, 32, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(32), torch.nn.LeakyReLU(0.2),
-            torch.nn.MaxPool3d(kernel_size=2))
+            torch.nn.MaxPool3d(kernel_size=2)) # Take care of the gridding scale!!!
         self.conv2 = torch.nn.Sequential(
             torch.nn.Conv3d(32, 64, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(64), torch.nn.LeakyReLU(0.2),
@@ -78,7 +79,7 @@ class GRNet(torch.nn.Module):
             torch.nn.ConvTranspose3d(
                 32, 1, kernel_size=4, stride=2, bias=False, padding=1),
             torch.nn.BatchNorm3d(1), torch.nn.ReLU())
-        self.gridding_rev = GriddingReverse(scale=64)
+        self.gridding_rev = GriddingReverse(scale=self.scale)
         self.point_sampling = RandomPointSampling(n_points=2048)
         self.feature_sampling = CubicFeatureSampling()
         self.fc11 = torch.nn.Sequential(
@@ -96,8 +97,8 @@ class GRNet(torch.nn.Module):
     def forward(self, data):
         partial_cloud = data
         # print(partial_cloud.size())     # torch.Size([batch_size, 2048, 3])
-        pt_features_64_l = self.gridding(partial_cloud).view(-1, 1, 64, 64, 64)
-        # print(pt_features_64_l.size())  # torch.Size([batch_size, 1, 64, 64, 64])
+        pt_features_64_l = self.gridding(partial_cloud).view(-1, 1, self.scale, self.scale, self.scale)
+        # print(pt_features_64_l.size())  # torch.Size([batch_size, 1, self.scale, self.scale, self.scale])
         pt_features_32_l = self.conv1(pt_features_64_l)
         # print(pt_features_32_l.size())  # torch.Size([batch_size, 32, 32, 32, 32])
         pt_features_16_l = self.conv2(pt_features_32_l)
@@ -106,12 +107,15 @@ class GRNet(torch.nn.Module):
         # print(pt_features_8_l.size())   # torch.Size([batch_size, 124, 4, 4, 8])
         pt_features_4_l = self.conv4(pt_features_8_l)
         # print(pt_features_4_l.size())   # torch.Size([batch_size, 256, 4, 4, 4])
+        """
         features = self.fc5(pt_features_4_l.view(-1, 16384))
         # print(features.size())          # torch.Size([batch_size, 2048])
         pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4,
                                                   4) + pt_features_4_l * self.unet
         # print(pt_features_4_r.size())   # torch.Size([batch_size, 256, 4, 4, 4])
         pt_features_8_r = self.dconv7(pt_features_4_r) + pt_features_8_l * self.unet
+        """
+        pt_features_8_r = self.dconv7(pt_features_4_l) + pt_features_8_l * self.unet
         # print(pt_features_8_r.size())   # torch.Size([batch_size, 124, 4, 4, 8])
         pt_features_16_r = self.dconv8(pt_features_8_r) + pt_features_16_l * self.unet
         # print(pt_features_16_r.size())  # torch.Size([batch_size, 64, 16, 16, 16])
@@ -119,10 +123,6 @@ class GRNet(torch.nn.Module):
         # print(pt_features_32_r.size())  # torch.Size([batch_size, 32, 32, 32, 32])
         pt_features_64_r = self.dconv10(
             pt_features_32_r) + pt_features_64_l * self.unet
-        """
-        vertices, triangles = mcubes.marching_cubes(np.array(pt_features_64_r[0,0,:,:,:].cpu()), 0)
-        mcubes.export_obj(vertices, triangles, 'sphere_coarse.obj')
-        """
         # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
         sparse_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
         # print(sparse_cloud.size())      # torch.Size([batch_size, 262144, 3])

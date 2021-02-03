@@ -440,7 +440,7 @@ with torch.no_grad():
         voxels = torch.flip(voxels[0,0,:,:,:].transpose(2, 0).transpose(2, 1), [0])
         voxels = np.array(voxels.cpu())
         vertices, triangles = mcubes.marching_cubes(voxels, 0)
-        vertices /= 64.0
+        vertices /= 128.0
         vertices -= 0.5
         vertices[:, 2] += 0.0125
         mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
