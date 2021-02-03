@@ -442,8 +442,6 @@ with torch.no_grad():
         vertices, triangles = mcubes.marching_cubes(voxels, 0)
         vertices /= 64.0
         vertices -= 0.5
-        # vertices = vertices[:, [2, 0, 1]]
-        # vertices[:, 0] *= -1
         vertices[:, 2] += 0.0125
         mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
 

@@ -29,8 +29,8 @@ xml_head = \
             <integer name="sampleCount" value="256"/>
         </sampler>
         <film type="hdrfilm">
-            <integer name="width" value="1024"/>
-            <integer name="height" value="1024"/>
+            <integer name="width" value="512"/>
+            <integer name="height" value="512"/>
             <rfilter type="gaussian"/>
         </film>
     </sensor>
@@ -90,7 +90,6 @@ obj_mesh = \
     <shape type="obj">
 	<string name="filename" value="{}"/>
         <bsdf type="diffuse">
-            <rgb name="reflectance" value="0.7,0.7,0.9"/>
         </bsdf>
     </shape>
     """
@@ -207,7 +206,7 @@ def main(argv):
         from dataset import read_points
         with open(pathToFile) as file:
             tempname = file.readline()
-            # if model_list[0][-4:] == '.pcd':
+            # if tempname[-5:-1] == '.pcd':
             if tempname[-5:-1] == '.pcd':
                 model_list = [line.strip().replace('.pcd', '') for line in file]
                 for j in range(len(model_list)):
