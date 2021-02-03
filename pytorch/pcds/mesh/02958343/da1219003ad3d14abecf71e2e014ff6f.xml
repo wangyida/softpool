@@ -29,7 +29,7 @@
     
 
     <shape type="obj">
-	<string name="filename" value="../pytorch/pcds/mesh/02933112/2bdedc5d70cda02cc59350d819542ec7.obj"/>
+	<string name="filename" value="../pytorch/pcds/mesh/02958343/da1219003ad3d14abecf71e2e014ff6f.obj"/>
         <bsdf type="diffuse">
         </bsdf>
     </shape>
