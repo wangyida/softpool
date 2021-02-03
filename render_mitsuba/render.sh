@@ -7,7 +7,7 @@ done
 
 for outputx in $(ls $folder_pcds)
 do
-	for categories in $(ls $folder_pcds/gt)
+	for categories in $(ls $folder_pcds/output1)
 	do
 		echo $folder_pcds/$outputx/$categories
 		ls $folder_pcds/$outputx/$categories/* > results.list
@@ -16,6 +16,7 @@ do
 		rm -rf $folder_pcds/$outputx/$categories/*.exr
 		rm -rf $folder_pcds/$outputx/$categories/*.xml
 		rm -rf $folder_pcds/$outputx/$categories/*.pcd
+		rm -rf $folder_pcds/$outputx/$categories/*.obj
 	done
 done
 

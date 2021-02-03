@@ -439,6 +439,7 @@ with torch.no_grad():
         import mcubes
         vertices, triangles = mcubes.marching_cubes(np.array(voxels[0,0,:,:,:].cpu()), 0)
         vertices /= 64.0
+        vertices -= 0.5
         vertices = vertices[:, [2, 0, 1]]
         vertices[:, 0] *= -1
         vertices[:, 2] += 0.0125
