@@ -41,7 +41,7 @@ class RandomPointSampling(torch.nn.Module):
 class GRNet(torch.nn.Module):
     def __init__(self):
         super(GRNet, self).__init__()
-        self.scale=128
+        self.scale=64
         self.gridding = Gridding(scale=self.scale)
         self.conv1 = torch.nn.Sequential(
             torch.nn.Conv3d(1, 32, kernel_size=4, padding=2),
@@ -107,15 +107,12 @@ class GRNet(torch.nn.Module):
         # print(pt_features_8_l.size())   # torch.Size([batch_size, 124, 4, 4, 8])
         pt_features_4_l = self.conv4(pt_features_8_l)
         # print(pt_features_4_l.size())   # torch.Size([batch_size, 256, 4, 4, 4])
-        """
         features = self.fc5(pt_features_4_l.view(-1, 16384))
         # print(features.size())          # torch.Size([batch_size, 2048])
         pt_features_4_r = self.fc6(features).view(-1, 256, 4, 4,
                                                   4) + pt_features_4_l * self.unet
         # print(pt_features_4_r.size())   # torch.Size([batch_size, 256, 4, 4, 4])
         pt_features_8_r = self.dconv7(pt_features_4_r) + pt_features_8_l * self.unet
-        """
-        pt_features_8_r = self.dconv7(pt_features_4_l) + pt_features_8_l * self.unet
         # print(pt_features_8_r.size())   # torch.Size([batch_size, 124, 4, 4, 8])
         pt_features_16_r = self.dconv8(pt_features_8_r) + pt_features_16_l * self.unet
         # print(pt_features_16_r.size())  # torch.Size([batch_size, 64, 16, 16, 16])
