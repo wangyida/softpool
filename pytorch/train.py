@@ -130,7 +130,7 @@ class FullModel(nn.Module):
             emd5 = emd5.mean()
             loss_net += emd5
         else:
-            emd3 = []
+            emd5 = []
 
         return output1, output2, output3, output4, output5, emd1, emd2, emd3, emd4, emd5, loss_net
 

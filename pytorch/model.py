@@ -590,6 +590,11 @@ class Network(nn.Module):
 
     def forward(self, part, part_seg):
         pn_feat = self.pn_enc(part)
+
+        if ('msn' in self.model_lists):
+            [pcd_msn1, pcd_msn2, loss_mst, mean_mst_dis] = self.msn(
+                part, pn_feat)
+
         if ('softpool' in self.model_lists):
             part_seg = part_seg[:, :, 0]
             with_label = False
@@ -676,10 +681,6 @@ class Network(nn.Module):
             fusion = fusion[:, 0:3, :]
             pcd_fusion_trans = fusion + delta
             pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
-
-        if ('msn' in self.model_lists):
-            [pcd_msn1, pcd_msn2, loss_mst, mean_mst_dis] = self.msn(
-                part, pn_feat)
 
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
         if ('folding' in self.model_lists):
