@@ -270,7 +270,7 @@ with torch.no_grad():
                     gt1, opt.num_points * 8)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
 
-        output1, output2, output3, output4, out_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, _, _, voxels = network(
+        output1, output2, output3, output4 = network(
             part.transpose(2, 1).contiguous(), part_seg)
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
 
@@ -323,11 +323,7 @@ with torch.no_grad():
             pfile=model)
 
         # save selected points on input
-        pts_coord = input_chosen[0].data.cpu()[:, 0:3]
-        """
-        dist, _, idx1, _ = CD.forward(input1=input_chosen, input2=gt)
-        pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0][idx1[0].long()].cpu() / 11)[:, 0:3]
-        """
+        pts_coord = output1[3][0].data.cpu()[:, 0:3]
         maxi = labels_inputs_points.max() // 2
         pts_color = matplotlib.cm.gist_rainbow(
             labels_inputs_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
@@ -355,7 +351,7 @@ with torch.no_grad():
         """
 
         # save output1
-        for stage in range(len(output1)):
+        for stage in range(3):
             pts_coord = output1[stage][0].data.cpu()[:, 0:3]
             maxi = labels_generated_points.max()
             if stage == 0:
@@ -380,7 +376,7 @@ with torch.no_grad():
                 f.create_dataset("data", data=np.float32(pts_coord))
 
         # save output2
-        for stage in range(len(output2)):
+        for stage in range(2):
             pts_coord = output2[stage][0].data.cpu()[:, 0:3]
             mini = output2[stage][0].min()
             pts_color = matplotlib.cm.cool(output2[stage][0].data.cpu()[:, 1] +
@@ -407,7 +403,7 @@ with torch.no_grad():
                 pfile=model)
 
         # save output4
-        for stage in range(len(output4)):
+        for stage in range(3):
             pts_coord = output4[stage][0].data.cpu()[:, 0:3]
             maxi = labels_generated_points.max()
 
@@ -417,12 +413,12 @@ with torch.no_grad():
                     output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
             elif stage == 1:
                 pts_color = matplotlib.cm.gist_rainbow(
-                    torch.argmax(grnet_seg_fine[0][:, :].cpu(),
-                                 dim=-1).float() / 11)[:, 0:3]
+                    torch.argmax(output4[3][0][:, :].cpu(), dim=-1).float() /
+                    11)[:, 0:3]
             else:
                 pts_color = matplotlib.cm.gist_rainbow(
-                    torch.argmax(grnet_seg_coar[0][:, :].cpu(),
-                                 dim=-1).float() / 11)[:, 0:3]
+                    torch.argmax(output4[4][0][:, :].cpu(), dim=-1).float() /
+                    11)[:, 0:3]
             cd4 = dist.mean()
             """
             pts_color = matplotlib.cm.rainbow(
@@ -439,7 +435,7 @@ with torch.no_grad():
         os.makedirs('pcds/mesh/%s' % subfold, exist_ok=True)
         import mcubes
         voxels = torch.flip(
-            voxels[0, 0, :, :, :].transpose(2, 0).transpose(2, 1), [0])
+            output4[5][0, 0, :, :, :].transpose(2, 0).transpose(2, 1), [0])
         voxels = np.array(voxels.cpu())
         vertices, triangles = mcubes.marching_cubes(voxels, 0)
         vertices /= 128.0

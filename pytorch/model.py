@@ -584,130 +584,135 @@ class Network(nn.Module):
         self.msn = MSN()
 
     def forward(self, part, part_seg):
-
-        part_seg = part_seg[:, :, 0]
-        with_label = False
-        if with_label:
-            part_seg = torch.nn.functional.one_hot(
-                part_seg.to(torch.int64), self.n_regions).transpose(1, 2)
-
-            sp_feat, _, sp_idx, trans = self.softpool_enc(
-                x=part, x_seg=part_seg)
-        else:
-            sp_feat, _, sp_idx, trans = self.softpool_enc(x=part, x_seg=None)
-
-        input_chosen = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
-        input_chosen = torch.gather(
-            part, dim=2, index=sp_idx[:, :3, 0, :].long()).transpose(1, 2)
-
-        loss_trans = feature_transform_regularizer(trans[-3:, -3:])
         pn_feat = self.pn_enc(part)
-        [pcd_msn1, pcd_msn2, loss_mst, mean_mst_dis] = self.msn(part, pn_feat)
-        pn_feat = pn_feat.unsqueeze(2).expand(
-            part.size(0), self.dim_pn, self.num_points).contiguous()
+        if ('softpool' in self.model_lists):
+            part_seg = part_seg[:, :, 0]
+            with_label = False
+            if with_label:
+                part_seg = torch.nn.functional.one_hot(
+                    part_seg.to(torch.int64), self.n_regions).transpose(1, 2)
 
-        sp_feat_conv1 = self.reg_conv1(sp_feat)  # 256 points
-        sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)  # 256 points
-        sp_feat_conv3 = self.reg_conv3(sp_feat_conv2)  # 256 points
+                sp_feat, _, sp_idx, trans = self.softpool_enc(
+                    x=part, x_seg=part_seg)
+            else:
+                sp_feat, _, sp_idx, trans = self.softpool_enc(
+                    x=part, x_seg=None)
 
-        if self.n_regions == 1:
-            sp_feat_unet = torch.cat(
-                (self.embedding(sp_feat_conv3), sp_feat_conv3),
-                dim=-1)  # 512 points
-        elif self.n_regions > 1:
-            sp_feat_unet = self.embedding(sp_feat_conv3)  # 512 points
+            input_chosen = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
+            input_chosen = torch.gather(
+                part, dim=2, index=sp_idx[:, :3, 0, :].long()).transpose(1, 2)
 
-        sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet)  # 1024 points
-        sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3)  # 2048 points
-        sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2)  # 2048 points
+            loss_trans = feature_transform_regularizer(trans[-3:, -3:])
 
-        sp_feat_ae = self.reg_deconv1(
-            self.reg_deconv2(self.reg_deconv3(sp_feat_conv3)))
+            sp_feat_conv1 = self.reg_conv1(sp_feat)  # 256 points
+            sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)  # 256 points
+            sp_feat_conv3 = self.reg_conv3(sp_feat_conv2)  # 256 points
 
-        rand_grid = Variable(
-            torch.FloatTensor(
-                part.size(0), 2,
-                self.num_points // self.n_regions // 8)).cuda()
-        rand_grid.data.uniform_(0, 1)
-        fourier_map2 = Periodics()
-        rand_grid = fourier_map2(rand_grid).cuda()
+            if self.n_regions == 1:
+                sp_feat_unet = torch.cat(
+                    (self.embedding(sp_feat_conv3), sp_feat_conv3),
+                    dim=-1)  # 512 points
+            elif self.n_regions > 1:
+                sp_feat_unet = self.embedding(sp_feat_conv3)  # 512 points
 
-        mesh_y = 4
-        mesh_x = 2
-        mesh_grid_mini = torch.meshgrid([
-            torch.linspace(0.0, 1.0, mesh_x),
-            torch.linspace(0.0, 1.0, mesh_y)
-        ])
-        mesh_grid_mini = torch.cat(
-            (torch.reshape(mesh_grid_mini[0], (mesh_x * mesh_y, 1)),
-             torch.reshape(mesh_grid_mini[1], (mesh_x * mesh_y, 1))),
-            dim=1)
-        mesh_grid_mini = torch.transpose(mesh_grid_mini, 0,
-                                         1).unsqueeze(0).repeat(
-                                             sp_feat_deconv1.shape[0], 1,
-                                             1).cuda()
-        # mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
-        # here self.num_points // self.n_regions = 8*4
+            sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet)  # 1024 points
+            sp_feat_deconv2 = self.reg_deconv2(sp_feat_deconv3)  # 2048 points
+            sp_feat_deconv1 = self.reg_deconv1(sp_feat_deconv2)  # 2048 points
 
-        mesh_grid = torch.meshgrid([
-            torch.linspace(0.0, 1.0, 64),
-            torch.linspace(0.0, 1.0, self.num_points // 64)
-        ])
-        mesh_grid = torch.cat(
-            (torch.reshape(mesh_grid[0], (self.num_points, 1)),
-             torch.reshape(mesh_grid[1], (self.num_points, 1))),
-            dim=1)
-        mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
-            sp_feat_deconv1.shape[0], 1, 1).cuda()
-        fourier_map3 = Periodics()
-        # mesh_grid = fourier_map3(mesh_grid)
-        y = sp_feat_deconv1[:, :, 0, :]
-        pcd_seg = y.transpose(1, 2).contiguous()
-        sm = nn.Softmax(dim=2)
-        pcd_seg = sm(pcd_seg)
-        # y = torch.cat((y, pn_feat), 1).contiguous()
-        pcd_softpool_trans = self.decoder1(y)
-        pcd_softpool = pcd_softpool_trans.transpose(1, 2).contiguous()
+            sp_feat_ae = self.reg_deconv1(
+                self.reg_deconv2(self.reg_deconv3(sp_feat_conv3)))
 
-        [
-            pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar, grnet_seg_fine,
-            grnet_seg_coar, voxels
-        ] = self.grnet(part.transpose(1, 2))
+            rand_grid = Variable(
+                torch.FloatTensor(
+                    part.size(0), 2,
+                    self.num_points // self.n_regions // 8)).cuda()
+            rand_grid.data.uniform_(0, 1)
+            fourier_map2 = Periodics()
+            rand_grid = fourier_map2(rand_grid).cuda()
 
-        y = sp_feat_ae[:, :, 0, :]
-        pcd_sp_ae = self.decoder1(y)
-        pcd_ae = pcd_sp_ae.transpose(1, 2).contiguous()
+            mesh_y = 4
+            mesh_x = 2
+            mesh_grid_mini = torch.meshgrid([
+                torch.linspace(0.0, 1.0, mesh_x),
+                torch.linspace(0.0, 1.0, mesh_y)
+            ])
+            mesh_grid_mini = torch.cat(
+                (torch.reshape(mesh_grid_mini[0], (mesh_x * mesh_y, 1)),
+                 torch.reshape(mesh_grid_mini[1], (mesh_x * mesh_y, 1))),
+                dim=1)
+            mesh_grid_mini = torch.transpose(
+                mesh_grid_mini, 0, 1).unsqueeze(0).repeat(
+                    sp_feat_deconv1.shape[0], 1, 1).cuda()
+            # mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
+            # here self.num_points // self.n_regions = 8*4
+
+            mesh_grid = torch.meshgrid([
+                torch.linspace(0.0, 1.0, 64),
+                torch.linspace(0.0, 1.0, self.num_points // 64)
+            ])
+            mesh_grid = torch.cat(
+                (torch.reshape(mesh_grid[0], (self.num_points, 1)),
+                 torch.reshape(mesh_grid[1], (self.num_points, 1))),
+                dim=1)
+            mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
+                sp_feat_deconv1.shape[0], 1, 1).cuda()
+            fourier_map3 = Periodics()
+            # mesh_grid = fourier_map3(mesh_grid)
+            y = sp_feat_deconv1[:, :, 0, :]
+            pcd_softpool_trans = self.decoder1(y)
+            pcd_softpool = pcd_softpool_trans.transpose(1, 2).contiguous()
+
+            y = sp_feat_ae[:, :, 0, :]
+            pcd_sp_ae = self.decoder1(y)
+            pcd_ae = pcd_sp_ae.transpose(1, 2).contiguous()
+
+        if ('msn' in self.model_lists):
+            [pcd_msn1, pcd_msn2, loss_mst, mean_mst_dis] = self.msn(
+                part, pn_feat)
 
         # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-        y = torch.cat((mesh_grid, pn_feat), 1).contiguous()
-        pcd_fold_trans = self.decoder_fold(y)
-        pcd_fold = pcd_fold_trans.transpose(1, 2).contiguous()
+        if ('folding' in self.model_lists):
+            pn_feat = pn_feat.unsqueeze(2).expand(
+                part.size(0), self.dim_pn, self.num_points).contiguous()
+            y = torch.cat((mesh_grid, pn_feat), 1).contiguous()
+            pcd_fold_trans = self.decoder_fold(y)
+            pcd_fold = pcd_fold_trans.transpose(1, 2).contiguous()
 
-        id1 = torch.ones(
-            pcd_grnet_voxel.transpose(1, 2).shape[0], 1,
-            pcd_grnet_voxel.transpose(1, 2).shape[2]).cuda().contiguous()
-        id2 = torch.zeros(pcd_softpool_trans.shape[0], 1,
-                          pcd_softpool_trans.shape[2]).cuda().contiguous()
-        # fuse_observe = torch.cat((part, id1), 1)
-        fuse_observe = torch.cat((pcd_grnet_voxel.transpose(1, 2), id1), 1)
-        # fuse_observe = torch.cat((pcd_softpool_trans[:, :, :self.num_points // 2:], id1), 1)
-        fuse_expand = torch.cat((pcd_softpool_trans, id2), 1)
-        fusion = torch.cat((fuse_observe, fuse_expand), 2)
-        # fusion = torch.cat((fuse2, pcd_fold_trans, fuse1), 2)
+        if ('grnet' in self.model_lists):
+            [
+                pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar,
+                grnet_seg_fine, grnet_seg_coar, voxels
+            ] = self.grnet(part.transpose(1, 2))
 
-        resampled_idx = MDS_module.minimum_density_sample(
-            fusion[:, 0:3, :].transpose(1, 2).contiguous(),
-            pcd_softpool.shape[1], mean_mst_dis)
-        fusion = MDS_module.gather_operation(fusion, resampled_idx)
-        delta = self.res(fusion)
-        fusion = fusion[:, 0:3, :]
-        pcd_fusion_trans = fusion + delta
-        pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
+        if ('softpool' in self.model_lists):
+            id1 = torch.ones(
+                pcd_grnet_voxel.transpose(1, 2).shape[0], 1,
+                pcd_grnet_voxel.transpose(1, 2).shape[2]).cuda().contiguous()
+            id2 = torch.zeros(pcd_softpool_trans.shape[0], 1,
+                              pcd_softpool_trans.shape[2]).cuda().contiguous()
+            # fuse_observe = torch.cat((part, id1), 1)
+            fuse_observe = torch.cat((pcd_grnet_voxel.transpose(1, 2), id1), 1)
+            # fuse_observe = torch.cat((pcd_softpool_trans[:, :, :self.num_points // 2:], id1), 1)
+            fuse_expand = torch.cat((pcd_softpool_trans, id2), 1)
+            fusion = torch.cat((fuse_observe, fuse_expand), 2)
 
-        pred_softpool = [pcd_softpool, pcd_ae, pcd_fusion
-                         ] if ('softpool' in self.model_lists) else []
-        pred_msn = [pcd_msn1, pcd_msn2] if ('msn' in self.model_lists) else []
+            resampled_idx = MDS_module.minimum_density_sample(
+                fusion[:, 0:3, :].transpose(1, 2).contiguous(),
+                pcd_softpool.shape[1], mean_mst_dis)
+            fusion = MDS_module.gather_operation(fusion, resampled_idx)
+            delta = self.res(fusion)
+            fusion = fusion[:, 0:3, :]
+            pcd_fusion_trans = fusion + delta
+            pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
+
+        pred_softpool = [
+            pcd_softpool, pcd_ae, pcd_fusion, input_chosen, loss_trans
+        ] if ('softpool' in self.model_lists) else []
+        pred_msn = [pcd_msn1, pcd_msn2, loss_mst
+                    ] if ('msn' in self.model_lists) else []
         pred_folding = [pcd_fold] if ('folding' in self.model_lists) else []
-        pred_grnet = [pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar
-                      ] if ('grnet' in self.model_lists) else []
-        return pred_softpool, pred_msn, pred_folding, pred_grnet, pcd_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, loss_mst, voxels
+        pred_grnet = [
+            pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar, grnet_seg_fine,
+            grnet_seg_coar, voxels
+        ] if ('grnet' in self.model_lists) else []
+        return pred_softpool, pred_msn, pred_folding, pred_grnet

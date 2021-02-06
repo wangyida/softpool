@@ -2,8 +2,16 @@ import numpy as np
 import sys, os, subprocess
 import OpenEXR
 import Imath
-from PIL import Image
+from PIL import Image, ImageChops
 from plyfile import PlyData, PlyElement
+
+def trim(im):
+    bg = Image.new(im.mode, im.size, im.getpixel((0,0)))
+    diff = ImageChops.difference(im, bg)
+    # diff = ImageChops.add(diff, diff)
+    bbox = diff.getbbox()
+    if bbox:
+        return im.crop(bbox)
 
 # PATH_TO_MITSUBA2 = "/home/tolga/Codes/mitsuba2/build/dist/mitsuba"  # mitsuba exectuable
 PATH_TO_MITSUBA2 = "/home/wangyida/Documents/gitfarm/mitsuba2/build/dist/mitsuba"  # mitsuba exectuable
@@ -48,7 +56,7 @@ xml_head = \
 xml_ball_segment = \
     """
     <shape type="sphere">
-        <float name="radius" value="0.015"/>
+        <float name="radius" value="0.012"/>
         <transform name="toWorld">
             <translate x="{}" y="{}" z="{}"/>
         </transform>
@@ -93,9 +101,9 @@ obj_mesh = \
         </bsdf>
     </shape>
     """
-
-xml_tail = \
-    """
+    
+    # A rectangular bottom plane
+"""
     <shape type="rectangle">
         <ref name="bsdf" id="surfaceMaterial"/>
         <transform name="toWorld">
@@ -103,6 +111,10 @@ xml_tail = \
             <translate x="0" y="0" z="{}"/>
         </transform>
     </shape>
+"""
+
+xml_tail = \
+    """
     
     <shape type="rectangle">
         <transform name="toWorld">
@@ -110,7 +122,7 @@ xml_tail = \
             <lookat origin="-4,4,20" target="0,0,0" up="0,0,1"/>
         </transform>
         <emitter type="area">
-            <rgb name="radiance" value="6,6,6"/>
+            <rgb name="radiance" value="5,5,5"/>
         </emitter>
     </shape>
 </scene>
@@ -173,8 +185,9 @@ def ConvertEXRToJPG(exrfile, jpgfile):
                           (1.055 * (rgb[i] ** (1.0 / 2.4)) - 0.055) * 255.0)
 
     rgb8 = [Image.frombytes("F", Size, c.tostring()).convert("L") for c in rgb]
+    rgb8 = trim(Image.merge("RGB", rgb8))
     # rgb8 = [Image.fromarray(c.astype(int)) for c in rgb]
-    Image.merge("RGB", rgb8).save(jpgfile, "JPEG", quality=95)
+    rgb8.save(jpgfile, "JPEG", quality=95)
 
 
 def main(argv):
@@ -233,7 +246,8 @@ def main(argv):
                         color = colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125)
                         # xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
                         xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *pcl_color[i]))
-                    xml_segments.append(xml_tail.format(np.min(pcl[:, 2])-0.025))
+                    # xml_segments.append(xml_tail.format(np.min(pcl[:, 2])-0.025))
+                    xml_segments.append(xml_tail)
 
                     xml_content = str.join('', xml_segments)
 
@@ -259,7 +273,7 @@ def main(argv):
                 for j in range(len(model_list)):
                     xml_segments = [xml_head]
                     xml_segments.append(obj_mesh.format(os.path.join('%s.obj' % model_list[j])))
-                    xml_segments.append(xml_tail.format(-0.225))
+                    xml_segments.append(xml_tail)
 
                     xml_content = str.join('', xml_segments)
 

@@ -51,8 +51,7 @@ class FullModel(nn.Module):
         self.CD = cd.chamferDist()
 
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
-        output1, output2, output3, output4, out_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, expansion_penalty, voxels = self.model(
-            parts, part_seg)
+        output1, output2, output3, output4 = self.model(parts, part_seg)
         loss_net = torch.zeros(1).cuda()
         if output1:
             dist1, dist2, _, _ = self.CD(output1[0], gt)
@@ -71,7 +70,7 @@ class FullModel(nn.Module):
             emd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output2[1], gt)
             emd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            emd2 += 0.1 * expansion_penalty
+            emd2 += 0.1 * output2[2]
             emd2 = emd2.mean()
             loss_net += emd2
         else:
@@ -96,7 +95,7 @@ class FullModel(nn.Module):
             emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
 
             SM = torch.nn.Softmax(dim=-1)
-            sem_feat = SM(grnet_seg_fine[:, :, :]).float()
+            sem_feat = SM(output4[3][:, :, :]).float()
             labels_gt = torch.gather(gt_seg[:, :, 0], dim=1, index=idx1.long())
             sem_gt = torch.nn.functional.one_hot(
                 labels_gt.to(torch.int64), 12).float()
@@ -108,7 +107,7 @@ class FullModel(nn.Module):
 
             dist1, dist2, idx1, _ = self.CD(output4[2], gt)
             emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            sem_feat = SM(grnet_seg_coar[:, :, :]).float()
+            sem_feat = SM(output4[4][:, :, :]).float()
             labels_gt = torch.gather(gt_seg[:, :, 0], dim=1, index=idx1.long())
             sem_gt = torch.nn.functional.one_hot(
                 labels_gt.to(torch.int64), 12).float()
@@ -122,7 +121,7 @@ class FullModel(nn.Module):
         else:
             emd4 = []
 
-        return output1, output2, output3, output4, input_chosen, emd1, emd2, emd3, emd4, loss_net
+        return output1, output2, output3, output4, _, emd1, emd2, emd3, emd4, loss_net
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -160,9 +159,14 @@ dataloader_test = torch.utils.data.DataLoader(
 
 len_dataset = len(dataset)
 print("Train set size: ", len_dataset)
-
-network = Network(num_points=opt.num_points, n_regions=opt.n_regions, model_lists=['softpool', 'msn', 'folding', 'grnet'])
-# network = Network(num_points=opt.num_points, n_regions=opt.n_regions, model_lists=['grnet'])
+"""
+network = Network(
+    num_points=opt.num_points,
+    n_regions=opt.n_regions,
+    model_lists=['softpool', 'msn', 'folding', 'grnet'])
+"""
+network = Network(
+    num_points=opt.num_points, n_regions=opt.n_regions, model_lists=['grnet'])
 network = torch.nn.DataParallel(FullModel(network))
 network.cuda()
 network.module.model.apply(weights_init)  #initialization of the weight
@@ -213,7 +217,7 @@ for epoch in range(opt.nepoch):
         part_seg = part_seg.float().cuda()
         gt = gt.float().cuda()
         gt_seg = gt_seg.float().cuda()
-        output1, output2, output3, output4, input_chosen, emd1, emd2, emd3, emd4, loss_net = network(
+        output1, output2, output3, output4, _, emd1, emd2, emd3, emd4, loss_net = network(
             part.transpose(2, 1), gt, part_seg, gt_seg, 0.005, 50)
         """
         loss_net = [emd1 if emd1 else torch.zeros(1)] + [emd2 if emd2 else torch.zeros(1)] + [emd3 if emd3 else torch.zeros(1)] + [emd4 if emd4 else torch.zeros(1)]
@@ -232,8 +236,9 @@ for epoch in range(opt.nepoch):
 
         print(opt.env +
               ' train [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f' %
-              (epoch, i, len_dataset / opt.batchSize, emd1.item() if emd1 else 0,
-               emd2.item() if emd2 else 0, emd3.item() if emd3 else 0, emd4.item() if emd4 else 0))
+              (epoch, i, len_dataset / opt.batchSize,
+               emd1.item() if emd1 else 0, emd2.item() if emd2 else 0,
+               emd3.item() if emd3 else 0, emd4.item() if emd4 else 0))
     train_curve.append(train_loss.avg)
 
     # VALIDATION
@@ -247,15 +252,15 @@ for epoch in range(opt.nepoch):
                 part_seg = part_seg.float().cuda()
                 gt = gt.float().cuda()
                 gt_seg = gt_seg.float().cuda()
-                output1, output2, output3, output4, input_chosen, emd1, emd2, emd3, emd4, _ = network(
+                output1, output2, output3, output4, _, emd1, emd2, emd3, emd4, _ = network(
                     part.transpose(2, 1), gt, part_seg, gt_seg, 0.004, 3000)
                 val_loss.update(emd4.mean().item())
                 idx = random.randint(0, part.size()[0] - 1)
                 print(opt.env +
                       ' val [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f' %
-                      (epoch, i, len_dataset / opt.batchSize, emd1.item() if emd1 else 0,
-               emd2.item() if emd2 else 0, emd3.item() if emd3 else 0, emd4.item() if emd4 else 0
-                       ))
+                      (epoch, i, len_dataset / opt.batchSize,
+                       emd1.item() if emd1 else 0, emd2.item() if emd2 else 0,
+                       emd3.item() if emd3 else 0, emd4.item() if emd4 else 0))
 
     val_curve.append(val_loss.avg)
 
