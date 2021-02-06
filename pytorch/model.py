@@ -15,6 +15,7 @@ sys.path.append("./MDS/")
 import MDS_module
 import grnet
 from PointCNN import PointCnnLayer
+from pcn import PCNEMD
 
 
 def feature_transform_regularizer(trans):
@@ -587,6 +588,10 @@ class Network(nn.Module):
             self.msn = MSN()
         if ('grnet' in self.model_lists):
             self.grnet = grnet.GRNet()
+        if ('pointcnn' in self.model_lists):
+            ok = True
+        if ('pcn' in self.model_lists):
+            self.pcn = PCNEMD().cuda()
 
     def forward(self, part, part_seg):
         pn_feat = self.pn_enc(part)
@@ -730,8 +735,11 @@ class Network(nn.Module):
                       (32 * x, 0.5),
                       (3,0.5)]]
 
-            model = PointCnnLayer(part.transpose(1, 2), ["features"],[ xconv_params,xdconv_params,fc_params ]).cuda()
-            pcd_pcnn = model(part.transpose(1, 2))
+            self.pointcnn = PointCnnLayer(part.transpose(1, 2), ["features"],[ xconv_params,xdconv_params,fc_params ]).cuda()
+            pcd_pcnn = self.pointcnn(part.transpose(1, 2))
+            """
+            pcn_coarse, pcn_fine = self.pcn(part[:,:,:1024].transpose(1, 2))
+            """
              
 
         pred_softpool = [

@@ -227,6 +227,6 @@ if __name__ == "__main__":
               (32 * x, 0.5),
               (3,0.5)]]
 
-    model = PointCnnLayer(xyz,["features"],[ xconv_params,xdconv_params,fc_params ]).cuda()
+    model = PointCnnLayer(xyz, ["features"],[ xconv_params,xdconv_params,fc_params ]).cuda()
     out = model(xyz)
     print(out.shape)

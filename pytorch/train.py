@@ -127,6 +127,10 @@ class FullModel(nn.Module):
         if output5:
             dist1, dist2, _, _ = self.CD(output5[0], gt)
             emd5 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            """
+            dist1, dist2, _, _ = self.CD(output5[1], gt)
+            emd5 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            """
             emd5 = emd5.mean()
             loss_net += emd5
         else:
