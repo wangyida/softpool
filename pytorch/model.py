@@ -449,13 +449,15 @@ class Network(nn.Module):
                  num_points=8192,
                  n_regions=16,
                  dim_pn=256,
-                 sp_points=1024):
+                 sp_points=1024,
+                 model_lists=['softpool', 'msn', 'folding', 'grnet']):
         super(Network, self).__init__()
         self.num_points = num_points
         self.dim_pn = dim_pn
         self.n_regions = n_regions
         self.sp_points = sp_points
         self.sp_ratio = n_regions
+        self.model_lists = model_lists
 
         self.pn_enc = nn.Sequential(
             PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),
@@ -702,8 +704,10 @@ class Network(nn.Module):
         pcd_fusion_trans = fusion + delta
         pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
 
-        return [
-            pcd_softpool, pcd_ae, pcd_fusion
-        ], [pcd_msn1, pcd_msn2], pcd_fold, [
-            pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar
-        ], pcd_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, loss_mst, voxels
+        pred_softpool = [pcd_softpool, pcd_ae, pcd_fusion
+                         ] if ('softpool' in self.model_lists) else []
+        pred_msn = [pcd_msn1, pcd_msn2] if ('msn' in self.model_lists) else []
+        pred_folding = [pcd_fold] if ('folding' in self.model_lists) else []
+        pred_grnet = [pcd_grnet_voxel, pcd_grnet_fine, pcd_grnet_coar
+                      ] if ('grnet' in self.model_lists) else []
+        return pred_softpool, pred_msn, pred_folding, pred_grnet, pcd_seg, grnet_seg_fine, grnet_seg_coar, input_chosen, loss_trans, loss_mst, voxels

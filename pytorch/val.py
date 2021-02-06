@@ -282,7 +282,7 @@ with torch.no_grad():
             cd2 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd2'] += cd2
 
-            dist, _, _, _ = CD.forward(input1=output3, input2=gt)
+            dist, _, _, _ = CD.forward(input1=output3[0], input2=gt)
             cd3 = dist.mean() * 1e4
             hash_tab[str(subfold)]['cd3'] += cd3
 
@@ -312,7 +312,8 @@ with torch.no_grad():
         # save gt
         pts_coord = gt[0].data.cpu()[:, 0:3]
         mini = gt[0].min()
-        pts_color = matplotlib.cm.gist_rainbow(gt_seg[0, :, 0].cpu() / 11)[:, :3]
+        pts_color = matplotlib.cm.gist_rainbow(
+            gt_seg[0, :, 0].cpu() / 11)[:, :3]
 
         points_save(
             points=pts_coord,
@@ -392,16 +393,18 @@ with torch.no_grad():
                 pfile=model + '-' + str(stage))
 
         # save output3
-        pts_coord = output3[0].data.cpu()[:, 0:3]
-        maxi = labels_generated_points.max()
-        pts_color = matplotlib.cm.rainbow(
-            labels_generated_points[0:output3.size(1)] / maxi)[:, 0:3]
-        points_save(
-            points=pts_coord,
-            colors=pts_color,
-            root='pcds/output3',
-            child=subfold,
-            pfile=model)
+        for stage in range(len(output3)):
+            pts_coord = output3[stage][0].data.cpu()[:, 0:3]
+            maxi = labels_generated_points.max()
+            pts_color = matplotlib.cm.rainbow(
+                labels_generated_points[0:output3[stage].size(1)] /
+                maxi)[:, 0:3]
+            points_save(
+                points=pts_coord,
+                colors=pts_color,
+                root='pcds/output3',
+                child=subfold,
+                pfile=model)
 
         # save output4
         for stage in range(len(output4)):
@@ -435,10 +438,11 @@ with torch.no_grad():
         # save mesh from voxels
         os.makedirs('pcds/mesh/%s' % subfold, exist_ok=True)
         import mcubes
-        voxels = torch.flip(voxels[0,0,:,:,:].transpose(2, 0).transpose(2, 1), [0])
+        voxels = torch.flip(
+            voxels[0, 0, :, :, :].transpose(2, 0).transpose(2, 1), [0])
         voxels = np.array(voxels.cpu())
         vertices, triangles = mcubes.marching_cubes(voxels, 0)
-        vertices /= 256.0
+        vertices /= 128.0
         vertices -= 0.5
         vertices[:, 2] += 0.0125
         mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
