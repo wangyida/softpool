@@ -89,6 +89,7 @@ elif opt.dataset == 'shapenet':
             'cd2': 0.0,
             'cd3': 0.0,
             'cd4': 0.0,
+            'cd5': 0.0,
             'cnt': 0
         },
         '04530566': {
@@ -101,6 +102,7 @@ elif opt.dataset == 'shapenet':
             'cd2': 0.0,
             'cd3': 0.0,
             'cd4': 0.0,
+            'cd5': 0.0,
             'cnt': 0
         },
         '02933112': {
@@ -113,6 +115,7 @@ elif opt.dataset == 'shapenet':
             'cd2': 0.0,
             'cd3': 0.0,
             'cd4': 0.0,
+            'cd5': 0.0,
             'cnt': 0
         },
         '04379243': {
@@ -125,6 +128,7 @@ elif opt.dataset == 'shapenet':
             'cd2': 0.0,
             'cd3': 0.0,
             'cd4': 0.0,
+            'cd5': 0.0,
             'cnt': 0
         },
         '02691156': {
@@ -137,6 +141,7 @@ elif opt.dataset == 'shapenet':
             'cd2': 0.0,
             'cd3': 0.0,
             'cd4': 0.0,
+            'cd5': 0.0,
             'cnt': 0
         },
         '02958343': {
@@ -149,6 +154,7 @@ elif opt.dataset == 'shapenet':
             'cd2': 0.0,
             'cd3': 0.0,
             'cd4': 0.0,
+            'cd5': 0.0,
             'cnt': 0
         },
         '03001627': {
@@ -161,6 +167,7 @@ elif opt.dataset == 'shapenet':
             'cd2': 0.0,
             'cd3': 0.0,
             'cd4': 0.0,
+            'cd5': 0.0,
             'cnt': 0
         },
         '04256520': {
@@ -173,6 +180,7 @@ elif opt.dataset == 'shapenet':
             'cd2': 0.0,
             'cd3': 0.0,
             'cd4': 0.0,
+            'cd5': 0.0,
             'cnt': 0
         },
         '03636649': {
@@ -185,6 +193,7 @@ elif opt.dataset == 'shapenet':
             'cd2': 0.0,
             'cd3': 0.0,
             'cd4': 0.0,
+            'cd5': 0.0,
             'cnt': 0
         }
     }
@@ -272,7 +281,7 @@ with torch.no_grad():
                     gt1, opt.num_points * 8)
                 gt_seg[j, :, :] = np.round(gt_color[idx_sampled] * 11)
 
-        output1, output2, output3, output4 = network(
+        output1, output2, output3, output4, output5 = network(
             part.transpose(2, 1).contiguous(), part_seg)
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
             if output1:
@@ -303,11 +312,18 @@ with torch.no_grad():
             else:
                 hash_tab[str(subfold)]['cd4'] += 0
 
+            if output5:
+                dist, _, _, _ = CD.forward(input1=output5[0], input2=gt)
+                cd5 = dist.mean() * 1e4
+                hash_tab[str(subfold)]['cd5'] += cd5
+            else:
+                hash_tab[str(subfold)]['cd5'] += 0
+
             hash_tab[str(subfold)]['cnt'] += 1
             idx = random.randint(0, 0)
             print(opt.env +
-                    ' val [%d/%d]  cd1: %.2f cd2: %.2f cd3: %.2f cd4: %.2f mean cd2 so far: %.2f' %
-                  (i + 1, len(model_list), cd1.item() if output1 else 0, cd2.item() if output2 else 0, cd3.item() if output3 else 0, cd4.item() if output4 else 0,
+                    ' val [%d/%d]  cd1: %.2f cd2: %.2f cd3: %.2f cd4: %.2f cd5: %.2f mean cd2 so far: %.2f' %
+                  (i + 1, len(model_list), cd1.item() if output1 else 0, cd2.item() if output2 else 0, cd3.item() if output3 else 0, cd4.item() if output4 else 0, cd5.item() if output5 else 0,
                    hash_tab[str(subfold)]['cd2'] /
                    hash_tab[str(subfold)]['cnt']))
 
@@ -460,13 +476,28 @@ with torch.no_grad():
             vertices[:, 2] += 0.0125
             mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
 
+        if output5:
+            # save output5
+            for stage in range(len(output5)):
+                pts_coord = output5[stage][0].data.cpu()[:, 0:3]
+                maxi = labels_generated_points.max()
+                pts_color = matplotlib.cm.rainbow(
+                    labels_generated_points[0:output5[stage].size(1)] /
+                    maxi)[:, 0:3]
+                points_save(
+                    points=pts_coord,
+                    colors=pts_color,
+                    root='pcds/output5',
+                    child=subfold,
+                    pfile=model)
+
     if opt.dataset == 'shapenet' and complete3d_benchmark == False:
         for i in [
                 '04530566', '02933112', '04379243', '02691156', '02958343',
                 '03001627', '04256520', '03636649'
         ]:
             print(
-                '%s cd1: %.2f cd2: %.2f cd3: %.2f cd4: %.2f' %
+                '%s cd1: %.2f cd2: %.2f cd3: %.2f cd4: %.2f cd5: %.2f' %
                 (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'],
                  hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] /
-                 hash_tab[i]['cnt'], hash_tab[i]['cd4'] / hash_tab[i]['cnt']))
+                 hash_tab[i]['cnt'], hash_tab[i]['cd4'] / hash_tab[i]['cnt'], hash_tab[i]['cd5'] / hash_tab[i]['cnt']))
