@@ -60,32 +60,30 @@ class GRNet(torch.nn.Module):
             torch.nn.Conv3d(128, 256, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(256), torch.nn.LeakyReLU(0.2),
             torch.nn.MaxPool3d(kernel_size=2))
-        if self.scale == 128:
+        if self.scale >= 128:
             self.conv5 = torch.nn.Sequential(
                 torch.nn.Conv3d(256, 256, kernel_size=4, padding=2),
                 torch.nn.BatchNorm3d(256), torch.nn.LeakyReLU(0.2),
                 torch.nn.MaxPool3d(kernel_size=2))
-            """
+        if self.scale >= 256:
             self.conv6 = torch.nn.Sequential(
                 torch.nn.Conv3d(256, 256, kernel_size=4, padding=2),
                 torch.nn.BatchNorm3d(256), torch.nn.LeakyReLU(0.2),
                 torch.nn.MaxPool3d(kernel_size=2))
-            """
         self.fc5 = torch.nn.Sequential(
             torch.nn.Linear(16384, 2048), torch.nn.ReLU())
         self.fc6 = torch.nn.Sequential(
             torch.nn.Linear(2048, 16384), torch.nn.ReLU())
-        if self.scale == 128:
+        if self.scale >= 128:
             self.dconv5 = torch.nn.Sequential(
                 torch.nn.ConvTranspose3d(
                     256, 256, kernel_size=4, stride=2, bias=False, padding=1),
                 torch.nn.BatchNorm3d(256), torch.nn.ReLU())
-            """
+        if self.scale >= 256:
             self.dconv6 = torch.nn.Sequential(
                 torch.nn.ConvTranspose3d(
                     256, 256, kernel_size=4, stride=2, bias=False, padding=1),
                 torch.nn.BatchNorm3d(256), torch.nn.ReLU())
-            """
         self.dconv7 = torch.nn.Sequential(
             torch.nn.ConvTranspose3d(
                 256, 128, kernel_size=4, stride=2, bias=False, padding=1),
@@ -131,21 +129,19 @@ class GRNet(torch.nn.Module):
         # print(pt_features_8_l.size())   # torch.Size([batch_size, 124, 4, 4, 8])
         pt_features_4_l = self.conv4(pt_features_8_l)
         # print(pt_features_4_l.size())   # torch.Size([batch_size, 256, 4, 4, 4])
-        if self.scale == 128:
+        if self.scale >= 128:
             pt_features_4_l = self.conv5(pt_features_4_l)
-            """
+        if self.scale >= 256:
             pt_features_4_l = self.conv6(pt_features_4_l)
-            """
         features = self.fc5(pt_features_4_l.view(-1, 16384))
         # print(features.size())          # torch.Size([batch_size, 2048])
         pt_features_4_r = self.fc6(features).view(
             -1, 256, 4, 4, 4) + pt_features_4_l * self.unet
         # print(pt_features_4_r.size())   # torch.Size([batch_size, 256, 4, 4, 4])
-        if self.scale == 128:
+        if self.scale >= 128:
             pt_features_4_r = self.dconv5(pt_features_4_r)
-            """
+        if self.scale >= 256:
             pt_features_4_r = self.dconv5(pt_features_4_r)
-            """
         pt_features_8_r = self.dconv7(
             pt_features_4_r) + pt_features_8_l * self.unet
         # print(pt_features_8_r.size())   # torch.Size([batch_size, 124, 4, 4, 8])

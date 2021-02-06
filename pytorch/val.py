@@ -50,11 +50,13 @@ parser.add_argument(
     '--env', type=str, default="SoftPool_VAL", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
+parser.add_argument(
+    '--methods', nargs='+', default=['softpool', 'msn', 'folding', 'grnet'], help='a list of methods')
 
 opt = parser.parse_args()
 print(opt)
 
-network = Network(num_points=opt.num_points, n_regions=opt.n_regions)
+network = Network(num_points=opt.num_points, n_regions=opt.n_regions, model_lists=opt.methods)
 network.cuda()
 network.apply(weights_init)
 
@@ -273,28 +275,39 @@ with torch.no_grad():
         output1, output2, output3, output4 = network(
             part.transpose(2, 1).contiguous(), part_seg)
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
+            if output1:
+                dist, _, _, _ = CD.forward(input1=output1[0], input2=gt)
+                cd1 = dist.mean() * 1e4
+                hash_tab[str(subfold)]['cd1'] += cd1
+            else:
+                hash_tab[str(subfold)]['cd1'] += 0
 
-            dist, _, _, _ = CD.forward(input1=output1[0], input2=gt)
-            cd1 = dist.mean() * 1e4
-            hash_tab[str(subfold)]['cd1'] += cd1
+            if output2:
+                dist, _, _, _ = CD.forward(input1=output2[1], input2=gt)
+                cd2 = dist.mean() * 1e4
+                hash_tab[str(subfold)]['cd2'] += cd2
+            else:
+                hash_tab[str(subfold)]['cd2'] += 0
 
-            dist, _, _, _ = CD.forward(input1=output2[1], input2=gt)
-            cd2 = dist.mean() * 1e4
-            hash_tab[str(subfold)]['cd2'] += cd2
+            if output3:
+                dist, _, _, _ = CD.forward(input1=output3[0], input2=gt)
+                cd3 = dist.mean() * 1e4
+                hash_tab[str(subfold)]['cd3'] += cd3
+            else:
+                hash_tab[str(subfold)]['cd3'] += 0
 
-            dist, _, _, _ = CD.forward(input1=output3[0], input2=gt)
-            cd3 = dist.mean() * 1e4
-            hash_tab[str(subfold)]['cd3'] += cd3
-
-            dist, _, _, _ = CD.forward(input1=output4[2], input2=gt)
-            cd4 = dist.mean() * 1e4
-            hash_tab[str(subfold)]['cd4'] += cd4
+            if output4:
+                dist, _, _, _ = CD.forward(input1=output4[2], input2=gt)
+                cd4 = dist.mean() * 1e4
+                hash_tab[str(subfold)]['cd4'] += cd4
+            else:
+                hash_tab[str(subfold)]['cd4'] += 0
 
             hash_tab[str(subfold)]['cnt'] += 1
             idx = random.randint(0, 0)
             print(opt.env +
-                  ' val [%d/%d]  cd1: %f cd2: %f cd3: %f mean cd2 so far: %f' %
-                  (i + 1, len(model_list), cd1.item(), cd2.item(), cd3.item(),
+                    ' val [%d/%d]  cd1: %.2f cd2: %.2f cd3: %.2f cd4: %.2f mean cd2 so far: %.2f' %
+                  (i + 1, len(model_list), cd1.item() if output1 else 0, cd2.item() if output2 else 0, cd3.item() if output3 else 0, cd4.item() if output4 else 0,
                    hash_tab[str(subfold)]['cd2'] /
                    hash_tab[str(subfold)]['cnt']))
 
@@ -323,125 +336,129 @@ with torch.no_grad():
             pfile=model)
 
         # save selected points on input
-        pts_coord = output1[3][0].data.cpu()[:, 0:3]
-        maxi = labels_inputs_points.max() // 2
-        pts_color = matplotlib.cm.gist_rainbow(
-            labels_inputs_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
-        points_save(
-            points=pts_coord,
-            colors=pts_color,
-            root='pcds/regions_part',
-            child=subfold,
-            pfile=model)
-
-        # save selected points on groung truth
-        """
-        pts_coord = []
-        for i in range(np.size(gt_regions)):
-            pts_coord.append(gt_regions[i][0].data.cpu()[:, 0:3])
-            maxi = labels_inputs_points.max()
-            pts_color = matplotlib.cm.plasma(
-                labels_inputs_points[0:gt_regions[i].size(1)] / maxi)[:, 0:3]
-            points_save(
-                points=pts_coord[i],
-                colors=pts_color,
-                root='pcds/regions_gt',
-                child=subfold,
-                pfile=model + '-' + str(i))
-        """
-
-        # save output1
-        for stage in range(3):
-            pts_coord = output1[stage][0].data.cpu()[:, 0:3]
-            maxi = labels_generated_points.max()
-            if stage == 0:
-                pts_color = matplotlib.cm.gist_rainbow(
-                    labels_generated_points[0:output1[stage].size(1)] /
-                    maxi)[:, 0:3]
-            else:
-                pts_color = matplotlib.cm.cool(
-                    output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+        if output1:
+            pts_coord = output1[3][0].data.cpu()[:, 0:3]
+            maxi = labels_inputs_points.max() // 2
+            pts_color = matplotlib.cm.gist_rainbow(
+                labels_inputs_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
             points_save(
                 points=pts_coord,
                 colors=pts_color,
-                root='pcds/output1',
-                child=subfold,
-                pfile=model + '-' + str(stage))
-
-        # Submission
-        if opt.dataset == 'shapenet' and complete3d_benchmark == True:
-            os.makedirs('benchmark', exist_ok=True)
-            os.makedirs('benchmark/' + subfold, exist_ok=True)
-            with h5py.File('benchmark/' + model + '.h5', "w") as f:
-                f.create_dataset("data", data=np.float32(pts_coord))
-
-        # save output2
-        for stage in range(2):
-            pts_coord = output2[stage][0].data.cpu()[:, 0:3]
-            mini = output2[stage][0].min()
-            pts_color = matplotlib.cm.cool(output2[stage][0].data.cpu()[:, 1] +
-                                           1)[:, 0:3]
-            points_save(
-                points=pts_coord,
-                colors=pts_color,
-                root='pcds/output2',
-                child=subfold,
-                pfile=model + '-' + str(stage))
-
-        # save output3
-        for stage in range(len(output3)):
-            pts_coord = output3[stage][0].data.cpu()[:, 0:3]
-            maxi = labels_generated_points.max()
-            pts_color = matplotlib.cm.rainbow(
-                labels_generated_points[0:output3[stage].size(1)] /
-                maxi)[:, 0:3]
-            points_save(
-                points=pts_coord,
-                colors=pts_color,
-                root='pcds/output3',
+                root='pcds/regions_part',
                 child=subfold,
                 pfile=model)
 
-        # save output4
-        for stage in range(3):
-            pts_coord = output4[stage][0].data.cpu()[:, 0:3]
-            maxi = labels_generated_points.max()
-
-            dist, _, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
-            if stage == 0:
-                pts_color = matplotlib.cm.cool(
-                    output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
-            elif stage == 1:
-                pts_color = matplotlib.cm.gist_rainbow(
-                    torch.argmax(output4[3][0][:, :].cpu(), dim=-1).float() /
-                    11)[:, 0:3]
-            else:
-                pts_color = matplotlib.cm.gist_rainbow(
-                    torch.argmax(output4[4][0][:, :].cpu(), dim=-1).float() /
-                    11)[:, 0:3]
-            cd4 = dist.mean()
+            # save selected points on groung truth
             """
-            pts_color = matplotlib.cm.rainbow(
-                labels_generated_points[0:output4.size(1)] / maxi)[:, 0:3]
+            pts_coord = []
+            for i in range(np.size(gt_regions)):
+                pts_coord.append(gt_regions[i][0].data.cpu()[:, 0:3])
+                maxi = labels_inputs_points.max()
+                pts_color = matplotlib.cm.plasma(
+                    labels_inputs_points[0:gt_regions[i].size(1)] / maxi)[:, 0:3]
+                points_save(
+                    points=pts_coord[i],
+                    colors=pts_color,
+                    root='pcds/regions_gt',
+                    child=subfold,
+                    pfile=model + '-' + str(i))
             """
-            points_save(
-                points=pts_coord,
-                colors=pts_color,
-                root='pcds/output4',
-                child=subfold,
-                pfile=model + '-' + str(stage))
 
-        # save mesh from voxels
-        os.makedirs('pcds/mesh/%s' % subfold, exist_ok=True)
-        import mcubes
-        voxels = torch.flip(
-            output4[5][0, 0, :, :, :].transpose(2, 0).transpose(2, 1), [0])
-        voxels = np.array(voxels.cpu())
-        vertices, triangles = mcubes.marching_cubes(voxels, 0)
-        vertices /= 128.0
-        vertices -= 0.5
-        vertices[:, 2] += 0.0125
-        mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
+            # save output1
+            for stage in range(3):
+                pts_coord = output1[stage][0].data.cpu()[:, 0:3]
+                maxi = labels_generated_points.max()
+                if stage == 0:
+                    pts_color = matplotlib.cm.gist_rainbow(
+                        labels_generated_points[0:output1[stage].size(1)] /
+                        maxi)[:, 0:3]
+                else:
+                    pts_color = matplotlib.cm.cool(
+                        output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                points_save(
+                    points=pts_coord,
+                    colors=pts_color,
+                    root='pcds/output1',
+                    child=subfold,
+                    pfile=model + '-' + str(stage))
+
+            # Submission
+            if opt.dataset == 'shapenet' and complete3d_benchmark == True:
+                os.makedirs('benchmark', exist_ok=True)
+                os.makedirs('benchmark/' + subfold, exist_ok=True)
+                with h5py.File('benchmark/' + model + '.h5', "w") as f:
+                    f.create_dataset("data", data=np.float32(pts_coord))
+
+        if output2:
+            # save output2
+            for stage in range(2):
+                pts_coord = output2[stage][0].data.cpu()[:, 0:3]
+                mini = output2[stage][0].min()
+                pts_color = matplotlib.cm.cool(output2[stage][0].data.cpu()[:, 1] +
+                                               1)[:, 0:3]
+                points_save(
+                    points=pts_coord,
+                    colors=pts_color,
+                    root='pcds/output2',
+                    child=subfold,
+                    pfile=model + '-' + str(stage))
+
+        if output3:
+            # save output3
+            for stage in range(len(output3)):
+                pts_coord = output3[stage][0].data.cpu()[:, 0:3]
+                maxi = labels_generated_points.max()
+                pts_color = matplotlib.cm.rainbow(
+                    labels_generated_points[0:output3[stage].size(1)] /
+                    maxi)[:, 0:3]
+                points_save(
+                    points=pts_coord,
+                    colors=pts_color,
+                    root='pcds/output3',
+                    child=subfold,
+                    pfile=model)
+
+        if output4:
+            # save output4
+            for stage in range(3):
+                pts_coord = output4[stage][0].data.cpu()[:, 0:3]
+                maxi = labels_generated_points.max()
+
+                dist, _, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
+                if stage == 0:
+                    pts_color = matplotlib.cm.cool(
+                        output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                elif stage == 1:
+                    pts_color = matplotlib.cm.gist_rainbow(
+                        torch.argmax(output4[3][0][:, :].cpu(), dim=-1).float() /
+                        11)[:, 0:3]
+                else:
+                    pts_color = matplotlib.cm.gist_rainbow(
+                        torch.argmax(output4[4][0][:, :].cpu(), dim=-1).float() /
+                        11)[:, 0:3]
+                cd4 = dist.mean()
+                """
+                pts_color = matplotlib.cm.rainbow(
+                    labels_generated_points[0:output4.size(1)] / maxi)[:, 0:3]
+                """
+                points_save(
+                    points=pts_coord,
+                    colors=pts_color,
+                    root='pcds/output4',
+                    child=subfold,
+                    pfile=model + '-' + str(stage))
+
+            # save mesh from voxels
+            os.makedirs('pcds/mesh/%s' % subfold, exist_ok=True)
+            import mcubes
+            voxels = torch.flip(
+                output4[5][0, 0, :, :, :].transpose(2, 0).transpose(2, 1), [0])
+            voxels = np.array(voxels.cpu())
+            vertices, triangles = mcubes.marching_cubes(voxels, 0)
+            vertices /= 128.0
+            vertices -= 0.5
+            vertices[:, 2] += 0.0125
+            mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
 
     if opt.dataset == 'shapenet' and complete3d_benchmark == False:
         for i in [
@@ -449,7 +466,7 @@ with torch.no_grad():
                 '03001627', '04256520', '03636649'
         ]:
             print(
-                '%s cd1: %f cd2: %f cd3: %f cd4: %f' %
+                '%s cd1: %.2f cd2: %.2f cd3: %.2f cd4: %.2f' %
                 (hash_tab[i]['name'], hash_tab[i]['cd1'] / hash_tab[i]['cnt'],
                  hash_tab[i]['cd2'] / hash_tab[i]['cnt'], hash_tab[i]['cd3'] /
                  hash_tab[i]['cnt'], hash_tab[i]['cd4'] / hash_tab[i]['cnt']))

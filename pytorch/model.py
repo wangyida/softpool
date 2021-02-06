@@ -14,6 +14,7 @@ import expansion_penalty_module as expansion
 sys.path.append("./MDS/")
 import MDS_module
 import grnet
+from pointcnn import PointCNN
 
 
 def feature_transform_regularizer(trans):
@@ -463,125 +464,129 @@ class Network(nn.Module):
             PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),
             nn.BatchNorm1d(dim_pn), nn.ReLU())
 
-        self.softpool_enc = SoftPoolFeat(
-            num_points,
-            regions=self.n_regions,
-            sp_points=2048,
-            sp_ratio=self.sp_ratio)
+        if ('softpool' in self.model_lists):
+            self.softpool_enc = SoftPoolFeat(
+                num_points,
+                regions=self.n_regions,
+                sp_points=2048,
+                sp_ratio=self.sp_ratio)
 
-        # Firstly we do not merge information among regions
-        # We merge regional informations in latent space
-        self.reg_conv1 = nn.Sequential(
-            nn.Conv2d(
-                1 * dim_pn,
-                dim_pn,
-                kernel_size=(1, 3),
-                stride=(1, 2),
-                padding=(0, 1),
-                padding_mode='same'), nn.Tanh())
-        self.reg_conv2 = nn.Sequential(
-            nn.Conv2d(
-                dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 3),
-                stride=(1, 2),
-                padding=(0, 1),
-                padding_mode='same'), nn.Tanh())
-        self.reg_conv3 = nn.Sequential(
-            nn.Conv2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 3),
-                stride=(1, 2),
-                padding=(0, 1),
-                padding_mode='same'), nn.Tanh())
+            # Firstly we do not merge information among regions
+            # We merge regional informations in latent space
+            self.reg_conv1 = nn.Sequential(
+                nn.Conv2d(
+                    1 * dim_pn,
+                    dim_pn,
+                    kernel_size=(1, 3),
+                    stride=(1, 2),
+                    padding=(0, 1),
+                    padding_mode='same'), nn.Tanh())
+            self.reg_conv2 = nn.Sequential(
+                nn.Conv2d(
+                    dim_pn,
+                    2 * dim_pn,
+                    kernel_size=(1, 3),
+                    stride=(1, 2),
+                    padding=(0, 1),
+                    padding_mode='same'), nn.Tanh())
+            self.reg_conv3 = nn.Sequential(
+                nn.Conv2d(
+                    2 * dim_pn,
+                    2 * dim_pn,
+                    kernel_size=(1, 3),
+                    stride=(1, 2),
+                    padding=(0, 1),
+                    padding_mode='same'), nn.Tanh())
 
-        # input for embedding has 32 points now, then in total it is regions x 32 points
-        # down-sampled by 2*2*2=8
-        ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
-        if self.n_regions == 1:
-            ebd_pnt_out = 256
-        elif self.n_regions > 1:
-            ebd_pnt_out = 512
+            # input for embedding has 32 points now, then in total it is regions x 32 points
+            # down-sampled by 2*2*2=8
+            ebd_pnt_reg = (self.num_points) // (self.sp_ratio * 8)
+            if self.n_regions == 1:
+                ebd_pnt_out = 256
+            elif self.n_regions > 1:
+                ebd_pnt_out = 512
 
-        self.embedding = nn.Sequential(
-            nn.MaxPool2d(
-                kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
-            nn.MaxPool2d(
-                kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, ebd_pnt_out),
-                stride=(1, ebd_pnt_out),
-                padding=(0, 0)))
-        """
-        self.embedding = nn.Sequential(
-            nn.MaxPool2d(
-                kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
-            nn.Conv2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, self.n_regions)),
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 4),
-                stride=(1, 4),
-                padding=(0, 0)),
-            nn.UpsamplingBilinear2d(scale_factor=(1, 4)),
-            nn.Conv2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 5),
-                stride=(1, 1),
-                padding=(0, 2),
-                padding_mode='same'),
-            nn.UpsamplingBilinear2d(scale_factor=(1, 16)))
-        """
-        self.pt_mixing = nn.Sequential(
-            nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU(),
-            nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU())
+            self.embedding = nn.Sequential(
+                nn.MaxPool2d(
+                    kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
+                nn.MaxPool2d(
+                    kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
+                nn.ConvTranspose2d(
+                    2 * dim_pn,
+                    2 * dim_pn,
+                    kernel_size=(1, ebd_pnt_out),
+                    stride=(1, ebd_pnt_out),
+                    padding=(0, 0)))
+            """
+            self.embedding = nn.Sequential(
+                nn.MaxPool2d(
+                    kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
+                nn.Conv2d(
+                    2 * dim_pn,
+                    2 * dim_pn,
+                    kernel_size=(1, self.n_regions)),
+                nn.ConvTranspose2d(
+                    2 * dim_pn,
+                    2 * dim_pn,
+                    kernel_size=(1, 4),
+                    stride=(1, 4),
+                    padding=(0, 0)),
+                nn.UpsamplingBilinear2d(scale_factor=(1, 4)),
+                nn.Conv2d(
+                    2 * dim_pn,
+                    2 * dim_pn,
+                    kernel_size=(1, 5),
+                    stride=(1, 1),
+                    padding=(0, 2),
+                    padding_mode='same'),
+                nn.UpsamplingBilinear2d(scale_factor=(1, 16)))
+            """
+            self.pt_mixing = nn.Sequential(
+                nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU(),
+                nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU())
 
-        self.reg_conv4 = nn.Sequential(
-            nn.Conv2d(
-                4 * dim_pn,
-                4 * dim_pn,
-                kernel_size=(self.n_regions, 1),
-                stride=(1, 1)))
+            self.reg_conv4 = nn.Sequential(
+                nn.Conv2d(
+                    4 * dim_pn,
+                    4 * dim_pn,
+                    kernel_size=(self.n_regions, 1),
+                    stride=(1, 1)))
 
-        self.reg_deconv3 = nn.Sequential(
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                2 * dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh())
-        self.reg_deconv2 = nn.Sequential(
-            nn.ConvTranspose2d(
-                2 * dim_pn,
-                dim_pn,
-                kernel_size=(1, 2),
-                stride=(1, 2),
-                padding=(0, 0)), nn.Tanh())
-        self.reg_deconv1 = nn.Sequential(
-            nn.ConvTranspose2d(
-                dim_pn,
-                dim_pn,
-                kernel_size=(1, 1),
-                stride=(1, 1),
-                padding=(0, 0)), nn.Tanh())
-        self.translate = nn.Sequential(
-            nn.Conv2d(dim_pn, dim_pn, kernel_size=(1, 1), stride=(1, 1)),
-            nn.Tanh())
+            self.reg_deconv3 = nn.Sequential(
+                nn.ConvTranspose2d(
+                    2 * dim_pn,
+                    2 * dim_pn,
+                    kernel_size=(1, 2),
+                    stride=(1, 2),
+                    padding=(0, 0)), nn.Tanh())
+            self.reg_deconv2 = nn.Sequential(
+                nn.ConvTranspose2d(
+                    2 * dim_pn,
+                    dim_pn,
+                    kernel_size=(1, 2),
+                    stride=(1, 2),
+                    padding=(0, 0)), nn.Tanh())
+            self.reg_deconv1 = nn.Sequential(
+                nn.ConvTranspose2d(
+                    dim_pn,
+                    dim_pn,
+                    kernel_size=(1, 1),
+                    stride=(1, 1),
+                    padding=(0, 0)), nn.Tanh())
+            self.translate = nn.Sequential(
+                nn.Conv2d(dim_pn, dim_pn, kernel_size=(1, 1), stride=(1, 1)),
+                nn.Tanh())
 
-        self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
-        self.decoder2 = PointGenCon(bottleneck_size=self.dim_pn + 3 + 2)
-        self.decoder_fold = PointGenCon(bottleneck_size=2 + self.dim_pn)
-        self.res = PointNetRes()
-        self.expansion = expansion.expansionPenaltyModule()
-        self.grnet = grnet.GRNet()
-        self.msn = MSN()
+            self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
+            self.decoder2 = PointGenCon(bottleneck_size=self.dim_pn + 3 + 2)
+            self.res = PointNetRes()
+        if ('folding' in self.model_lists):
+            self.decoder_fold = PointGenCon(bottleneck_size=2 + self.dim_pn)
+        if ('msn' in self.model_lists):
+            self.expansion = expansion.expansionPenaltyModule()
+            self.msn = MSN()
+        if ('grnet' in self.model_lists):
+            self.grnet = grnet.GRNet()
 
     def forward(self, part, part_seg):
         pn_feat = self.pn_enc(part)
@@ -646,6 +651,38 @@ class Network(nn.Module):
             # mesh_grid_mini = fourier_map(mesh_grid_mini).cuda()
             # here self.num_points // self.n_regions = 8*4
 
+            y = sp_feat_deconv1[:, :, 0, :]
+            pcd_softpool_trans = self.decoder1(y)
+            pcd_softpool = pcd_softpool_trans.transpose(1, 2).contiguous()
+
+            y = sp_feat_ae[:, :, 0, :]
+            pcd_sp_ae = self.decoder1(y)
+            pcd_ae = pcd_sp_ae.transpose(1, 2).contiguous()
+
+            id2 = torch.zeros(pcd_softpool_trans.shape[0], 1,
+                              pcd_softpool_trans.shape[2]).cuda().contiguous()
+            id1 = torch.ones(
+                part.shape[0], 1,
+                part.shape[2]).cuda().contiguous()
+            fuse_observe = torch.cat((part, id1), 1)
+            fuse_expand = torch.cat((pcd_softpool_trans, id2), 1)
+            fusion = torch.cat((fuse_observe, fuse_expand), 2)
+
+            resampled_idx = MDS_module.minimum_density_sample(
+                fusion[:, 0:3, :].transpose(1, 2).contiguous(),
+                pcd_softpool.shape[1], mean_mst_dis)
+            fusion = MDS_module.gather_operation(fusion, resampled_idx)
+            delta = self.res(fusion)
+            fusion = fusion[:, 0:3, :]
+            pcd_fusion_trans = fusion + delta
+            pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
+
+        if ('msn' in self.model_lists):
+            [pcd_msn1, pcd_msn2, loss_mst, mean_mst_dis] = self.msn(
+                part, pn_feat)
+
+        # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
+        if ('folding' in self.model_lists):
             mesh_grid = torch.meshgrid([
                 torch.linspace(0.0, 1.0, 64),
                 torch.linspace(0.0, 1.0, self.num_points // 64)
@@ -655,23 +692,9 @@ class Network(nn.Module):
                  torch.reshape(mesh_grid[1], (self.num_points, 1))),
                 dim=1)
             mesh_grid = torch.transpose(mesh_grid, 0, 1).unsqueeze(0).repeat(
-                sp_feat_deconv1.shape[0], 1, 1).cuda()
+                part.shape[0], 1, 1).cuda()
             fourier_map3 = Periodics()
             # mesh_grid = fourier_map3(mesh_grid)
-            y = sp_feat_deconv1[:, :, 0, :]
-            pcd_softpool_trans = self.decoder1(y)
-            pcd_softpool = pcd_softpool_trans.transpose(1, 2).contiguous()
-
-            y = sp_feat_ae[:, :, 0, :]
-            pcd_sp_ae = self.decoder1(y)
-            pcd_ae = pcd_sp_ae.transpose(1, 2).contiguous()
-
-        if ('msn' in self.model_lists):
-            [pcd_msn1, pcd_msn2, loss_mst, mean_mst_dis] = self.msn(
-                part, pn_feat)
-
-        # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
-        if ('folding' in self.model_lists):
             pn_feat = pn_feat.unsqueeze(2).expand(
                 part.size(0), self.dim_pn, self.num_points).contiguous()
             y = torch.cat((mesh_grid, pn_feat), 1).contiguous()
@@ -684,26 +707,7 @@ class Network(nn.Module):
                 grnet_seg_fine, grnet_seg_coar, voxels
             ] = self.grnet(part.transpose(1, 2))
 
-        if ('softpool' in self.model_lists):
-            id1 = torch.ones(
-                pcd_grnet_voxel.transpose(1, 2).shape[0], 1,
-                pcd_grnet_voxel.transpose(1, 2).shape[2]).cuda().contiguous()
-            id2 = torch.zeros(pcd_softpool_trans.shape[0], 1,
-                              pcd_softpool_trans.shape[2]).cuda().contiguous()
-            # fuse_observe = torch.cat((part, id1), 1)
-            fuse_observe = torch.cat((pcd_grnet_voxel.transpose(1, 2), id1), 1)
-            # fuse_observe = torch.cat((pcd_softpool_trans[:, :, :self.num_points // 2:], id1), 1)
-            fuse_expand = torch.cat((pcd_softpool_trans, id2), 1)
-            fusion = torch.cat((fuse_observe, fuse_expand), 2)
-
-            resampled_idx = MDS_module.minimum_density_sample(
-                fusion[:, 0:3, :].transpose(1, 2).contiguous(),
-                pcd_softpool.shape[1], mean_mst_dis)
-            fusion = MDS_module.gather_operation(fusion, resampled_idx)
-            delta = self.res(fusion)
-            fusion = fusion[:, 0:3, :]
-            pcd_fusion_trans = fusion + delta
-            pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
+        if ('pointcnn' in self.model_lists):
 
         pred_softpool = [
             pcd_softpool, pcd_ae, pcd_fusion, input_chosen, loss_trans

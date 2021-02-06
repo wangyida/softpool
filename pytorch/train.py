@@ -18,7 +18,8 @@ import emd_module as emd
 sys.path.append("./chamfer/")
 import dist_chamfer as cd
 from extensions.gridding_loss import GriddingLoss
-gridding_loss = GriddingLoss(scales=[64, 128], alphas=[0.5, 0.5])
+# gridding_loss = GriddingLoss(scales=[64, 128], alphas=[0.5, 0.5])
+gridding_loss = GriddingLoss(scales=[128], alphas=[0.5])
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -37,6 +38,8 @@ parser.add_argument(
     '--env', type=str, default="SoftPoolNet", help='visdom environment')
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
+parser.add_argument(
+    '--methods', nargs='+', default=['softpool', 'msn', 'folding', 'grnet'], help='a list of methods')
 parser.add_argument('--savepath', type=str, default='', help='path for saving')
 
 opt = parser.parse_args()
@@ -121,7 +124,7 @@ class FullModel(nn.Module):
         else:
             emd4 = []
 
-        return output1, output2, output3, output4, _, emd1, emd2, emd3, emd4, loss_net
+        return output1, output2, output3, output4, emd1, emd2, emd3, emd4, loss_net
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -163,10 +166,10 @@ print("Train set size: ", len_dataset)
 network = Network(
     num_points=opt.num_points,
     n_regions=opt.n_regions,
-    model_lists=['softpool', 'msn', 'folding', 'grnet'])
+    model_lists=['softpool', 'msn', 'folding'])
 """
 network = Network(
-    num_points=opt.num_points, n_regions=opt.n_regions, model_lists=['grnet'])
+    num_points=opt.num_points, n_regions=opt.n_regions, model_lists=opt.methods)
 network = torch.nn.DataParallel(FullModel(network))
 network.cuda()
 network.module.model.apply(weights_init)  #initialization of the weight
@@ -199,7 +202,7 @@ labels_generated_points = labels_generated_points.contiguous().view(-1)
 
 for epoch in range(opt.nepoch):
     #TRAIN MODE
-    train_loss.reset()
+    # train_loss.reset()
     network.module.model.train()
 
     # learning rate schedule
@@ -217,14 +220,14 @@ for epoch in range(opt.nepoch):
         part_seg = part_seg.float().cuda()
         gt = gt.float().cuda()
         gt_seg = gt_seg.float().cuda()
-        output1, output2, output3, output4, _, emd1, emd2, emd3, emd4, loss_net = network(
+        output1, output2, output3, output4, emd1, emd2, emd3, emd4, loss_net = network(
             part.transpose(2, 1), gt, part_seg, gt_seg, 0.005, 50)
         """
         loss_net = [emd1 if emd1 else torch.zeros(1)] + [emd2 if emd2 else torch.zeros(1)] + [emd3 if emd3 else torch.zeros(1)] + [emd4 if emd4 else torch.zeros(1)]
         """
 
         loss_net.backward()
-        train_loss.update(emd4.mean().item())
+        # train_loss.update(emd4.mean().item())
         optimizer.step()
 
         if i % 10 == 0:
@@ -235,11 +238,11 @@ for epoch in range(opt.nepoch):
                        '%s/network.pth' % (dir_name))
 
         print(opt.env +
-              ' train [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f' %
+              ' train [%d: %d/%d]  emd1: %.2f emd2: %.2f emd3: %.2f emd4: %.2f' %
               (epoch, i, len_dataset / opt.batchSize,
                emd1.item() if emd1 else 0, emd2.item() if emd2 else 0,
                emd3.item() if emd3 else 0, emd4.item() if emd4 else 0))
-    train_curve.append(train_loss.avg)
+    # train_curve.append(train_loss.avg)
 
     # VALIDATION
     if epoch % 200 == 199:
@@ -252,24 +255,12 @@ for epoch in range(opt.nepoch):
                 part_seg = part_seg.float().cuda()
                 gt = gt.float().cuda()
                 gt_seg = gt_seg.float().cuda()
-                output1, output2, output3, output4, _, emd1, emd2, emd3, emd4, _ = network(
+                output1, output2, output3, output4, emd1, emd2, emd3, emd4, _ = network(
                     part.transpose(2, 1), gt, part_seg, gt_seg, 0.004, 3000)
-                val_loss.update(emd4.mean().item())
+                # val_loss.update(emd4.mean().item())
                 idx = random.randint(0, part.size()[0] - 1)
                 print(opt.env +
-                      ' val [%d: %d/%d]  emd1: %f emd2: %f emd3: %f emd4: %f' %
+                      ' val [%d: %d/%d]  emd1: %.2f emd2: %.2f emd3: %.2f emd4: %.2f' %
                       (epoch, i, len_dataset / opt.batchSize,
                        emd1.item() if emd1 else 0, emd2.item() if emd2 else 0,
                        emd3.item() if emd3 else 0, emd4.item() if emd4 else 0))
-
-    val_curve.append(val_loss.avg)
-
-    log_table = {
-        "train_loss": train_loss.avg,
-        "val_loss": val_loss.avg,
-        "epoch": epoch,
-        "lr": lrate,
-        "bestval": best_val_loss,
-    }
-    with open(logname, 'a') as f:
-        f.write('json_stats: ' + json.dumps(log_table) + '\n')
