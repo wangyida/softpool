@@ -306,7 +306,7 @@ class PointGenCon(nn.Module):
 
 
 class MSN(nn.Module):
-    def __init__(self, num_points=2048, bottleneck_size=256, n_primitives=16):
+    def __init__(self, num_points=8192, bottleneck_size=256, n_primitives=16):
         super(MSN, self).__init__()
         self.num_points = num_points
         self.bottleneck_size = bottleneck_size
@@ -511,7 +511,8 @@ class Network(nn.Module):
                 nn.MaxPool2d(
                     kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
                 nn.MaxPool2d(
-                    kernel_size=(1, self.n_regions), stride=(1, self.n_regions)),
+                    kernel_size=(1, self.n_regions),
+                    stride=(1, self.n_regions)),
                 nn.ConvTranspose2d(
                     2 * dim_pn,
                     2 * dim_pn,
@@ -591,26 +592,30 @@ class Network(nn.Module):
         if ('pointcnn' in self.model_lists):
             x = 8
             xconv_param_name = ('K', 'D', 'P', 'C')
-            xconv_params = [dict(zip(xconv_param_name, xconv_param)) for xconv_param in
-                        [(8, 1, -1, 256),
-                         (12, 2, 768, 256),
-                         (16, 2, 384, 512),
-                         (16, 4, 128, 1024)]]
+            xconv_params = [
+                dict(zip(xconv_param_name, xconv_param))
+                for xconv_param in [(8, 1, -1,
+                                     256), (12, 2, 768,
+                                            256), (16, 2, 384,
+                                                   512), (16, 4, 128, 1024)]
+            ]
 
             xdconv_param_name = ('K', 'D', 'pts_layer_idx', 'qrs_layer_idx')
-            xdconv_params = [dict(zip(xdconv_param_name, xdconv_param)) for xdconv_param in
-                        [(16, 4, 3, 3),
-                          (16, 2, 3, 2),
-                          (12, 2, 2, 1),
-                          (8, 2, 1, 0)]]
+            xdconv_params = [
+                dict(zip(xdconv_param_name, xdconv_param))
+                for xdconv_param in [(16, 4, 3, 3), (16, 2, 3,
+                                                     2), (12, 2, 2,
+                                                          1), (8, 2, 1, 0)]
+            ]
 
             fc_param_name = ('C', 'dropout_rate')
-            fc_params = [dict(zip(fc_param_name, fc_param)) for fc_param in
-                     [(32 * x, 0.0),
-                      (32 * x, 0.5),
-                      (3,0.5)]]
+            fc_params = [
+                dict(zip(fc_param_name, fc_param))
+                for fc_param in [(32 * x, 0.0), (32 * x, 0.5), (3, 0.5)]
+            ]
 
-            self.pointcnn = PointCnnLayer(["features"],[ xconv_params,xdconv_params,fc_params ]).cuda()
+            self.pointcnn = PointCnnLayer(
+                ["features"], [xconv_params, xdconv_params, fc_params]).cuda()
         if ('pcn' in self.model_lists):
             self.pcn = PCNEMD().cuda()
 
@@ -692,9 +697,8 @@ class Network(nn.Module):
 
             id2 = torch.zeros(pcd_softpool_trans.shape[0], 1,
                               pcd_softpool_trans.shape[2]).cuda().contiguous()
-            id1 = torch.ones(
-                part.shape[0], 1,
-                part.shape[2]).cuda().contiguous()
+            id1 = torch.ones(part.shape[0], 1,
+                             part.shape[2]).cuda().contiguous()
             fuse_observe = torch.cat((part, id1), 1)
             fuse_expand = torch.cat((pcd_softpool_trans, id2), 1)
             fusion = torch.cat((fuse_observe, fuse_expand), 2)
@@ -738,7 +742,7 @@ class Network(nn.Module):
             pcd_pcnn = self.pointcnn(part.transpose(1, 2))
 
         if ('pcn' in self.model_lists):
-            pcn_coarse, pcn_fine = self.pcn(part[:,:,:1024].transpose(1, 2))
+            pcn_coarse, pcn_fine = self.pcn(part.transpose(1, 2))
 
         pred_softpool = [
             pcd_softpool, pcd_ae, pcd_fusion, input_chosen, loss_trans
@@ -751,5 +755,6 @@ class Network(nn.Module):
             grnet_seg_coar, voxels
         ] if ('grnet' in self.model_lists) else []
         pred_pcnn = [pcd_pcnn] if ('pointcnn' in self.model_lists) else []
-        pred_pcn = [pcn_coarse, pcn_fine] if ('pcn' in self.model_lists) else []
+        pred_pcn = [pcn_coarse, pcn_fine
+                    ] if ('pcn' in self.model_lists) else []
         return pred_softpool, pred_msn, pred_folding, pred_grnet, pred_pcnn, pred_pcn

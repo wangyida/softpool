@@ -39,7 +39,10 @@ parser.add_argument(
 parser.add_argument(
     '--dataset', type=str, default="shapenet", help='dataset for evaluation')
 parser.add_argument(
-    '--methods', nargs='+', default=['softpool', 'msn', 'folding', 'grnet'], help='a list of methods')
+    '--methods',
+    nargs='+',
+    default=['softpool', 'msn', 'folding', 'grnet'],
+    help='a list of methods')
 parser.add_argument('--savepath', type=str, default='', help='path for saving')
 
 opt = parser.parse_args()
@@ -54,48 +57,49 @@ class FullModel(nn.Module):
         self.CD = cd.chamferDist()
 
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
-        output1, output2, output3, output4, output5, output6 = self.model(parts, part_seg)
+        output1, output2, output3, output4, output5, output6 = self.model(
+            parts, part_seg)
         loss_net = torch.zeros(1).cuda()
         if output1:
             dist1, dist2, _, _ = self.CD(output1[0], gt)
-            emd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output1[1], part)
-            emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output1[2], gt)
-            emd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            emd1 = emd1.mean()
-            loss_net += emd1
+            cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd1 = cd1.mean()
+            loss_net += cd1
         else:
-            emd1 = []
+            cd1 = []
 
         if output2:
             dist1, dist2, _, _ = self.CD(output2[0], gt)
-            emd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output2[1], gt)
-            emd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            emd2 += 0.1 * output2[2]
-            emd2 = emd2.mean()
-            loss_net += emd2
+            cd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd2 += 0.1 * output2[2]
+            cd2 = cd2.mean()
+            loss_net += cd2
         else:
-            emd2 = []
+            cd2 = []
 
         if output3:
             dist1, dist2, _, _ = self.CD(output3[0], gt)
-            emd3 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            emd3 = emd3.mean()
-            loss_net += emd3
+            cd3 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd3 = cd3.mean()
+            loss_net += cd3
         else:
-            emd3 = []
+            cd3 = []
 
         if output4:
             dist1, dist2, _, _ = self.CD(output4[0], gt)
-            emd4 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd4 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
 
             grid_loss = gridding_loss(output4[0], gt)
-            emd4 += grid_loss
+            cd4 += grid_loss
 
             dist1, dist2, idx1, _ = self.CD(output4[1], gt)
-            emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
 
             SM = torch.nn.Softmax(dim=-1)
             sem_feat = SM(output4[3][:, :, :]).float()
@@ -106,10 +110,10 @@ class FullModel(nn.Module):
                 0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
                 (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat),
                 dim=-1))
-            emd4 += 0.01 * loss_sem_fine
+            cd4 += 0.01 * loss_sem_fine
 
             dist1, dist2, idx1, _ = self.CD(output4[2], gt)
-            emd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd4 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             sem_feat = SM(output4[4][:, :, :]).float()
             labels_gt = torch.gather(gt_seg[:, :, 0], dim=1, index=idx1.long())
             sem_gt = torch.nn.functional.one_hot(
@@ -118,31 +122,31 @@ class FullModel(nn.Module):
                 0.97 * sem_gt * torch.log(1e-6 + sem_feat) +
                 (1 - 0.97) * (1 - sem_gt) * torch.log(1e-6 + 1 - sem_feat),
                 dim=-1))
-            emd4 += 0.01 * loss_sem_coar
-            emd4 = emd4.mean()
-            loss_net += emd4
+            cd4 += 0.01 * loss_sem_coar
+            cd4 = cd4.mean()
+            loss_net += cd4
         else:
-            emd4 = []
+            cd4 = []
 
         if output5:
             dist1, dist2, _, _ = self.CD(output5[0], gt)
-            emd5 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            emd5 = emd5.mean()
-            loss_net += emd5
+            cd5 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd5 = cd5.mean()
+            loss_net += cd5
         else:
-            emd5 = []
+            cd5 = []
 
         if output6:
             dist1, dist2, _, _ = self.CD(output6[0], gt)
-            emd6 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd6 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output6[1], gt)
-            emd6 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            emd6 = emd6.mean()
-            loss_net += emd6
+            cd6 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            cd6 = cd6.mean()
+            loss_net += cd6
         else:
-            emd6 = []
+            cd6 = []
 
-        return output1, output2, output3, output4, output5, output6, emd1, emd2, emd3, emd4, emd5, emd6, loss_net
+        return output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_net
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -181,7 +185,9 @@ dataloader_test = torch.utils.data.DataLoader(
 len_dataset = len(dataset)
 print("Train set size: ", len_dataset)
 network = Network(
-    num_points=opt.num_points, n_regions=opt.n_regions, model_lists=opt.methods)
+    num_points=opt.num_points,
+    n_regions=opt.n_regions,
+    model_lists=opt.methods)
 network = torch.nn.DataParallel(FullModel(network))
 network.cuda()
 # network.module.model.apply(weights_init)  #initialization of the weight
@@ -232,14 +238,14 @@ for epoch in range(opt.nepoch):
         part_seg = part_seg.float().cuda()
         gt = gt.float().cuda()
         gt_seg = gt_seg.float().cuda()
-        output1, output2, output3, output4, output5, output6, emd1, emd2, emd3, emd4, emd5, emd6, loss_net = network(
+        output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_net = network(
             part.transpose(2, 1), gt, part_seg, gt_seg, 0.005, 50)
         """
-        loss_net = [emd1 if emd1 else torch.zeros(1)] + [emd2 if emd2 else torch.zeros(1)] + [emd3 if emd3 else torch.zeros(1)] + [emd4 if emd4 else torch.zeros(1)]
+        loss_net = [cd1 if cd1 else torch.zeros(1)] + [cd2 if cd2 else torch.zeros(1)] + [cd3 if cd3 else torch.zeros(1)] + [cd4 if cd4 else torch.zeros(1)]
         """
 
         loss_net.backward()
-        # train_loss.update(emd4.mean().item())
+        # train_loss.update(cd4.mean().item())
         optimizer.step()
 
         if i % 10 == 0:
@@ -249,11 +255,13 @@ for epoch in range(opt.nepoch):
             torch.save(network.module.model.state_dict(),
                        '%s/network.pth' % (dir_name))
 
-        print(opt.env +
-              ' train [%d: %d/%d]  emd1: %.2f emd2: %.2f emd3: %.2f emd4: %.2f emd5: %.2f emd6: %.2f' %
-              (epoch, i, len_dataset / opt.batchSize,
-               emd1.item() if emd1 else 0, emd2.item() if emd2 else 0,
-               emd3.item() if emd3 else 0, emd4.item() if emd4 else 0, emd5.item() if emd5 else 0, emd6.item() if emd6 else 0))
+        print(
+            opt.env +
+            ' train [%d: %d/%d]  cd1: %.2f cd2: %.2f cd3: %.2f cd4: %.2f cd5: %.2f cd6: %.2f'
+            % (epoch, i, len_dataset / opt.batchSize,
+               cd1.item() * 1e4 if cd1 else 0, cd2.item() * 1e4 if cd2 else 0,
+               cd3.item() * 1e4 if cd3 else 0, cd4.item() * 1e4 if cd4 else 0,
+               cd5.item() * 1e4 if cd5 else 0, cd6.item() * 1e4 if cd6 else 0))
     # train_curve.append(train_loss.avg)
 
     # VALIDATION
@@ -267,12 +275,13 @@ for epoch in range(opt.nepoch):
                 part_seg = part_seg.float().cuda()
                 gt = gt.float().cuda()
                 gt_seg = gt_seg.float().cuda()
-                output1, output2, output3, output4, output5, output6, emd1, emd2, emd3, emd4, emd5, emd6, _ = network(
+                output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, _ = network(
                     part.transpose(2, 1), gt, part_seg, gt_seg, 0.004, 3000)
-                # val_loss.update(emd4.mean().item())
+                # val_loss.update(cd4.mean().item())
                 idx = random.randint(0, part.size()[0] - 1)
-                print(opt.env +
-                      ' val [%d: %d/%d]  emd1: %.2f emd2: %.2f emd3: %.2f emd4: %.2f' %
-                      (epoch, i, len_dataset / opt.batchSize,
-                       emd1.item() if emd1 else 0, emd2.item() if emd2 else 0,
-                       emd3.item() if emd3 else 0, emd4.item() if emd4 else 0))
+                print(
+                    opt.env +
+                    ' val [%d: %d/%d]  cd1: %.2f cd2: %.2f cd3: %.2f cd4: %.2f'
+                    % (epoch, i, len_dataset / opt.batchSize,
+                       cd1.item() if cd1 else 0, cd2.item() if cd2 else 0,
+                       cd3.item() if cd3 else 0, cd4.item() if cd4 else 0))

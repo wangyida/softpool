@@ -6,18 +6,19 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils import data
 from torch import cuda, FloatTensor, LongTensor
-from xConv import XConv,Dense
+from xConv import XConv, Dense
 import sys
 
-from sklearn.neighbors import  NearestNeighbors
+from sklearn.neighbors import NearestNeighbors
 #import matplotlib.pyplot as plt
-params = {'batch_size': 5,
-          'shuffle': False,
-          'num_workers': 4}
-def knn_indices_func_cpu(rep_pts : FloatTensor,  # (N, pts, dim)
-                         pts : FloatTensor,      # (N, x, dim)
-                         K : int, D : int
-                        ) -> LongTensor:         # (N, pts, K)
+params = {'batch_size': 5, 'shuffle': False, 'num_workers': 4}
+
+
+def knn_indices_func_cpu(
+        rep_pts: FloatTensor,  # (N, pts, dim)
+        pts: FloatTensor,  # (N, x, dim)
+        K: int,
+        D: int) -> LongTensor:  # (N, pts, K)
     """
     CPU-based Indexing function based on K-Nearest Neighbors search.
     :param rep_pts: Representative points.
@@ -38,10 +39,10 @@ def knn_indices_func_cpu(rep_pts : FloatTensor,  # (N, pts, dim)
 
     for n, p in enumerate(rep_pts):
         P_particular = pts[n]
-        nbrs = NearestNeighbors(D*K + 1, algorithm = "auto").fit(P_particular)
+        nbrs = NearestNeighbors(D * K + 1, algorithm="auto").fit(P_particular)
         indices = nbrs.kneighbors(p)[1]
-        region_idx.append(indices[:,1::D])
+        region_idx.append(indices[:, 1::D])
 
-    region_idx = torch.from_numpy(np.stack(region_idx, axis = 0))
+    region_idx = torch.from_numpy(np.stack(region_idx, axis=0))
 
     return region_idx
