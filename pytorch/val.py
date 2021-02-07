@@ -229,21 +229,14 @@ elif opt.dataset == 'shapenet':
 
 
 def labels_points(num_points, divisions):
-    labels_generated_points = torch.Tensor(
+    labels_for_points = torch.Tensor(
         range(1, (divisions + 1) * (num_points // divisions) + 1))
-    labels_generated_points = labels_generated_points.view(
+    labels_for_points = labels_for_points.view(
         num_points // divisions, (divisions + 1)).transpose(0, 1)
-    labels_generated_points = (labels_generated_points) % (divisions + 1)
-    labels_generated_points = labels_generated_points.contiguous().view(-1)
-    return labels_generated_points
+    labels_for_points = (labels_for_points) % (divisions + 1)
+    labels_for_points = labels_for_points.contiguous().view(-1)
+    return labels_for_points
 
-
-"""
-labels_inputs_points = torch.Tensor(range(1, opt.num_points + 1)).view(
-    1, opt.num_points).transpose(0, 1)
-labels_inputs_points = (labels_inputs_points) % (opt.num_points + 1)
-labels_inputs_points = labels_inputs_points.contiguous().view(-1)
-"""
 
 with torch.no_grad():
     for i, model in enumerate(model_list):
@@ -378,11 +371,11 @@ with torch.no_grad():
         # save selected points on input
         if output1:
             pts_coord = output1[3][0].data.cpu()[:, 0:3]
-            labels_inputs_points = labels_points(
+            labels_for_points = labels_points(
                 num_points=opt.num_points, divisions=opt.num_points)
-            maxi = labels_inputs_points.max()
+            maxi = labels_for_points.max()
             pts_color = matplotlib.cm.gist_rainbow(
-                labels_inputs_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
+                labels_for_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
             points_save(
                 points=pts_coord,
                 colors=pts_color,
@@ -395,9 +388,9 @@ with torch.no_grad():
             pts_coord = []
             for i in range(np.size(gt_regions)):
                 pts_coord.append(gt_regions[i][0].data.cpu()[:, 0:3])
-                maxi = labels_inputs_points.max()
+                maxi = labels_for_points.max()
                 pts_color = matplotlib.cm.plasma(
-                    labels_inputs_points[0:gt_regions[i].size(1)] / maxi)[:, 0:3]
+                    labels_for_points[0:gt_regions[i].size(1)] / maxi)[:, 0:3]
                 points_save(
                     points=pts_coord[i],
                     colors=pts_color,
@@ -410,11 +403,11 @@ with torch.no_grad():
             for stage in range(3):
                 pts_coord = output1[stage][0].data.cpu()[:, 0:3]
                 if stage == 0:
-                    labels_generated_points = labels_points(
+                    labels_for_points = labels_points(
                         num_points=opt.num_points, divisions=2)
-                    maxi = labels_generated_points.max()
+                    maxi = labels_for_points.max()
                     pts_color = matplotlib.cm.gist_rainbow(
-                        labels_generated_points[0:output1[stage].size(1)] /
+                        labels_for_points[0:output1[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
                     pts_color = matplotlib.cm.cool(
@@ -438,11 +431,11 @@ with torch.no_grad():
             for stage in range(2):
                 pts_coord = output2[stage][0].data.cpu()[:, 0:3]
                 if stage == 0:
-                    labels_generated_points = labels_points(
+                    labels_for_points = labels_points(
                         num_points=8192, divisions=16)
-                    maxi = labels_generated_points.max()
+                    maxi = labels_for_points.max()
                     pts_color = matplotlib.cm.gist_rainbow(
-                        labels_generated_points[0:output2[stage].size(1)] /
+                        labels_for_points[0:output2[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
                     pts_color = matplotlib.cm.cool(
@@ -458,11 +451,11 @@ with torch.no_grad():
             # save output3
             for stage in range(len(output3)):
                 pts_coord = output3[stage][0].data.cpu()[:, 0:3]
-                labels_inputs_points = labels_points(
+                labels_for_points = labels_points(
                     num_points=opt.num_points, divisions=opt.num_points)
-                maxi = labels_inputs_points.max()
+                maxi = labels_for_points.max()
                 pts_color = matplotlib.cm.gist_rainbow(
-                    labels_inputs_points[0:input_chosen.size(1)] /
+                    labels_for_points[0:input_chosen.size(1)] /
                     maxi)[:, 0:3]
                 points_save(
                     points=pts_coord,
@@ -525,8 +518,16 @@ with torch.no_grad():
             # save outpu6
             for stage in range(len(output6)):
                 pts_coord = output6[stage][0].data.cpu()[:, 0:3]
-                pts_color = matplotlib.cm.cool(
-                    output6[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                if stage == 1:
+                    labels_for_points = labels_points(
+                        num_points=16384, divisions=1024)
+                    maxi = labels_for_points.max()
+                    pts_color = matplotlib.cm.gist_rainbow(
+                        labels_for_points[0:output6[stage].size(1)] /
+                        maxi)[:, 0:3]
+                else:
+                    pts_color = matplotlib.cm.cool(
+                        output6[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
