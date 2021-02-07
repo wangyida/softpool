@@ -18,8 +18,8 @@ import emd_module as emd
 sys.path.append("./chamfer/")
 import dist_chamfer as cd
 from extensions.gridding_loss import GriddingLoss
-# gridding_loss = GriddingLoss(scales=[64, 128], alphas=[0.5, 0.5])
-gridding_loss = GriddingLoss(scales=[128], alphas=[0.5])
+gridding_loss = GriddingLoss(scales=[64, 128], alphas=[0.5, 0.5])
+# gridding_loss = GriddingLoss(scales=[128], alphas=[0.5])
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

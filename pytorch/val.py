@@ -329,7 +329,7 @@ with torch.no_grad():
                 hash_tab[str(subfold)]['cd5'] += 0
 
             if output6:
-                dist, _, _, _ = CD.forward(input1=output6[0], input2=gt)
+                dist, _, _, _ = CD.forward(input1=output6[1], input2=gt)
                 cd6 = dist.mean() * 1e4
                 hash_tab[str(subfold)]['cd6'] += cd6
             else:
@@ -371,7 +371,7 @@ with torch.no_grad():
         # save selected points on input
         if output1:
             pts_coord = output1[3][0].data.cpu()[:, 0:3]
-            maxi = labels_inputs_points.max() // 2
+            maxi = labels_inputs_points.max()
             pts_color = matplotlib.cm.gist_rainbow(
                 labels_inputs_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
             points_save(
@@ -440,10 +440,9 @@ with torch.no_grad():
             # save output3
             for stage in range(len(output3)):
                 pts_coord = output3[stage][0].data.cpu()[:, 0:3]
-                maxi = labels_generated_points.max()
-                pts_color = matplotlib.cm.rainbow(
-                    labels_generated_points[0:output3[stage].size(1)] /
-                    maxi)[:, 0:3]
+                maxi = labels_inputs_points.max()
+                pts_color = matplotlib.cm.gist_rainbow(
+                    labels_inputs_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
@@ -509,7 +508,7 @@ with torch.no_grad():
                     pfile=model)
 
         if output6:
-            # save outpu6t
+            # save outpu6
             for stage in range(len(output6)):
                 pts_coord = output6[stage][0].data.cpu()[:, 0:3]
                 maxi = labels_generated_points.max()
