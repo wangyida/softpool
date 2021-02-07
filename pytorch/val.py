@@ -520,7 +520,7 @@ with torch.no_grad():
                     colors=pts_color,
                     root='pcds/output6',
                     child=subfold,
-                    pfile=model)
+                    pfile=model + '-' + str(stage))
 
     if opt.dataset == 'shapenet' and complete3d_benchmark == False:
         for i in [
