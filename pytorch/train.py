@@ -54,7 +54,7 @@ class FullModel(nn.Module):
         self.CD = cd.chamferDist()
 
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
-        output1, output2, output3, output4, output5 = self.model(parts, part_seg)
+        output1, output2, output3, output4, output5, output6 = self.model(parts, part_seg)
         loss_net = torch.zeros(1).cuda()
         if output1:
             dist1, dist2, _, _ = self.CD(output1[0], gt)
@@ -127,16 +127,22 @@ class FullModel(nn.Module):
         if output5:
             dist1, dist2, _, _ = self.CD(output5[0], gt)
             emd5 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            """
-            dist1, dist2, _, _ = self.CD(output5[1], gt)
-            emd5 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            """
             emd5 = emd5.mean()
             loss_net += emd5
         else:
             emd5 = []
 
-        return output1, output2, output3, output4, output5, emd1, emd2, emd3, emd4, emd5, loss_net
+        if output6:
+            dist1, dist2, _, _ = self.CD(output6[0], gt)
+            emd6 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            dist1, dist2, _, _ = self.CD(output6[1], gt)
+            emd6 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            emd6 = emd6.mean()
+            loss_net += emd6
+        else:
+            emd6 = []
+
+        return output1, output2, output3, output4, output5, output6, emd1, emd2, emd3, emd4, emd5, emd6, loss_net
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -174,17 +180,11 @@ dataloader_test = torch.utils.data.DataLoader(
 
 len_dataset = len(dataset)
 print("Train set size: ", len_dataset)
-"""
-network = Network(
-    num_points=opt.num_points,
-    n_regions=opt.n_regions,
-    model_lists=['softpool', 'msn', 'folding'])
-"""
 network = Network(
     num_points=opt.num_points, n_regions=opt.n_regions, model_lists=opt.methods)
 network = torch.nn.DataParallel(FullModel(network))
 network.cuda()
-network.module.model.apply(weights_init)  #initialization of the weight
+# network.module.model.apply(weights_init)  #initialization of the weight
 
 if opt.model != '':
     network.module.model.load_state_dict(torch.load(opt.model))
@@ -232,7 +232,7 @@ for epoch in range(opt.nepoch):
         part_seg = part_seg.float().cuda()
         gt = gt.float().cuda()
         gt_seg = gt_seg.float().cuda()
-        output1, output2, output3, output4, output5, emd1, emd2, emd3, emd4, emd5, loss_net = network(
+        output1, output2, output3, output4, output5, output6, emd1, emd2, emd3, emd4, emd5, emd6, loss_net = network(
             part.transpose(2, 1), gt, part_seg, gt_seg, 0.005, 50)
         """
         loss_net = [emd1 if emd1 else torch.zeros(1)] + [emd2 if emd2 else torch.zeros(1)] + [emd3 if emd3 else torch.zeros(1)] + [emd4 if emd4 else torch.zeros(1)]
@@ -250,10 +250,10 @@ for epoch in range(opt.nepoch):
                        '%s/network.pth' % (dir_name))
 
         print(opt.env +
-              ' train [%d: %d/%d]  emd1: %.2f emd2: %.2f emd3: %.2f emd4: %.2f emd5: %.2f' %
+              ' train [%d: %d/%d]  emd1: %.2f emd2: %.2f emd3: %.2f emd4: %.2f emd5: %.2f emd6: %.2f' %
               (epoch, i, len_dataset / opt.batchSize,
                emd1.item() if emd1 else 0, emd2.item() if emd2 else 0,
-               emd3.item() if emd3 else 0, emd4.item() if emd4 else 0, emd5.item() if emd5 else 0))
+               emd3.item() if emd3 else 0, emd4.item() if emd4 else 0, emd5.item() if emd5 else 0, emd6.item() if emd6 else 0))
     # train_curve.append(train_loss.avg)
 
     # VALIDATION
@@ -267,7 +267,7 @@ for epoch in range(opt.nepoch):
                 part_seg = part_seg.float().cuda()
                 gt = gt.float().cuda()
                 gt_seg = gt_seg.float().cuda()
-                output1, output2, output3, output4, output5, emd1, emd2, emd3, emd4, emd5, _ = network(
+                output1, output2, output3, output4, output5, output6, emd1, emd2, emd3, emd4, emd5, emd6, _ = network(
                     part.transpose(2, 1), gt, part_seg, gt_seg, 0.004, 3000)
                 # val_loss.update(emd4.mean().item())
                 idx = random.randint(0, part.size()[0] - 1)

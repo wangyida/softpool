@@ -9,7 +9,7 @@ from collections import OrderedDict
 
 
 class PointCnnLayer(nn.Module):
-    def __init__(self,pc,features,settings):
+    def __init__(self,features,settings):
         """
         :param points: Points cloud
         :param features: features as input, can be None if nothing known
@@ -18,7 +18,7 @@ class PointCnnLayer(nn.Module):
             : setting fc parameters : parameters for the fully convolutional part of the network  :  fc_param_name = ('C', 'dropout_rate')
         """
         super(PointCnnLayer,self).__init__()
-        N = pc
+        # N = pc
         #print("There are " + str(N) + "  points in the begining")
         with_X_transformation = True ## investigating that
         sorting_method = None ## sorting or not points along a dimension
@@ -32,7 +32,7 @@ class PointCnnLayer(nn.Module):
                             C_out = settings[0][0].get('C'),
                             dims = 3,
                             K = settings[0][0].get('K'),
-                            P = N,
+                            P = self.settings[0][0].get('P'),
                             C_mid = settings[0][0].get('C') //2 ,
                             depth_multiplier = 4)  ## First XConvolution
 

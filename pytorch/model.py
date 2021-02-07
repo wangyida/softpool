@@ -589,7 +589,28 @@ class Network(nn.Module):
         if ('grnet' in self.model_lists):
             self.grnet = grnet.GRNet()
         if ('pointcnn' in self.model_lists):
-            ok = True
+            x = 8
+            xconv_param_name = ('K', 'D', 'P', 'C')
+            xconv_params = [dict(zip(xconv_param_name, xconv_param)) for xconv_param in
+                        [(8, 1, -1, 256),
+                         (12, 2, 768, 256),
+                         (16, 2, 384, 512),
+                         (16, 4, 128, 1024)]]
+
+            xdconv_param_name = ('K', 'D', 'pts_layer_idx', 'qrs_layer_idx')
+            xdconv_params = [dict(zip(xdconv_param_name, xdconv_param)) for xdconv_param in
+                        [(16, 4, 3, 3),
+                          (16, 2, 3, 2),
+                          (12, 2, 2, 1),
+                          (8, 2, 1, 0)]]
+
+            fc_param_name = ('C', 'dropout_rate')
+            fc_params = [dict(zip(fc_param_name, fc_param)) for fc_param in
+                     [(32 * x, 0.0),
+                      (32 * x, 0.5),
+                      (3,0.5)]]
+
+            self.pointcnn = PointCnnLayer(["features"],[ xconv_params,xdconv_params,fc_params ]).cuda()
         if ('pcn' in self.model_lists):
             self.pcn = PCNEMD().cuda()
 
@@ -714,33 +735,10 @@ class Network(nn.Module):
             ] = self.grnet(part.transpose(1, 2))
 
         if ('pointcnn' in self.model_lists):
-            x = 8
-            xconv_param_name = ('K', 'D', 'P', 'C')
-            xconv_params = [dict(zip(xconv_param_name, xconv_param)) for xconv_param in
-                        [(8, 1, -1, 256),
-                         (12, 2, 768, 256),
-                         (16, 2, 384, 512),
-                         (16, 4, 128, 1024)]]
-
-            xdconv_param_name = ('K', 'D', 'pts_layer_idx', 'qrs_layer_idx')
-            xdconv_params = [dict(zip(xdconv_param_name, xdconv_param)) for xdconv_param in
-                        [(16, 4, 3, 3),
-                          (16, 2, 3, 2),
-                          (12, 2, 2, 1),
-                          (8, 2, 1, 0)]]
-
-            fc_param_name = ('C', 'dropout_rate')
-            fc_params = [dict(zip(fc_param_name, fc_param)) for fc_param in
-                     [(32 * x, 0.0),
-                      (32 * x, 0.5),
-                      (3,0.5)]]
-
-            self.pointcnn = PointCnnLayer(part.transpose(1, 2), ["features"],[ xconv_params,xdconv_params,fc_params ]).cuda()
             pcd_pcnn = self.pointcnn(part.transpose(1, 2))
-            """
+
+        if ('pcn' in self.model_lists):
             pcn_coarse, pcn_fine = self.pcn(part[:,:,:1024].transpose(1, 2))
-            """
-             
 
         pred_softpool = [
             pcd_softpool, pcd_ae, pcd_fusion, input_chosen, loss_trans
@@ -753,4 +751,5 @@ class Network(nn.Module):
             grnet_seg_coar, voxels
         ] if ('grnet' in self.model_lists) else []
         pred_pcnn = [pcd_pcnn] if ('pointcnn' in self.model_lists) else []
-        return pred_softpool, pred_msn, pred_folding, pred_grnet, pred_pcnn
+        pred_pcn = [pcn_coarse, pcn_fine] if ('pcn' in self.model_lists) else []
+        return pred_softpool, pred_msn, pred_folding, pred_grnet, pred_pcnn, pred_pcn

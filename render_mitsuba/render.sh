@@ -7,7 +7,7 @@ done
 
 for outputx in $(ls $folder_pcds)
 do
-	for categories in $(ls $folder_pcds/output1)
+	for categories in $(ls $folder_pcds/input)
 	do
 		echo $folder_pcds/$outputx/$categories
 		ls $folder_pcds/$outputx/$categories/* > results.list
