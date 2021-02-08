@@ -414,9 +414,6 @@ class Network(nn.Module):
         self.sp_ratio = n_regions
         self.model_lists = model_lists
 
-        self.pn_enc = nn.Sequential(
-            PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),
-            nn.BatchNorm1d(dim_pn), nn.ReLU())
 
         if ('softpool' in self.model_lists):
             self.softpool_enc = SoftPoolFeat(
@@ -425,6 +422,7 @@ class Network(nn.Module):
                 sp_points=2048,
                 sp_ratio=self.sp_ratio)
 
+            self.expansion = expansion.expansionPenaltyModule()
             # Firstly we do not merge information among regions
             # We merge regional informations in latent space
             self.reg_conv1 = nn.Sequential(
@@ -473,13 +471,6 @@ class Network(nn.Module):
                     stride=(1, ebd_pnt_out),
                     padding=(0, 0)))
 
-            self.reg_conv4 = nn.Sequential(
-                nn.Conv2d(
-                    4 * dim_pn,
-                    4 * dim_pn,
-                    kernel_size=(self.n_regions, 1),
-                    stride=(1, 1)))
-
             self.reg_deconv3 = nn.Sequential(
                 nn.ConvTranspose2d(
                     2 * dim_pn,
@@ -501,16 +492,18 @@ class Network(nn.Module):
                     kernel_size=(1, 1),
                     stride=(1, 1),
                     padding=(0, 0)), nn.Tanh())
-            self.translate = nn.Sequential(
-                nn.Conv2d(dim_pn, dim_pn, kernel_size=(1, 1), stride=(1, 1)),
-                nn.Tanh())
 
             self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
-            self.decoder2 = PointGenCon(bottleneck_size=self.dim_pn + 3 + 2)
             self.res = PointNetRes()
         if ('folding' in self.model_lists):
+            self.pn_enc = nn.Sequential(
+                PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),
+                nn.BatchNorm1d(dim_pn), nn.ReLU())
             self.decoder_fold = PointGenCon(bottleneck_size=2 + self.dim_pn)
         if ('msn' in self.model_lists):
+            self.pn_enc = nn.Sequential(
+                PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),
+                nn.BatchNorm1d(dim_pn), nn.ReLU())
             self.expansion = expansion.expansionPenaltyModule()
             self.msn = MSN()
         if ('grnet' in self.model_lists):
@@ -546,9 +539,9 @@ class Network(nn.Module):
             self.pcn = PCNEMD().cuda()
 
     def forward(self, part, part_seg):
-        pn_feat = self.pn_enc(part)
 
         if ('msn' in self.model_lists):
+            pn_feat = self.pn_enc(part)
             [pcd_msn1, pcd_msn2, loss_mst, mean_mst_dis] = self.msn(
                 part, pn_feat)
 
@@ -568,8 +561,6 @@ class Network(nn.Module):
             input_chosen = sp_feat[:, -3:, 0, :].transpose(1, 2).contiguous()
             input_chosen = torch.gather(
                 part, dim=2, index=sp_idx[:, :3, 0, :].long()).transpose(1, 2)
-
-            loss_trans = feature_transform_regularizer(trans[-3:, -3:])
 
             sp_feat_conv1 = self.reg_conv1(sp_feat)  # 256 points
             sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)  # 256 points
@@ -629,17 +620,21 @@ class Network(nn.Module):
             fuse_expand = torch.cat((pcd_softpool_trans, id2), 1)
             fusion = torch.cat((fuse_observe, fuse_expand), 2)
 
+            dist, _, mean_mst_dis = self.expansion(pcd_softpool, 2048 // np.max((4, self.n_regions)), 1.5)
+            loss_mst = torch.mean(dist)
+
             resampled_idx = MDS_module.minimum_density_sample(
                 fusion[:, 0:3, :].transpose(1, 2).contiguous(),
                 pcd_softpool.shape[1], mean_mst_dis)
+
             fusion = MDS_module.gather_operation(fusion, resampled_idx)
             delta = self.res(fusion)
             fusion = fusion[:, 0:3, :]
             pcd_fusion_trans = fusion + delta
             pcd_fusion = pcd_fusion_trans.transpose(2, 1).contiguous()
 
-        # y = torch.cat((mesh_grid.cuda(), pn_feat), 1).contiguous()
         if ('folding' in self.model_lists):
+            pn_feat = self.pn_enc(part)
             mesh_grid = torch.meshgrid([
                 torch.linspace(0.0, 1.0, 64),
                 torch.linspace(0.0, 1.0, self.num_points // 64)
@@ -671,7 +666,7 @@ class Network(nn.Module):
             pcn_coarse, pcn_fine = self.pcn(part.transpose(1, 2))
 
         pred_softpool = [
-            pcd_softpool, pcd_ae, pcd_fusion, input_chosen, loss_trans
+            pcd_softpool, pcd_ae, pcd_fusion, input_chosen, loss_mst
         ] if ('softpool' in self.model_lists) else []
         pred_msn = [pcd_msn1, pcd_msn2, loss_mst
                     ] if ('msn' in self.model_lists) else []

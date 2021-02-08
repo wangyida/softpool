@@ -68,6 +68,7 @@ class FullModel(nn.Module):
             dist1, dist2, _, _ = self.CD(output1[2], gt)
             cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             cd1 = cd1.mean()
+            cd1 += 0.1 * output1[4]
             loss_net += cd1
         else:
             cd1 = []
@@ -77,8 +78,8 @@ class FullModel(nn.Module):
             cd2 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output2[1], gt)
             cd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            cd2 += 0.1 * output2[2]
             cd2 = cd2.mean()
+            cd2 += 0.1 * output2[2]
             loss_net += cd2
         else:
             cd2 = []

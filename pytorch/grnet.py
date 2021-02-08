@@ -41,7 +41,7 @@ class RandomPointSampling(torch.nn.Module):
 class GRNet(torch.nn.Module):
     def __init__(self):
         super(GRNet, self).__init__()
-        self.scale = 128
+        self.scale = 64
         self.gridding = Gridding(scale=self.scale)
         self.conv1 = torch.nn.Sequential(
             torch.nn.Conv3d(1, 32, kernel_size=4, padding=2),

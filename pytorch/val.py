@@ -347,7 +347,7 @@ with torch.no_grad():
         # save input
         pts_coord = part[0].data.cpu()[:, 0:3]
         mini = part[0].min()
-        pts_color = matplotlib.cm.gray(part[0].data.cpu()[:, 1] + 1)[:, 0:3]
+        pts_color = matplotlib.cm.copper(part[0].data.cpu()[:, 1] + 1)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -379,7 +379,7 @@ with torch.no_grad():
             points_save(
                 points=pts_coord,
                 colors=pts_color,
-                root='pcds/regions_part',
+                root='pcds/input_sort',
                 child=subfold,
                 pfile=model)
 
@@ -404,18 +404,18 @@ with torch.no_grad():
                 pts_coord = output1[stage][0].data.cpu()[:, 0:3]
                 if stage == 0:
                     labels_for_points = labels_points(
-                        num_points=opt.num_points, divisions=2)
+                        num_points=opt.num_points, divisions=np.max((2, opt.n_regions)))
                     maxi = labels_for_points.max()
                     pts_color = matplotlib.cm.gist_rainbow(
                         labels_for_points[0:output1[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
-                    pts_color = matplotlib.cm.gray(
+                    pts_color = matplotlib.cm.copper(
                         output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/output1',
+                    root='pcds/clouds1',
                     child=subfold,
                     pfile=model + '-' + str(stage))
 
@@ -438,12 +438,12 @@ with torch.no_grad():
                         labels_for_points[0:output2[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
-                    pts_color = matplotlib.cm.gray(
+                    pts_color = matplotlib.cm.copper(
                         output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/output2',
+                    root='pcds/clouds2',
                     child=subfold,
                     pfile=model + '-' + str(stage))
 
@@ -460,7 +460,7 @@ with torch.no_grad():
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/output3',
+                    root='pcds/clouds3',
                     child=subfold,
                     pfile=model)
 
@@ -471,7 +471,7 @@ with torch.no_grad():
 
                 dist, _, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
                 if stage == 0:
-                    pts_color = matplotlib.cm.gray(
+                    pts_color = matplotlib.cm.copper(
                         output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 elif stage == 1:
                     pts_color = matplotlib.cm.gist_rainbow(
@@ -485,7 +485,7 @@ with torch.no_grad():
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/output4',
+                    root='pcds/clouds4',
                     child=subfold,
                     pfile=model + '-' + str(stage))
 
@@ -496,7 +496,7 @@ with torch.no_grad():
                 output4[5][0, 0, :, :, :].transpose(2, 0).transpose(2, 1), [0])
             voxels = np.array(voxels.cpu())
             vertices, triangles = mcubes.marching_cubes(voxels, 0)
-            vertices /= 64.0
+            vertices /= 128.0
             vertices -= 0.5
             # vertices[:, 2] += 0.0125
             mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
@@ -505,12 +505,12 @@ with torch.no_grad():
             # save output5
             for stage in range(len(output5)):
                 pts_coord = output5[stage][0].data.cpu()[:, 0:3]
-                pts_color = matplotlib.cm.gray(
+                pts_color = matplotlib.cm.copper(
                     output5[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/output5',
+                    root='pcds/clouds5',
                     child=subfold,
                     pfile=model)
 
@@ -526,12 +526,12 @@ with torch.no_grad():
                         labels_for_points[0:output6[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
-                    pts_color = matplotlib.cm.gray(
+                    pts_color = matplotlib.cm.copper(
                         output6[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/output6',
+                    root='pcds/clouds6',
                     child=subfold,
                     pfile=model + '-' + str(stage))
 
