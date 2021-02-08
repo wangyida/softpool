@@ -355,53 +355,6 @@ class MSN(nn.Module):
         return [out1, out2, loss_mst, mean_mst_dis]
 
 
-class PointGenCon2D(nn.Module):
-    def __init__(self, bottleneck_size=8192):
-        self.bottleneck_size = bottleneck_size
-        super(PointGenCon2D, self).__init__()
-        self.conv1 = torch.nn.Conv2d(
-            self.bottleneck_size,
-            self.bottleneck_size,
-            kernel_size=(1, 1),
-            stride=(1, 1),
-            padding=(0, 0),
-            padding_mode='same')
-        self.conv2 = torch.nn.Conv2d(
-            self.bottleneck_size,
-            self.bottleneck_size // 2,
-            kernel_size=(1, 1),
-            stride=(1, 1),
-            padding=(0, 0),
-            padding_mode='same')
-        self.conv3 = torch.nn.Conv2d(
-            self.bottleneck_size // 2,
-            self.bottleneck_size // 4,
-            kernel_size=(1, 1),
-            stride=(1, 1),
-            padding=(0, 0),
-            padding_mode='same')
-        self.conv4 = torch.nn.Conv2d(
-            self.bottleneck_size // 4,
-            3,
-            kernel_size=(8, 1),
-            stride=(1, 1),
-            padding=(0, 0),
-            padding_mode='same')
-
-        self.th = nn.Tanh()
-        self.bn1 = torch.nn.BatchNorm2d(self.bottleneck_size)
-        self.bn2 = torch.nn.BatchNorm2d(self.bottleneck_size // 2)
-        self.bn3 = torch.nn.BatchNorm2d(self.bottleneck_size // 4)
-
-    def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
-        # x = self.th(self.conv4(x))
-        x = self.conv4(x)
-        return x
-
-
 class PointNetRes(nn.Module):
     def __init__(self):
         super(PointNetRes, self).__init__()
@@ -519,33 +472,6 @@ class Network(nn.Module):
                     kernel_size=(1, ebd_pnt_out),
                     stride=(1, ebd_pnt_out),
                     padding=(0, 0)))
-            """
-            self.embedding = nn.Sequential(
-                nn.MaxPool2d(
-                    kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
-                nn.Conv2d(
-                    2 * dim_pn,
-                    2 * dim_pn,
-                    kernel_size=(1, self.n_regions)),
-                nn.ConvTranspose2d(
-                    2 * dim_pn,
-                    2 * dim_pn,
-                    kernel_size=(1, 4),
-                    stride=(1, 4),
-                    padding=(0, 0)),
-                nn.UpsamplingBilinear2d(scale_factor=(1, 4)),
-                nn.Conv2d(
-                    2 * dim_pn,
-                    2 * dim_pn,
-                    kernel_size=(1, 5),
-                    stride=(1, 1),
-                    padding=(0, 2),
-                    padding_mode='same'),
-                nn.UpsamplingBilinear2d(scale_factor=(1, 16)))
-            """
-            self.pt_mixing = nn.Sequential(
-                nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU(),
-                nn.Linear(256, 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU())
 
             self.reg_conv4 = nn.Sequential(
                 nn.Conv2d(

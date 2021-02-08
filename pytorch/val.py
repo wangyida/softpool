@@ -347,7 +347,7 @@ with torch.no_grad():
         # save input
         pts_coord = part[0].data.cpu()[:, 0:3]
         mini = part[0].min()
-        pts_color = matplotlib.cm.cool(part[0].data.cpu()[:, 1] + 1)[:, 0:3]
+        pts_color = matplotlib.cm.gray(part[0].data.cpu()[:, 1] + 1)[:, 0:3]
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -374,7 +374,7 @@ with torch.no_grad():
             labels_for_points = labels_points(
                 num_points=opt.num_points, divisions=opt.num_points)
             maxi = labels_for_points.max()
-            pts_color = matplotlib.cm.gist_rainbow(
+            pts_color = matplotlib.cm.plasma(
                 labels_for_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
             points_save(
                 points=pts_coord,
@@ -410,7 +410,7 @@ with torch.no_grad():
                         labels_for_points[0:output1[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
-                    pts_color = matplotlib.cm.cool(
+                    pts_color = matplotlib.cm.gray(
                         output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 points_save(
                     points=pts_coord,
@@ -438,7 +438,7 @@ with torch.no_grad():
                         labels_for_points[0:output2[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
-                    pts_color = matplotlib.cm.cool(
+                    pts_color = matplotlib.cm.gray(
                         output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 points_save(
                     points=pts_coord,
@@ -471,7 +471,7 @@ with torch.no_grad():
 
                 dist, _, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
                 if stage == 0:
-                    pts_color = matplotlib.cm.cool(
+                    pts_color = matplotlib.cm.gray(
                         output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 elif stage == 1:
                     pts_color = matplotlib.cm.gist_rainbow(
@@ -496,16 +496,16 @@ with torch.no_grad():
                 output4[5][0, 0, :, :, :].transpose(2, 0).transpose(2, 1), [0])
             voxels = np.array(voxels.cpu())
             vertices, triangles = mcubes.marching_cubes(voxels, 0)
-            vertices /= 128.0
+            vertices /= 64.0
             vertices -= 0.5
-            vertices[:, 2] += 0.0125
+            # vertices[:, 2] += 0.0125
             mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
 
         if output5:
             # save output5
             for stage in range(len(output5)):
                 pts_coord = output5[stage][0].data.cpu()[:, 0:3]
-                pts_color = matplotlib.cm.cool(
+                pts_color = matplotlib.cm.gray(
                     output5[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 points_save(
                     points=pts_coord,
@@ -526,7 +526,7 @@ with torch.no_grad():
                         labels_for_points[0:output6[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
-                    pts_color = matplotlib.cm.cool(
+                    pts_color = matplotlib.cm.gray(
                         output6[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 points_save(
                     points=pts_coord,
