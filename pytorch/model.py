@@ -414,7 +414,6 @@ class Network(nn.Module):
         self.sp_ratio = n_regions
         self.model_lists = model_lists
 
-
         if ('softpool' in self.model_lists):
             self.softpool_enc = SoftPoolFeat(
                 num_points,
@@ -620,7 +619,8 @@ class Network(nn.Module):
             fuse_expand = torch.cat((pcd_softpool_trans, id2), 1)
             fusion = torch.cat((fuse_observe, fuse_expand), 2)
 
-            dist, _, mean_mst_dis = self.expansion(pcd_softpool, 2048 // np.max((4, self.n_regions)), 1.5)
+            dist, _, mean_mst_dis = self.expansion(
+                pcd_softpool, 2048 // np.max((4, self.n_regions)), 1.5)
             loss_mst = torch.mean(dist)
 
             resampled_idx = MDS_module.minimum_density_sample(

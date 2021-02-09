@@ -15,6 +15,7 @@ def train2cabins(windows, num_cabin=8):
     num_points = list(windows.shape)[3]
     cabins = torch.zeros(size_bth, size_feat, regions, num_cabin).cuda()
     points_cabin = num_points // num_cabin
+
     for idx in range(num_cabin):
         cabins[:, :, :, idx] = torch.max(
             windows[:, :, :, idx * points_cabin:(idx + 1) * points_cabin],
@@ -36,36 +37,38 @@ class Sorter(nn.Module):
 
 
 class SoftPool(nn.Module):
-    def __init__(self, regions=16, cabins=8, sp_ratio=4):
+    def __init__(self, regions=16, cabins=8, sp_ratio=4, size_feat=256):
         super(SoftPool, self).__init__()
         self.regions = regions
         self.num_cabin = cabins
         self.sp_ratio = sp_ratio
+        self.size_feat = size_feat
 
-    def forward(self, x):
-        [self.size_bth, self.size_feat, self.pnt_per_sort] = list(x.shape)
-        self.pnt_per_sort //= self.sp_ratio
-        # cabin -2
-        conv2d_1 = nn.Conv2d(
+        self.conv2d_1 = nn.Conv2d(
             self.size_feat, self.size_feat, kernel_size=(1, 3),
             stride=(1, 1)).cuda()
         # cabin -2
-        conv2d_2 = nn.Conv2d(
+        self.conv2d_2 = nn.Conv2d(
             self.size_feat, self.size_feat, kernel_size=(1, 3),
             stride=(1, 1)).cuda()
-        conv2d_3 = nn.Conv2d(
+        self.conv2d_3 = nn.Conv2d(
             self.size_feat,
             self.size_feat,
             kernel_size=(1, self.num_cabin - 2 * (3 - 1)),
             stride=(1, 1)).cuda()
-        conv2d_5 = nn.Conv2d(
+        self.conv2d_5 = nn.Conv2d(
             self.size_feat,
             self.size_feat,
             kernel_size=(self.regions, 1),
             stride=(1, 1)).cuda()
 
-        sorter = Sorter(self.size_feat, self.regions)
-        val_activa, id_activa = sorter(x)
+        self.sorter = Sorter(self.size_feat, self.regions)
+
+    def forward(self, x):
+        [self.size_bth, self.size_feat, self.pnt_per_sort] = list(x.shape)
+        self.pnt_per_sort //= self.sp_ratio
+
+        val_activa, id_activa = self.sorter(x)
 
         # initialize empty space for softpool feature
         sp_cube = torch.zeros(self.size_bth, self.size_feat, self.regions,
@@ -92,12 +95,12 @@ class SoftPool(nn.Module):
             cabins, repeats=points_cabin, dim=3)
 
         # merge cabins in train
-        trains = conv2d_3(conv2d_2(conv2d_1(cabins)))
+        trains = self.conv2d_3(self.conv2d_2(self.conv2d_1(cabins)))
         # we need to use succession manner to repeat cabin to fit with cube
         sp_trains = trains.repeat(1, 1, 1, self.pnt_per_sort)
 
         # now make a station
-        station = conv2d_5(trains)
+        station = self.conv2d_5(trains)
         sp_station = station.repeat(1, 1, self.regions, self.pnt_per_sort)
 
         scope = 'local'

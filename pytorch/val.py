@@ -231,8 +231,9 @@ elif opt.dataset == 'shapenet':
 def labels_points(num_points, divisions):
     labels_for_points = torch.Tensor(
         range(1, (divisions + 1) * (num_points // divisions) + 1))
-    labels_for_points = labels_for_points.view(
-        num_points // divisions, (divisions + 1)).transpose(0, 1)
+    labels_for_points = labels_for_points.view(num_points // divisions,
+                                               (divisions + 1)).transpose(
+                                                   0, 1)
     labels_for_points = (labels_for_points) % (divisions + 1)
     labels_for_points = labels_for_points.contiguous().view(-1)
     return labels_for_points
@@ -349,7 +350,6 @@ with torch.no_grad():
         if opt.dataset == 'suncg':
             model = 'all_samples/' + model
 
-
         # save input
         pts_coord = part[0].data.cpu()[:, 0:3]
         mini = part[0].min()
@@ -410,7 +410,8 @@ with torch.no_grad():
                 pts_coord = output1[stage][0].data.cpu()[:, 0:3]
                 if stage == 0:
                     labels_for_points = labels_points(
-                        num_points=opt.num_points, divisions=np.max((2, opt.n_regions)))
+                        num_points=opt.num_points,
+                        divisions=np.max((2, opt.n_regions)))
                     maxi = labels_for_points.max()
                     pts_color = matplotlib.cm.gist_rainbow(
                         labels_for_points[0:output1[stage].size(1)] /
@@ -461,8 +462,7 @@ with torch.no_grad():
                     num_points=opt.num_points, divisions=opt.num_points)
                 maxi = labels_for_points.max()
                 pts_color = matplotlib.cm.gist_rainbow(
-                    labels_for_points[0:input_chosen.size(1)] /
-                    maxi)[:, 0:3]
+                    labels_for_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
