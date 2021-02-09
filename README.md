@@ -24,7 +24,7 @@ If you find this work useful in yourr research, please cite:
 }
 ```
 
-Thanks for @slothfulxtx who has corrected my PyTorch implementation of SoftPool operator!
+Thanks for @[slothfulxtx](https://github.com/slothfulxtx) who has corrected my PyTorch implementation of SoftPool operator!
 
 ## SoftPoolNet
 
