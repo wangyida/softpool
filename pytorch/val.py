@@ -241,7 +241,10 @@ def labels_points(num_points, divisions):
 with torch.no_grad():
     for i, model in enumerate(model_list):
         print(model)
-        subfold = model[:model.rfind('/')]
+        if opt.dataset == 'suncg':
+            subfold = 'all_samples'
+        else:
+            subfold = model[:model.rfind('/')]
         part = torch.zeros((1, opt.num_points, 3), device='cuda')
         part_seg = torch.zeros((1, opt.num_points, 3), device='cuda')
         input_chosen = torch.zeros((1, opt.num_points, 3), device='cuda')
@@ -343,6 +346,9 @@ with torch.no_grad():
                  cd4.item() if output4 else 0, cd5.item() if output5 else 0,
                  cd6.item() if output6 else 0, hash_tab[str(subfold)]['cd2'] /
                  hash_tab[str(subfold)]['cnt']))
+        if opt.dataset == 'suncg':
+            model = 'all_samples/' + model
+
 
         # save input
         pts_coord = part[0].data.cpu()[:, 0:3]
