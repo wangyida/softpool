@@ -24,6 +24,8 @@ If you find this work useful in yourr research, please cite:
 }
 ```
 
+Thanks for @slothfulxtx who has corrected my PyTorch implementation of SoftPool operator!
+
 ## SoftPoolNet
 
  <img src="imgs/2min_presentation_softpool.gif" alt="road condition" frameborder="0" style="border:0" >
