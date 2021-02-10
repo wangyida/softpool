@@ -252,20 +252,6 @@ with torch.no_grad():
         gt = torch.zeros((1, opt.num_points * 8, 3), device='cuda')
         gt_seg = torch.zeros((1, opt.num_points * 8, 3), device='cuda')
         gt_regions = torch.zeros((1, opt.num_points * 8, 3), device='cuda')
-        """
-        def read_points(filename, dataset=self.dataset):
-            if self.dataset == 'suncg':
-                pcd = o3d.read_point_cloud(filename)
-                coord = torch.from_numpy(np.array(pcd.points)).float()
-                color = torch.from_numpy(np.array(pcd.colors)).float()
-                return coord, color
-            elif self.dataset == 'shapenet':
-                fh5 = h5py.File(filename, 'r')
-                label = float(self.hash_tab[filename.split("/")[-2]]['label'])
-                coord = torch.from_numpy(np.array(fh5['data'])).float()
-                color = torch.from_numpy(np.ones_like(np.array(fh5['data'])) / 11 * label).float()
-                return coord, color
-        """
 
         for j in range(1):
             if opt.dataset == 'suncg' or opt.dataset == 'fusion':
@@ -364,7 +350,7 @@ with torch.no_grad():
         # save gt
         pts_coord = gt[0].data.cpu()[:, 0:3]
         mini = gt[0].min()
-        pts_color = matplotlib.cm.gist_rainbow(
+        pts_color = matplotlib.cm.Pastel1(
             gt_seg[0, :, 0].cpu() / 11)[:, :3]
 
         points_save(
@@ -413,7 +399,7 @@ with torch.no_grad():
                         num_points=opt.num_points,
                         divisions=np.max((2, opt.n_regions)))
                     maxi = labels_for_points.max()
-                    pts_color = matplotlib.cm.gist_rainbow(
+                    pts_color = matplotlib.cm.Pastel1(
                         labels_for_points[0:output1[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
@@ -422,7 +408,7 @@ with torch.no_grad():
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/clouds1',
+                    root='pcds/all_clouds1',
                     child=subfold,
                     pfile=model + '-' + str(stage))
 
@@ -441,7 +427,7 @@ with torch.no_grad():
                     labels_for_points = labels_points(
                         num_points=8192, divisions=16)
                     maxi = labels_for_points.max()
-                    pts_color = matplotlib.cm.gist_rainbow(
+                    pts_color = matplotlib.cm.Pastel1(
                         labels_for_points[0:output2[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
@@ -450,7 +436,7 @@ with torch.no_grad():
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/clouds2',
+                    root='pcds/all_clouds2',
                     child=subfold,
                     pfile=model + '-' + str(stage))
 
@@ -461,12 +447,12 @@ with torch.no_grad():
                 labels_for_points = labels_points(
                     num_points=opt.num_points, divisions=opt.num_points)
                 maxi = labels_for_points.max()
-                pts_color = matplotlib.cm.gist_rainbow(
+                pts_color = matplotlib.cm.Pastel1(
                     labels_for_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/clouds3',
+                    root='pcds/all_clouds3',
                     child=subfold,
                     pfile=model)
 
@@ -480,32 +466,32 @@ with torch.no_grad():
                     pts_color = matplotlib.cm.copper(
                         output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 elif stage == 1:
-                    pts_color = matplotlib.cm.gist_rainbow(
+                    pts_color = matplotlib.cm.Pastel1(
                         torch.argmax(output4[3][0][:, :].cpu(),
                                      dim=-1).float() / 11)[:, 0:3]
                 else:
-                    pts_color = matplotlib.cm.gist_rainbow(
+                    pts_color = matplotlib.cm.Pastel1(
                         torch.argmax(output4[4][0][:, :].cpu(),
                                      dim=-1).float() / 11)[:, 0:3]
                 cd4 = dist.mean()
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/clouds4',
+                    root='pcds/all_clouds4',
                     child=subfold,
                     pfile=model + '-' + str(stage))
 
             # save mesh from voxels
-            os.makedirs('pcds/mesh/%s' % subfold, exist_ok=True)
+            os.makedirs('pcds/all_mesh/%s' % subfold, exist_ok=True)
             import mcubes
             voxels = torch.flip(
                 output4[5][0, 0, :, :, :].transpose(2, 0).transpose(2, 1), [0])
             voxels = np.array(voxels.cpu())
             vertices, triangles = mcubes.marching_cubes(voxels, 0)
-            vertices /= 128.0
+            vertices /= 64.0
             vertices -= 0.5
             # vertices[:, 2] += 0.0125
-            mcubes.export_obj(vertices, triangles, 'pcds/mesh/%s.obj' % model)
+            mcubes.export_obj(vertices, triangles, 'pcds/all_mesh/%s.obj' % model)
 
         if output5:
             # save output5
@@ -516,7 +502,7 @@ with torch.no_grad():
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/clouds5',
+                    root='pcds/all_clouds5',
                     child=subfold,
                     pfile=model)
 
@@ -528,7 +514,7 @@ with torch.no_grad():
                     labels_for_points = labels_points(
                         num_points=16384, divisions=1024)
                     maxi = labels_for_points.max()
-                    pts_color = matplotlib.cm.gist_rainbow(
+                    pts_color = matplotlib.cm.Pastel1(
                         labels_for_points[0:output6[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
@@ -537,7 +523,7 @@ with torch.no_grad():
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
-                    root='pcds/clouds6',
+                    root='pcds/all_clouds6',
                     child=subfold,
                     pfile=model + '-' + str(stage))
 
