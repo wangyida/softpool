@@ -281,42 +281,42 @@ with torch.no_grad():
             part.transpose(2, 1).contiguous(), part_seg)
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
             if output1:
-                dist, _, _, _ = CD.forward(input1=output1[0], input2=gt)
+                _, dist, _, _ = CD.forward(input1=output1[0], input2=gt)
                 cd1 = dist.mean() * 1e4
                 hash_tab[str(subfold)]['cd1'] += cd1
             else:
                 hash_tab[str(subfold)]['cd1'] += 0
 
             if output2:
-                dist, _, _, _ = CD.forward(input1=output2[1], input2=gt)
+                _, dist, _, _ = CD.forward(input1=output2[1], input2=gt)
                 cd2 = dist.mean() * 1e4
                 hash_tab[str(subfold)]['cd2'] += cd2
             else:
                 hash_tab[str(subfold)]['cd2'] += 0
 
             if output3:
-                dist, _, _, _ = CD.forward(input1=output3[0], input2=gt)
+                _, dist, _, _ = CD.forward(input1=output3[0], input2=gt)
                 cd3 = dist.mean() * 1e4
                 hash_tab[str(subfold)]['cd3'] += cd3
             else:
                 hash_tab[str(subfold)]['cd3'] += 0
 
             if output4:
-                dist, _, _, _ = CD.forward(input1=output4[2], input2=gt)
+                _, dist, _, _ = CD.forward(input1=output4[2], input2=gt)
                 cd4 = dist.mean() * 1e4
                 hash_tab[str(subfold)]['cd4'] += cd4
             else:
                 hash_tab[str(subfold)]['cd4'] += 0
 
             if output5:
-                dist, _, _, _ = CD.forward(input1=output5[0], input2=gt)
+                _, dist, _, _ = CD.forward(input1=output5[0], input2=gt)
                 cd5 = dist.mean() * 1e4
                 hash_tab[str(subfold)]['cd5'] += cd5
             else:
                 hash_tab[str(subfold)]['cd5'] += 0
 
             if output6:
-                dist, _, _, _ = CD.forward(input1=output6[1], input2=gt)
+                _, dist, _, _ = CD.forward(input1=output6[1], input2=gt)
                 cd6 = dist.mean() * 1e4
                 hash_tab[str(subfold)]['cd6'] += cd6
             else:
@@ -362,7 +362,7 @@ with torch.no_grad():
 
         # save selected points on input
         if output1:
-            pts_coord = output1[3][0].data.cpu()[:, 0:3]
+            pts_coord = output1[5][0].data.cpu()[:, 0:3]
             labels_for_points = labels_points(
                 num_points=opt.num_points, divisions=opt.num_points)
             maxi = labels_for_points.max()
@@ -392,7 +392,7 @@ with torch.no_grad():
             """
 
             # save output1
-            for stage in range(3):
+            for stage in range(5):
                 pts_coord = output1[stage][0].data.cpu()[:, 0:3]
                 if stage == 0:
                     labels_for_points = labels_points(
@@ -461,7 +461,7 @@ with torch.no_grad():
             for stage in range(3):
                 pts_coord = output4[stage][0].data.cpu()[:, 0:3]
 
-                dist, _, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
+                _, dist, idx1, _ = CD.forward(input1=output4[stage], input2=gt)
                 if stage == 0:
                     pts_color = matplotlib.cm.copper(
                         output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]

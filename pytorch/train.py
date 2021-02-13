@@ -60,16 +60,21 @@ class FullModel(nn.Module):
         output1, output2, output3, output4, output5, output6 = self.model(
             parts, part_seg)
         loss_points = torch.zeros(1).cuda()
+        loss_others = torch.zeros(1).cuda()
         if output1:
             dist1, dist2, _, _ = self.CD(output1[0], gt)
             cd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            dist1, dist2, _, _ = self.CD(output1[1], part)
+            dist1, dist2, _, _ = self.CD(output1[1], gt)
             cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            dist1, dist2, _, _ = self.CD(output1[2], gt)
+            dist1, dist2, _, _ = self.CD(output1[2], part)
+            cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            dist1, dist2, _, _ = self.CD(output1[3], gt)
+            cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            dist1, dist2, _, _ = self.CD(output1[4], gt)
             cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             cd1 = cd1.mean()
-            cd1 += 0.1 * output1[4].mean()
             loss_points += cd1
+            loss_others += 0.1 * output1[6]
         else:
             cd1 = []
 
@@ -79,8 +84,8 @@ class FullModel(nn.Module):
             dist1, dist2, _, _ = self.CD(output2[1], gt)
             cd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             cd2 = cd2.mean()
-            cd2 += 0.1 * output2[2].mean()
             loss_points += cd2
+            loss_others += 0.1 * output2[2]
         else:
             cd2 = []
 
@@ -147,7 +152,7 @@ class FullModel(nn.Module):
         else:
             cd6 = []
 
-        return output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_points
+        return output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_points, loss_others
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -239,10 +244,11 @@ for epoch in range(opt.nepoch):
         part_seg = part_seg.float().cuda()
         gt = gt.float().cuda()
         gt_seg = gt_seg.float().cuda()
-        output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_points = network(
+        output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_points, loss_others = network(
             part.transpose(2, 1), gt, part_seg, gt_seg, 0.005, 50)
 
-        loss_points.backward()
+        loss_all = loss_points + loss_others
+        loss_all.backward()
         # train_loss.update(cd4.mean().item())
         optimizer.step()
 
