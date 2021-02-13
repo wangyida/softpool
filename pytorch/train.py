@@ -59,7 +59,7 @@ class FullModel(nn.Module):
     def forward(self, parts, gt, part_seg, gt_seg, eps, iters):
         output1, output2, output3, output4, output5, output6 = self.model(
             parts, part_seg)
-        loss_net = torch.zeros(1).cuda()
+        loss_points = torch.zeros(1).cuda()
         if output1:
             dist1, dist2, _, _ = self.CD(output1[0], gt)
             cd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
@@ -68,8 +68,8 @@ class FullModel(nn.Module):
             dist1, dist2, _, _ = self.CD(output1[2], gt)
             cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             cd1 = cd1.mean()
-            cd1 += 0.1 * output1[4]
-            loss_net += cd1
+            cd1 += 0.1 * output1[4].mean()
+            loss_points += cd1
         else:
             cd1 = []
 
@@ -79,8 +79,8 @@ class FullModel(nn.Module):
             dist1, dist2, _, _ = self.CD(output2[1], gt)
             cd2 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             cd2 = cd2.mean()
-            cd2 += 0.1 * output2[2]
-            loss_net += cd2
+            cd2 += 0.1 * output2[2].mean()
+            loss_points += cd2
         else:
             cd2 = []
 
@@ -88,7 +88,7 @@ class FullModel(nn.Module):
             dist1, dist2, _, _ = self.CD(output3[0], gt)
             cd3 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
             cd3 = cd3.mean()
-            loss_net += cd3
+            loss_points += cd3
         else:
             cd3 = []
 
@@ -125,7 +125,7 @@ class FullModel(nn.Module):
                 dim=-1))
             cd4 += 0.01 * loss_sem_coar
             cd4 = cd4.mean()
-            loss_net += cd4
+            loss_points += cd4
         else:
             cd4 = []
 
@@ -133,7 +133,7 @@ class FullModel(nn.Module):
             dist1, dist2, _, _ = self.CD(output5[0], gt)
             cd5 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
             cd5 = cd5.mean()
-            loss_net += cd5
+            loss_points += cd5
         else:
             cd5 = []
 
@@ -143,11 +143,11 @@ class FullModel(nn.Module):
             dist1, dist2, _, _ = self.CD(output6[1], gt)
             cd6 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             cd6 = cd6.mean()
-            loss_net += cd6
+            loss_points += cd6
         else:
             cd6 = []
 
-        return output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_net
+        return output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_points
 
 
 # vis = visdom.Visdom(port = 8097, env=opt.env) # set your port
@@ -239,13 +239,10 @@ for epoch in range(opt.nepoch):
         part_seg = part_seg.float().cuda()
         gt = gt.float().cuda()
         gt_seg = gt_seg.float().cuda()
-        output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_net = network(
+        output1, output2, output3, output4, output5, output6, cd1, cd2, cd3, cd4, cd5, cd6, loss_points = network(
             part.transpose(2, 1), gt, part_seg, gt_seg, 0.005, 50)
-        """
-        loss_net = [cd1 if cd1 else torch.zeros(1)] + [cd2 if cd2 else torch.zeros(1)] + [cd3 if cd3 else torch.zeros(1)] + [cd4 if cd4 else torch.zeros(1)]
-        """
 
-        loss_net.backward()
+        loss_points.backward()
         # train_loss.update(cd4.mean().item())
         optimizer.step()
 
