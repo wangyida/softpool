@@ -424,23 +424,21 @@ class Network(nn.Module):
             self.expansion = expansion.expansionPenaltyModule()
             # Firstly we do not merge information among regions
             # We merge regional informations in latent space
-            self.reg_conv1 = nn.Sequential(
+            self.reg_encode = nn.Sequential(
                 nn.Conv2d(
                     1 * dim_pn,
                     dim_pn,
                     kernel_size=(1, 3),
                     stride=(1, 2),
                     padding=(0, 1),
-                    padding_mode='same'), nn.Tanh())
-            self.reg_conv2 = nn.Sequential(
+                    padding_mode='same'), nn.Tanh(),
                 nn.Conv2d(
                     dim_pn,
                     2 * dim_pn,
                     kernel_size=(1, 3),
                     stride=(1, 2),
                     padding=(0, 1),
-                    padding_mode='same'), nn.Tanh())
-            self.reg_conv3 = nn.Sequential(
+                    padding_mode='same'), nn.Tanh(),
                 nn.Conv2d(
                     2 * dim_pn,
                     2 * dim_pn,
@@ -488,12 +486,12 @@ class Network(nn.Module):
                 nn.ConvTranspose2d(
                     dim_pn,
                     dim_pn,
-                    kernel_size=(1, 8),
-                    stride=(1, 8),
+                    kernel_size=(1, 2),
+                    stride=(1, 2),
                     padding=(0, 0)), nn.Tanh())
 
-            self.decoder1 = PointGenCon(bottleneck_size=self.dim_pn)
-            self.res = PointNetRes()
+            self.sp_dec_mlp = PointGenCon(bottleneck_size=self.dim_pn)
+            self.sp_dec_residual = PointNetRes()
         if ('folding' in self.model_lists):
             self.pn_enc = nn.Sequential(
                 PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),
@@ -561,53 +559,57 @@ class Network(nn.Module):
             input_chosen = torch.gather(
                 part, dim=2, index=sp_idx[:, :3, 0, :].long()).transpose(1, 2)
 
-            sp_feat_conv1 = self.reg_conv1(sp_feat)  # 256 points
-            sp_feat_conv2 = self.reg_conv2(sp_feat_conv1)  # 256 points
-            sp_feat_conv3 = self.reg_conv3(sp_feat_conv2)  # 256 points
+            sp_feat_encode = self.reg_encode(sp_feat)  # 256 points
 
             if self.n_regions == 1:
                 sp_feat_unet = torch.cat(
-                    (self.embedding(sp_feat_conv3), sp_feat_conv3),
+                    (self.embedding(sp_feat_encode), sp_feat_encode),
                     dim=-1)  # 512 points
             elif self.n_regions > 1:
-                sp_feat_unet = self.embedding(sp_feat_conv3)  # 512 points
+                sp_feat_unet = self.embedding(sp_feat_encode)  # 512 points
 
-            sp_feat_deconv3 = self.reg_deconv3(sp_feat_unet)  # 1024 points
-            sp_feat_low = self.reg_deconv2(sp_feat_deconv3)  # 2048 points
-            sp_feat_high = self.reg_deconv1(sp_feat_low)  # 16384 points
+            sp_feat_deconv = self.reg_deconv3(sp_feat_unet)  # 1024 points
+            sp_feat_low = self.reg_deconv2(sp_feat_deconv)  # 2048 points
+            sp_feat_high = self.reg_deconv1(sp_feat_low)  # 4096 points
 
-            pcd_sp_l_trans = self.decoder1(sp_feat_low[:, :, 0, :])
-            pcd_sp_l = pcd_sp_l_trans.transpose(1, 2).contiguous()
-            pcd_sp_h_trans = self.decoder1(sp_feat_high[:, :, 0, :])
-            pcd_sp_h = pcd_sp_h_trans.transpose(1, 2).contiguous()
+            pcd_sp_low_t = self.sp_dec_mlp(sp_feat_low[:, :, 0, :])
+            pcd_sp_low = pcd_sp_low_t.transpose(1, 2).contiguous()
+            pcd_sp_high_t = self.sp_dec_mlp(sp_feat_high[:, :, 0, :])
+            pcd_sp_high = pcd_sp_high_t.transpose(1, 2).contiguous()
 
             id1 = torch.ones(part.shape[0], 1,
                              part.shape[2]).cuda().contiguous()
-            id2 = torch.zeros(pcd_sp_l_trans.shape[0], 1,
-                              pcd_sp_l_trans.shape[2]).cuda().contiguous()
-            id3 = torch.zeros(pcd_sp_h_trans.shape[0], 1,
-                              pcd_sp_h_trans.shape[2]).cuda().contiguous()
+            id2 = torch.zeros(pcd_sp_low_t.shape[0], 1,
+                              pcd_sp_low_t.shape[2]).cuda().contiguous()
+            id3 = torch.zeros(pcd_sp_high_t.shape[0], 1,
+                              pcd_sp_high_t.shape[2]).cuda().contiguous()
             labeled_observe = torch.cat((part, id1), 1)
-            labeled_low = torch.cat((pcd_sp_l_trans, id2), 1)
-            labeled_high = torch.cat((pcd_sp_h_trans, id3), 1)
+            labeled_low = torch.cat((pcd_sp_low_t, id2), 1)
+            labeled_high = torch.cat((pcd_sp_high_t, id3), 1)
             fusion_low = torch.cat((labeled_observe, labeled_low), 2)
             fusion_high = torch.cat((labeled_observe, labeled_high), 2)
 
             dist, _, mean_mst_dis = self.expansion(
-                pcd_sp_l, 2048 // np.max((4, self.n_regions)), 1.5)
+                pcd_sp_low, 4096 // np.max((8, self.n_regions)), 1.5)
             loss_mst = torch.mean(dist)
 
-            resampled_idx_l = MDS_module.minimum_density_sample(
+            resampled_idx_low = MDS_module.minimum_density_sample(
                 fusion_low[:, 0:3, :].transpose(1, 2).contiguous(),
-                pcd_sp_l.shape[1], mean_mst_dis)
-            fusion_low = MDS_module.gather_operation(fusion_low, resampled_idx_l)
-            pcd_fusion_l = (fusion_low[:, 0:3, :] + self.res(fusion_low)).transpose(2, 1).contiguous()
+                pcd_sp_low.shape[1], mean_mst_dis)
+            fusion_low = MDS_module.gather_operation(fusion_low,
+                                                     resampled_idx_low)
+            pcd_fusion_low = (fusion_low[:, 0:3, :] +
+                              self.sp_dec_residual(fusion_low)).transpose(
+                                  2, 1).contiguous()
 
-            resampled_idx_h = MDS_module.minimum_density_sample(
+            resampled_idx_high = MDS_module.minimum_density_sample(
                 fusion_high[:, 0:3, :].transpose(1, 2).contiguous(),
-                pcd_sp_h.shape[1], mean_mst_dis)
-            fusion_high = MDS_module.gather_operation(fusion_high, resampled_idx_h)
-            pcd_fusion_h = (fusion_high[:, 0:3, :] + self.res(fusion_high)).transpose(2, 1).contiguous()
+                pcd_sp_high.shape[1], mean_mst_dis)
+            fusion_high = MDS_module.gather_operation(fusion_high,
+                                                      resampled_idx_high)
+            pcd_fusion_high = (fusion_high[:, 0:3, :] +
+                               self.sp_dec_residual(fusion_high)).transpose(
+                                   2, 1).contiguous()
 
         if ('folding' in self.model_lists):
             pn_feat = self.pn_enc(part)
@@ -626,8 +628,8 @@ class Network(nn.Module):
             pn_feat = pn_feat.unsqueeze(2).expand(
                 part.size(0), self.dim_pn, self.num_points).contiguous()
             y = torch.cat((mesh_grid, pn_feat), 1).contiguous()
-            pcd_fold_trans = self.decoder_fold(y)
-            pcd_fold = pcd_fold_trans.transpose(1, 2).contiguous()
+            pcd_fold_t = self.decoder_fold(y)
+            pcd_fold = pcd_fold_t.transpose(1, 2).contiguous()
 
         if ('grnet' in self.model_lists):
             [
@@ -642,7 +644,8 @@ class Network(nn.Module):
             pcn_coarse, pcn_fine = self.pcn(part.transpose(1, 2))
 
         pred_softpool = [
-            pcd_sp_l, pcd_sp_h, pcd_fusion_l, pcd_fusion_h, input_chosen, loss_mst
+            pcd_sp_low, pcd_sp_high, pcd_fusion_low, pcd_fusion_high,
+            input_chosen, loss_mst
         ] if ('softpool' in self.model_lists) else []
         pred_msn = [pcd_msn1, pcd_msn2, loss_mst
                     ] if ('msn' in self.model_lists) else []

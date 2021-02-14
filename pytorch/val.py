@@ -350,8 +350,7 @@ with torch.no_grad():
         # save gt
         pts_coord = gt[0].data.cpu()[:, 0:3]
         mini = gt[0].min()
-        pts_color = matplotlib.cm.Set3(
-            gt_seg[0, :, 0].cpu() / 11)[:, :3]
+        pts_color = matplotlib.cm.Set3(gt_seg[0, :, 0].cpu() / 11)[:, :3]
 
         points_save(
             points=pts_coord,
@@ -491,7 +490,8 @@ with torch.no_grad():
             vertices /= 64.0
             vertices -= 0.5
             # vertices[:, 2] += 0.0125
-            mcubes.export_obj(vertices, triangles, 'pcds/all_mesh/%s.obj' % model)
+            mcubes.export_obj(vertices, triangles,
+                              'pcds/all_mesh/%s.obj' % model)
 
         if output5:
             # save output5
