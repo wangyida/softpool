@@ -66,15 +66,18 @@ class FullModel(nn.Module):
             cd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output1[1], gt)
             cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            dist1, dist2, _, _ = self.CD(output1[2], part)
+            if self.model.n_regions == 1:
+                dist1, dist2, _, _ = self.CD(output1[0][:,output1[0].shape[1]//2:,:], part)
+                cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+                dist1, dist2, _, _ = self.CD(output1[1][:,output1[1].shape[1]//2:,:], part)
+                cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
+            dist1, dist2, _, _ = self.CD(output1[2], gt)
             cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output1[3], gt)
             cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            dist1, dist2, _, _ = self.CD(output1[4], gt)
-            cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             cd1 = cd1.mean()
             loss_points += cd1
-            loss_others += 0.1 * output1[6]
+            loss_others += 0.1 * output1[5]
         else:
             cd1 = []
 

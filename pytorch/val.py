@@ -281,7 +281,7 @@ with torch.no_grad():
             part.transpose(2, 1).contiguous(), part_seg)
         if opt.dataset == 'shapenet' and complete3d_benchmark == False:
             if output1:
-                _, dist, _, _ = CD.forward(input1=output1[0], input2=gt)
+                _, dist, _, _ = CD.forward(input1=output1[1], input2=gt)
                 cd1 = dist.mean() * 1e4
                 hash_tab[str(subfold)]['cd1'] += cd1
             else:
@@ -362,7 +362,7 @@ with torch.no_grad():
 
         # save selected points on input
         if output1:
-            pts_coord = output1[5][0].data.cpu()[:, 0:3]
+            pts_coord = output1[4][0].data.cpu()[:, 0:3]
             labels_for_points = labels_points(
                 num_points=opt.num_points, divisions=opt.num_points)
             maxi = labels_for_points.max()

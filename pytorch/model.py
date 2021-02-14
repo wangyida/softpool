@@ -576,14 +576,10 @@ class Network(nn.Module):
             sp_feat_low = self.reg_deconv2(sp_feat_deconv3)  # 2048 points
             sp_feat_high = self.reg_deconv1(sp_feat_low)  # 16384 points
 
-            sp_feat_skipped = self.reg_deconv2(self.reg_deconv3(sp_feat_conv3))
-
             pcd_sp_l_trans = self.decoder1(sp_feat_low[:, :, 0, :])
             pcd_sp_l = pcd_sp_l_trans.transpose(1, 2).contiguous()
             pcd_sp_h_trans = self.decoder1(sp_feat_high[:, :, 0, :])
             pcd_sp_h = pcd_sp_h_trans.transpose(1, 2).contiguous()
-            
-            pcd_ae = self.decoder1(sp_feat_skipped[:, :, 0, :]).transpose(1, 2).contiguous()
 
             id1 = torch.ones(part.shape[0], 1,
                              part.shape[2]).cuda().contiguous()
@@ -646,7 +642,7 @@ class Network(nn.Module):
             pcn_coarse, pcn_fine = self.pcn(part.transpose(1, 2))
 
         pred_softpool = [
-            pcd_sp_l, pcd_sp_h, pcd_ae, pcd_fusion_l, pcd_fusion_h, input_chosen, loss_mst
+            pcd_sp_l, pcd_sp_h, pcd_fusion_l, pcd_fusion_h, input_chosen, loss_mst
         ] if ('softpool' in self.model_lists) else []
         pred_msn = [pcd_msn1, pcd_msn2, loss_mst
                     ] if ('msn' in self.model_lists) else []
