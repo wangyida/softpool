@@ -19,6 +19,14 @@ from dataset import resample_pcd, read_points
 EMD = emd.emdModule()
 CD = cd.chamferDist()
 
+def colormap(xyz):
+    negative_shift = -0.5
+    vec = np.array(xyz - negative_shift)
+    vec = np.clip(vec, 0.001, 1.0)
+    norm = np.sqrt(np.sum(vec ** 2, axis=1, keepdims=True))
+    vec /= norm
+    return vec
+
 
 def points_save(points, colors, root='pcds/regions', child='all', pfile=''):
     os.makedirs(root, exist_ok=True)
@@ -340,6 +348,7 @@ with torch.no_grad():
         pts_coord = part[0].data.cpu()[:, 0:3]
         mini = part[0].min()
         pts_color = matplotlib.cm.copper(part[0].data.cpu()[:, 1] + 1)[:, 0:3]
+        pts_color = colormap(pts_coord)
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -350,8 +359,10 @@ with torch.no_grad():
         # save gt
         pts_coord = gt[0].data.cpu()[:, 0:3]
         mini = gt[0].min()
+        # semantics
         pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0].cpu() / 11)[:, :3]
-
+        # pure geometries
+        pts_color = colormap(pts_coord)
         points_save(
             points=pts_coord,
             colors=pts_color,
@@ -404,6 +415,7 @@ with torch.no_grad():
                 else:
                     pts_color = matplotlib.cm.copper(
                         output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                pts_color = colormap(pts_coord)
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
@@ -432,6 +444,7 @@ with torch.no_grad():
                 else:
                     pts_color = matplotlib.cm.copper(
                         output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                pts_color = colormap(pts_coord)
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
@@ -448,6 +461,7 @@ with torch.no_grad():
                 maxi = labels_for_points.max()
                 pts_color = matplotlib.cm.rainbow(
                     labels_for_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
+                pts_color = colormap(pts_coord)
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
@@ -473,6 +487,7 @@ with torch.no_grad():
                         torch.argmax(output4[4][0][:, :].cpu(),
                                      dim=-1).float() / 11)[:, 0:3]
                 cd4 = dist.mean()
+                pts_color = colormap(pts_coord)
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
@@ -499,6 +514,7 @@ with torch.no_grad():
                 pts_coord = output5[stage][0].data.cpu()[:, 0:3]
                 pts_color = matplotlib.cm.copper(
                     output5[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                pts_color = colormap(pts_coord)
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
@@ -520,6 +536,7 @@ with torch.no_grad():
                 else:
                     pts_color = matplotlib.cm.copper(
                         output6[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
+                pts_color = colormap(pts_coord)
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
