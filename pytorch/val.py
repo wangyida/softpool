@@ -404,7 +404,7 @@ with torch.no_grad():
             # save output1
             for stage in range(5):
                 pts_coord = output1[stage][0].data.cpu()[:, 0:3]
-                if stage == 0:
+                if stage <= 1:
                     labels_for_points = labels_points(
                         num_points=opt.num_points,
                         divisions=np.max((2, opt.n_regions)))
@@ -415,7 +415,7 @@ with torch.no_grad():
                 else:
                     pts_color = matplotlib.cm.copper(
                         output1[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
-                pts_color = colormap(pts_coord)
+                    pts_color = colormap(pts_coord)
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
@@ -444,7 +444,7 @@ with torch.no_grad():
                 else:
                     pts_color = matplotlib.cm.copper(
                         output2[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
-                pts_color = colormap(pts_coord)
+                    pts_color = colormap(pts_coord)
                 points_save(
                     points=pts_coord,
                     colors=pts_color,
