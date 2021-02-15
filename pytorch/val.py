@@ -350,7 +350,7 @@ with torch.no_grad():
         # save gt
         pts_coord = gt[0].data.cpu()[:, 0:3]
         mini = gt[0].min()
-        pts_color = matplotlib.cm.Set3(gt_seg[0, :, 0].cpu() / 11)[:, :3]
+        pts_color = matplotlib.cm.rainbow(gt_seg[0, :, 0].cpu() / 11)[:, :3]
 
         points_save(
             points=pts_coord,
@@ -398,7 +398,7 @@ with torch.no_grad():
                         num_points=opt.num_points,
                         divisions=np.max((2, opt.n_regions)))
                     maxi = labels_for_points.max()
-                    pts_color = matplotlib.cm.Set3(
+                    pts_color = matplotlib.cm.rainbow(
                         labels_for_points[0:output1[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
@@ -426,7 +426,7 @@ with torch.no_grad():
                     labels_for_points = labels_points(
                         num_points=8192, divisions=16)
                     maxi = labels_for_points.max()
-                    pts_color = matplotlib.cm.Set3(
+                    pts_color = matplotlib.cm.rainbow(
                         labels_for_points[0:output2[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
@@ -446,7 +446,7 @@ with torch.no_grad():
                 labels_for_points = labels_points(
                     num_points=opt.num_points, divisions=opt.num_points)
                 maxi = labels_for_points.max()
-                pts_color = matplotlib.cm.Set3(
+                pts_color = matplotlib.cm.rainbow(
                     labels_for_points[0:input_chosen.size(1)] / maxi)[:, 0:3]
                 points_save(
                     points=pts_coord,
@@ -465,11 +465,11 @@ with torch.no_grad():
                     pts_color = matplotlib.cm.copper(
                         output4[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 elif stage == 1:
-                    pts_color = matplotlib.cm.Set3(
+                    pts_color = matplotlib.cm.rainbow(
                         torch.argmax(output4[3][0][:, :].cpu(),
                                      dim=-1).float() / 11)[:, 0:3]
                 else:
-                    pts_color = matplotlib.cm.Set3(
+                    pts_color = matplotlib.cm.rainbow(
                         torch.argmax(output4[4][0][:, :].cpu(),
                                      dim=-1).float() / 11)[:, 0:3]
                 cd4 = dist.mean()
@@ -514,7 +514,7 @@ with torch.no_grad():
                     labels_for_points = labels_points(
                         num_points=16384, divisions=1024)
                     maxi = labels_for_points.max()
-                    pts_color = matplotlib.cm.Set3(
+                    pts_color = matplotlib.cm.rainbow(
                         labels_for_points[0:output6[stage].size(1)] /
                         maxi)[:, 0:3]
                 else:
