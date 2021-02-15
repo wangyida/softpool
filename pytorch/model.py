@@ -431,21 +431,21 @@ class Network(nn.Module):
                     kernel_size=(1, 3),
                     stride=(1, 2),
                     padding=(0, 1),
-                    padding_mode='same'), nn.Tanh(),
+                    padding_mode='same'), nn.LeakyReLU(0.2),
                 nn.Conv2d(
                     dim_pn,
                     2 * dim_pn,
                     kernel_size=(1, 3),
                     stride=(1, 2),
                     padding=(0, 1),
-                    padding_mode='same'), nn.Tanh(),
+                    padding_mode='same'), nn.LeakyReLU(0.2),
                 nn.Conv2d(
                     2 * dim_pn,
                     2 * dim_pn,
                     kernel_size=(1, 3),
                     stride=(1, 2),
                     padding=(0, 1),
-                    padding_mode='same'), nn.Tanh())
+                    padding_mode='same'), nn.LeakyReLU(0.2))
 
             # input for embedding has 32 points now, then in total it is regions x 32 points
             # down-sampled by 2*2*2=8
@@ -466,7 +466,7 @@ class Network(nn.Module):
                     2 * dim_pn,
                     kernel_size=(1, ebd_pnt_out),
                     stride=(1, ebd_pnt_out),
-                    padding=(0, 0)))
+                    padding=(0, 0)), nn.LeakyReLU(0.2))
 
             self.reg_deconv3 = nn.Sequential(
                 nn.ConvTranspose2d(
@@ -474,21 +474,21 @@ class Network(nn.Module):
                     2 * dim_pn,
                     kernel_size=(1, 2),
                     stride=(1, 2),
-                    padding=(0, 0)), nn.Tanh())
+                    padding=(0, 0)), nn.LeakyReLU(0.2))
             self.reg_deconv2 = nn.Sequential(
                 nn.ConvTranspose2d(
                     2 * dim_pn,
                     dim_pn,
                     kernel_size=(1, 2),
                     stride=(1, 2),
-                    padding=(0, 0)), nn.Tanh())
+                    padding=(0, 0)), nn.LeakyReLU(0.2))
             self.reg_deconv1 = nn.Sequential(
                 nn.ConvTranspose2d(
                     dim_pn,
                     dim_pn,
                     kernel_size=(1, 2),
                     stride=(1, 2),
-                    padding=(0, 0)), nn.Tanh())
+                    padding=(0, 0)), nn.LeakyReLU(0.2))
 
             self.sp_dec_mlp = PointGenCon(bottleneck_size=self.dim_pn)
             self.sp_dec_residual = PointNetRes()
