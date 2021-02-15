@@ -66,7 +66,6 @@ class FullModel(nn.Module):
             cd1 = torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output1[1], gt)
             cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            """
             if self.model.n_regions == 1:
                 dist1, dist2, _, _ = self.CD(
                     output1[0][:, output1[0].shape[1] // 2:, :], part)
@@ -74,7 +73,6 @@ class FullModel(nn.Module):
                 dist1, dist2, _, _ = self.CD(
                     output1[1][:, output1[1].shape[1] // 2:, :], part)
                 cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
-            """
             dist1, dist2, _, _ = self.CD(output1[2], gt)
             cd1 += torch.mean(dist1, 1) + torch.mean(dist2, 1)
             dist1, dist2, _, _ = self.CD(output1[3], gt)
