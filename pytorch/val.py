@@ -19,11 +19,12 @@ from dataset import resample_pcd, read_points
 EMD = emd.emdModule()
 CD = cd.chamferDist()
 
+
 def colormap(xyz):
     negative_shift = -0.5
     vec = np.array(xyz - negative_shift)
     vec = np.clip(vec, 0.001, 1.0)
-    norm = np.sqrt(np.sum(vec ** 2, axis=1, keepdims=True))
+    norm = np.sqrt(np.sum(vec**2, axis=1, keepdims=True))
     vec /= norm
     return vec
 

@@ -591,7 +591,7 @@ class Network(nn.Module):
 
             dist, _, mean_mst_dis_l = self.expansion(
                 pcd_sp_low, 1024 // np.max((4, self.n_regions)), 1.5)
-            loss_mst = torch.mean(dist)
+            # loss_mst = torch.mean(dist)
             resampled_idx_low = MDS_module.minimum_density_sample(
                 fusion_low[:, 0:3, :].transpose(1, 2).contiguous(),
                 pcd_sp_low.shape[1], mean_mst_dis_l)
@@ -603,7 +603,7 @@ class Network(nn.Module):
 
             dist, _, mean_mst_dis_h = self.expansion(
                 pcd_sp_high, 2048 // np.max((4, self.n_regions)), 1.5)
-            loss_mst += torch.mean(dist)
+            loss_mst = torch.mean(dist)
             resampled_idx_high = MDS_module.minimum_density_sample(
                 fusion_high[:, 0:3, :].transpose(1, 2).contiguous(),
                 pcd_sp_high.shape[1], mean_mst_dis_h)
