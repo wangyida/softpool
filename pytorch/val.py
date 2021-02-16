@@ -404,7 +404,7 @@ with torch.no_grad():
             # save output1
             for stage in range(5):
                 pts_coord = output1[stage][0].data.cpu()[:, 0:3]
-                if stage <= 1:
+                if stage == 0:
                     labels_for_points = labels_points(
                         num_points=opt.num_points,
                         divisions=np.max((2, opt.n_regions)))

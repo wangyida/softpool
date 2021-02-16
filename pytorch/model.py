@@ -590,7 +590,7 @@ class Network(nn.Module):
             fusion_high = torch.cat((labeled_observe, labeled_high), 2)
 
             dist, _, mean_mst_dis_l = self.expansion(
-                pcd_sp_low, 4096 // np.max((8, self.n_regions)), 1.5)
+                pcd_sp_low, 1024 // np.max((4, self.n_regions)), 1.5)
             loss_mst = torch.mean(dist)
             resampled_idx_low = MDS_module.minimum_density_sample(
                 fusion_low[:, 0:3, :].transpose(1, 2).contiguous(),
@@ -602,7 +602,7 @@ class Network(nn.Module):
                                   2, 1).contiguous()
 
             dist, _, mean_mst_dis_h = self.expansion(
-                pcd_sp_high, 4096 // np.max((8, self.n_regions)), 1.5)
+                pcd_sp_high, 2048 // np.max((4, self.n_regions)), 1.5)
             loss_mst += torch.mean(dist)
             resampled_idx_high = MDS_module.minimum_density_sample(
                 fusion_high[:, 0:3, :].transpose(1, 2).contiguous(),
