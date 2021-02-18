@@ -453,23 +453,20 @@ class Network(nn.Module):
             if self.n_regions == 1:
                 ebd_pnt_out = 256
             elif self.n_regions > 1:
-                ebd_pnt_out = 512 // self.n_regions
+                ebd_pnt_out = 512
 
             self.embedding = nn.Sequential(
                 nn.MaxPool2d(
                     kernel_size=(1, ebd_pnt_reg), stride=(1, ebd_pnt_reg)),
+                nn.MaxPool2d(
+                    kernel_size=(1, self.n_regions),
+                    stride=(1, self.n_regions)),
                 nn.ConvTranspose2d(
                     2 * dim_pn,
                     2 * dim_pn,
                     kernel_size=(1, ebd_pnt_out),
                     stride=(1, ebd_pnt_out),
                     padding=(0, 0)), nn.LeakyReLU(0.2))
-            """
-                nn.MaxPool2d(
-                    kernel_size=(1, self.n_regions),
-                    stride=(1, self.n_regions)),
-            """
-
 
             self.reg_deconv3 = nn.Sequential(
                 nn.ConvTranspose2d(
