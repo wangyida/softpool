@@ -512,7 +512,7 @@ with torch.no_grad():
         if output5:
             # save output5
             for stage in range(len(output5)):
-                pts_coord = output5[stage][0].data.cpu()[:, 0:3]
+                pts_coord = output5[stage][0].data.cpu()[:, 0:3] * 3
                 pts_color = matplotlib.cm.copper(
                     output5[stage][0].data.cpu()[:, 1] + 1)[:, 0:3]
                 pts_color = colormap(pts_coord)
