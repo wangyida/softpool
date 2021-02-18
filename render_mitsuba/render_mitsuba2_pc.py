@@ -37,8 +37,8 @@ xml_head = \
             <integer name="sampleCount" value="256"/>
         </sampler>
         <film type="hdrfilm">
-            <integer name="width" value="256"/>
-            <integer name="height" value="256"/>
+            <integer name="width" value="720"/>
+            <integer name="height" value="720"/>
             <rfilter type="gaussian"/>
         </film>
     </sensor>
@@ -122,7 +122,6 @@ xml_tail = \
             <translate x="0" y="0" z="{}"/>
         </transform>
     </shape>
-    
     <shape type="rectangle">
         <transform name="toWorld">
             <scale x="10" y="10" z="1"/>
@@ -134,6 +133,7 @@ xml_tail = \
     </shape>
 </scene>
 """
+    
 
 
 def colormap(x, y, z):
@@ -186,14 +186,23 @@ def ConvertEXRToJPG(exrfile, jpgfile):
     Size = (DW.max.x - DW.min.x + 1, DW.max.y - DW.min.y + 1)
 
     rgb = [np.fromstring(File.channel(c, PixType), dtype=np.float32) for c in 'RGB']
+    rgb_sums = rgb[0] + rgb[1] + rgb[2]
     for i in range(3):
         rgb[i] = np.where(rgb[i] <= 0.0031308,
                           (rgb[i] * 12.92) * 255.0,
                           (1.055 * (rgb[i] ** (1.0 / 2.4)) - 0.055) * 255.0)
+        """
+        rgb[i] = np.where(rgb_sums <= 0.0031308,
+                          255.0,
+                          (1.055 * (rgb[i] ** (1.0 / 2.4)) - 0.055) * 255.0)
+        """
 
     rgb8 = [Image.frombytes("F", Size, c.tostring()).convert("L") for c in rgb]
     rgb8 = Image.merge("RGB", rgb8)
     rgb8 = trim(rgb8)
+    """
+    It's for rendering with identical color
+    """
     # rgb8 = [Image.fromarray(c.astype(int)) for c in rgb]
     rgb8.save(jpgfile, "JPEG", quality=95)
 
@@ -255,6 +264,7 @@ def main(argv):
                         # xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
                         xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *pcl_color[i]))
                     xml_segments.append(xml_tail.format(np.min(pcl[:, 2])-0.025))
+                    # xml_segments.append(xml_tail)
 
                     xml_content = str.join('', xml_segments)
 
@@ -280,7 +290,8 @@ def main(argv):
                 for j in range(len(model_list)):
                     xml_segments = [xml_head]
                     xml_segments.append(obj_mesh.format(os.path.join('%s.obj' % model_list[j])))
-                    xml_segments.append(xml_tail.format(-0.525))
+                    xml_segments.append(xml_tail.format(-0.025))
+                    # xml_segments.append(xml_tail)
 
                     xml_content = str.join('', xml_segments)
 
