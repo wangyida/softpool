@@ -5,6 +5,7 @@ import torch.nn.init as init
 import torch.nn.functional as F
 import numpy as np
 from time import time
+import gcn3d
 
 # from emd import earth_mover_distance
 # from chamfer_distance import ChamferDistance
@@ -12,9 +13,9 @@ from time import time
 # chamfer_dist = ChamferDistance()
 
 
-class PCNEMD(nn.Module):
+class PCN(nn.Module):
     def __init__(self):
-        super(PCNEMD, self).__init__()
+        super(PCN, self).__init__()
         self.num_coarse = 1024
         self.grid_size = 4
         self.grid_scale = 0.05
@@ -79,7 +80,6 @@ class PCNEMD(nn.Module):
         return features.repeat([1, 1, 256])
 
     def forward(self, xyz):
-        xyz = xyz.permute(0, 2, 1)
         #####ENCODER
         features = self.first_mpl(xyz)
         features_global = self.point_maxpool(
@@ -140,7 +140,7 @@ if __name__ == '__main__':
         pcd1.colors = open3d.Vector3dVector(
             np.ones((1024, 3)) * [0.00, 0.53, 0.90])
         colors = torch.rand(1, 2048, 3).cuda()
-        net = PCNEMD()
+        net = PCN()
         net.cuda()
         coarse, fine = net(xyz)
         net.create_loss(coarse, fine, xyz, 1.0)

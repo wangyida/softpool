@@ -468,7 +468,7 @@ with torch.no_grad():
                     colors=pts_color,
                     root='pcds/all_clouds3',
                     child=subfold,
-                    pfile=model)
+                    pfile=model + '-' + str(stage))
 
         if output4:
             # save output4
