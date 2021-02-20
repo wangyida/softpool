@@ -222,8 +222,13 @@ class Network(nn.Module):
         if ('msn' in self.model_lists):
             if self.encode is 'gcn3d':
                 self.pn_enc = nn.Sequential(
+                    gcn3d.GCN3DFeat16(support_num=1, neighbor_num=10), nn.Linear(1024, dim_pn)
+                    )
+                """
+                self.pn_enc = nn.Sequential(
                     gcn3d.GCN3DFeat(support_num= 1, neighbor_num= 20), nn.Linear(1024, dim_pn),
                     nn.BatchNorm1d(dim_pn), nn.ReLU())
+                """
             else:
                 self.pn_enc = nn.Sequential(
                     pn.PointNetFeat(num_points, 1024), nn.Linear(1024, dim_pn),

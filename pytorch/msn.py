@@ -97,9 +97,10 @@ class MSN(nn.Module):
         self.expansion = expansion.expansionPenaltyModule()
 
     def forward(self, partial, feat):
-        x = feat
         outs = []
         for i in range(0, self.n_primitives):
+            # x = feat
+            x = feat[:,i,:]
             rand_grid = Variable(
                 torch.cuda.FloatTensor(
                     x.size(0), 2, self.num_points // self.n_primitives))
