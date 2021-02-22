@@ -5,22 +5,22 @@ do
 	esac
 done
 
-outputx='all_clouds5'
-# for outputx in $(ls $folder_pcds)
-# do
-for categories in $(ls $folder_pcds/input)
+# outputx='all_clouds1'
+for outputx in $(ls $folder_pcds)
 do
-	echo $folder_pcds/$outputx/$categories
-	ls $folder_pcds/$outputx/$categories/* > $folder_pcds/$outputx/$categories/results.list
-	python3 render_mitsuba2_pc.py $folder_pcds/$outputx/$categories/results.list 
-	rm -rf $folder_pcds/$outputx/$categories/results.list
-	rm -rf $folder_pcds/$outputx/$categories/*.exr
-	rm -rf $folder_pcds/$outputx/$categories/*.xml
-	rm -rf $folder_pcds/$outputx/$categories/*.pcd
-	rm -rf $folder_pcds/$outputx/$categories/*.obj
-	find $folder_pcds/$outputx/$categories/ -name "*.jpg" -exec convert {} -trim {} \;
+	for categories in $(ls $folder_pcds/input)
+	do
+		echo $folder_pcds/$outputx/$categories
+		ls $folder_pcds/$outputx/$categories/* > $folder_pcds/$outputx/$categories/results.list
+		python3 render_mitsuba2_pc.py $folder_pcds/$outputx/$categories/results.list 
+		rm -rf $folder_pcds/$outputx/$categories/results.list
+		rm -rf $folder_pcds/$outputx/$categories/*.exr
+		rm -rf $folder_pcds/$outputx/$categories/*.xml
+		rm -rf $folder_pcds/$outputx/$categories/*.pcd
+		rm -rf $folder_pcds/$outputx/$categories/*.obj
+		find $folder_pcds/$outputx/$categories/ -name "*.jpg" -exec convert {} -trim {} \;
+	done
 done
-# done
 
 : '
 root="../pytorch/benchmark/pcds"

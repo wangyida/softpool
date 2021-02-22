@@ -236,9 +236,9 @@ def main(argv):
         from dataset import read_points
         with open(pathToFile) as file:
             tempname = file.readline()
-            # if tempname[-5:-1] == '.pcd':
             if tempname[-5:-1] == '.pcd':
                 model_list = [line.strip().replace('.pcd', '') for line in file]
+                model_list.insert(0, tempname[:-5])
                 for j in range(len(model_list)):
                     pclTime, pclTime_color = read_points(
                         os.path.join('%s.pcd' % model_list[j]), 'suncg')
@@ -287,6 +287,7 @@ def main(argv):
                     ConvertEXRToJPG(exrFile, png)
             elif tempname[-5:-1] == '.obj':
                 model_list = [line.strip().replace('.obj', '') for line in file]
+                model_list.insert(0, tempname[:-5])
                 for j in range(len(model_list)):
                     xml_segments = [xml_head]
                     xml_segments.append(obj_mesh.format(os.path.join('%s.obj' % model_list[j])))
