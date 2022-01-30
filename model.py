@@ -140,21 +140,21 @@ class Network(nn.Module):
                     kernel_size=(1, 3),
                     stride=(1, 2),
                     padding=(0, 1),
-                    padding_mode='same'), nn.LeakyReLU(0.2),
+                    padding_mode='replicate'), nn.LeakyReLU(0.2),
                 nn.Conv2d(
                     dim_pn,
                     2 * dim_pn,
                     kernel_size=(1, 3),
                     stride=(1, 2),
                     padding=(0, 1),
-                    padding_mode='same'), nn.LeakyReLU(0.2),
+                    padding_mode='replicate'), nn.LeakyReLU(0.2),
                 nn.Conv2d(
                     2 * dim_pn,
                     2 * dim_pn,
                     kernel_size=(1, 3),
                     stride=(1, 2),
                     padding=(0, 1),
-                    padding_mode='same'), nn.LeakyReLU(0.2))
+                    padding_mode='replicate'), nn.LeakyReLU(0.2))
 
             # input for embedding has 32 points now, then in total it is regions x 32 points
             # down-sampled by 2*2*2=8

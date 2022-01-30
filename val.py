@@ -32,11 +32,11 @@ def colormap(xyz):
 def points_save(points, colors, root='pcds/regions', child='all', pfile=''):
     os.makedirs(root, exist_ok=True)
     os.makedirs(root + '/' + child, exist_ok=True)
-    pcd = o3d.PointCloud()
-    pcd.points = o3d.Vector3dVector(np.float32(points))
-    pcd.colors = o3d.Vector3dVector(np.float32(colors))
-    o3d.write_point_cloud(
-        os.path.join(root, '%s.pcd' % pfile),
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(np.float32(points))
+    pcd.colors = o3d.utility.Vector3dVector(np.float32(colors))
+    o3d.io.write_point_cloud(
+        os.path.join(root, '%s.ply' % pfile),
         pcd,
         write_ascii=True,
         compressed=True)
